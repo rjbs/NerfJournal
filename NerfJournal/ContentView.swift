@@ -51,10 +51,10 @@ struct ReminderRow: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(reminder.title ?? "(untitled)")
                 .lineLimit(2)
-            if let calTitle = reminder.calendar?.title {
-                Text(calTitle)
+            if let calendar = reminder.calendar {
+                Text(calendar.title)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(nsColor: calendar.color))
             }
         }
         .padding(.vertical, 2)
