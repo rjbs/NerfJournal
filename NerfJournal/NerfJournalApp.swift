@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 struct NerfJournalApp: App {
-    @StateObject private var store = RemindersStore()
+    @StateObject private var store = LocalJournalStore()
 
     var body: some Scene {
         WindowGroup {
@@ -12,13 +12,5 @@ struct NerfJournalApp: App {
             .environmentObject(store)
         }
         .defaultSize(width: 420, height: 640)
-
-        Window("Calendars", id: "calendar-picker") {
-            NavigationStack {
-                CalendarPickerView()
-            }
-            .environmentObject(store)
-        }
-        .defaultSize(width: 280, height: 400)
     }
 }
