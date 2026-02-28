@@ -2,7 +2,6 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject private var store: LocalJournalStore
-    @State private var isAddingTodo = false
     @State private var newTodoTitle = ""
 
     var body: some View {
@@ -14,17 +13,6 @@ struct ContentView: View {
             }
         }
         .navigationTitle(navigationTitle)
-        .toolbar {
-            if store.page != nil {
-                ToolbarItem {
-                    Button {
-                        isAddingTodo = true
-                    } label: {
-                        Label("Add Task", systemImage: "plus")
-                    }
-                }
-            }
-        }
         .task {
             try? await store.load()
         }
@@ -56,19 +44,9 @@ struct ContentView: View {
                     }
                 }
             }
-            if isAddingTodo {
-                Section {
-                    HStack {
-                        TextField("New task\u{2026}", text: $newTodoTitle)
-                            .onSubmit { submitNewTodo() }
-                        Button("Add", action: submitNewTodo)
-                            .disabled(newTodoTitle.trimmingCharacters(in: .whitespaces).isEmpty)
-                        Button("Cancel") {
-                            newTodoTitle = ""
-                            isAddingTodo = false
-                        }
-                    }
-                }
+            Section {
+                TextField("Add task\u{2026}", text: $newTodoTitle)
+                    .onSubmit { submitNewTodo() }
             }
         }
     }
@@ -89,25 +67,31 @@ struct ContentView: View {
         Task {
             try? await store.addTodo(title: title, shouldMigrate: true)
             newTodoTitle = ""
-            isAddingTodo = false
         }
     }
 }
 
 struct TodoRow: View {
     @EnvironmentObject private var store: LocalJournalStore
+    @Environment(\.undoManager) private var undoManager
     let todo: Todo
 
     var body: some View {
         HStack(spacing: 8) {
             Button {
-                Task { try? await store.completeTodo(todo) }
+                Task {
+                    if todo.status == .pending {
+                        try? await store.completeTodo(todo, undoManager: undoManager)
+                    } else if todo.status == .done {
+                        try? await store.uncompleteTodo(todo, undoManager: undoManager)
+                    }
+                }
             } label: {
                 Image(systemName: todo.status == .done ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(todo.status == .done ? Color.green : Color.secondary)
             }
             .buttonStyle(.plain)
-            .disabled(todo.status != .pending)
+            .disabled(todo.status == .abandoned)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(todo.title)

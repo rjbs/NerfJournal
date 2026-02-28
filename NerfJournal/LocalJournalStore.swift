@@ -82,7 +82,7 @@ final class LocalJournalStore: ObservableObject {
         try await refreshContents()
     }
 
-    func completeTodo(_ todo: Todo) async throws {
+    func completeTodo(_ todo: Todo, undoManager: UndoManager? = nil) async throws {
         guard let pageID = page?.id else { return }
         try await db.dbQueue.write { db in
             try Todo
@@ -96,6 +96,24 @@ final class LocalJournalStore: ObservableObject {
                 relatedTodoID: todo.id
             )
             try note.insert(db)
+        }
+        undoManager?.registerUndo(withTarget: self) { store in
+            Task { @MainActor in try? await store.uncompleteTodo(todo) }
+        }
+        try await refreshContents()
+    }
+
+    func uncompleteTodo(_ todo: Todo, undoManager: UndoManager? = nil) async throws {
+        try await db.dbQueue.write { db in
+            try Todo
+                .filter(Column("id") == todo.id)
+                .updateAll(db, [Column("status").set(to: TodoStatus.pending)])
+            try Note
+                .filter(Column("relatedTodoID") == todo.id)
+                .deleteAll(db)
+        }
+        undoManager?.registerUndo(withTarget: self) { store in
+            Task { @MainActor in try? await store.completeTodo(todo) }
         }
         try await refreshContents()
     }
