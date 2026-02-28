@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject private var store: LocalJournalStore
     @State private var newTodoTitle = ""
+    @FocusState private var addFieldFocused: Bool
 
     var body: some View {
         Group {
@@ -55,6 +56,7 @@ struct ContentView: View {
             }
             Section {
                 TextField("Add task\u{2026}", text: $newTodoTitle)
+                    .focused($addFieldFocused)
                     .onSubmit { submitNewTodo() }
             }
         }
@@ -76,6 +78,7 @@ struct ContentView: View {
         Task {
             try? await store.addTodo(title: title, shouldMigrate: true)
             newTodoTitle = ""
+            addFieldFocused = true
         }
     }
 }
