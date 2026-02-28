@@ -163,27 +163,57 @@ final class LocalJournalStore: ObservableObject {
         try await refreshContents()
     }
 
-    func setStatus(_ status: TodoStatus, for todo: Todo) async throws {
+    func setStatus(_ status: TodoStatus, for todo: Todo, undoManager: UndoManager? = nil) async throws {
+        let oldStatus = todo.status
         try await db.dbQueue.write { db in
             try Todo
                 .filter(Column("id") == todo.id)
                 .updateAll(db, [Column("status").set(to: status)])
         }
-        try await refreshContents()
-    }
-
-    func deleteTodo(_ todo: Todo) async throws {
-        try await db.dbQueue.write { db in
-            try Todo.filter(Column("id") == todo.id).deleteAll(db)
+        undoManager?.registerUndo(withTarget: self) { store in
+            Task { @MainActor in try? await store.setStatus(oldStatus, for: todo) }
         }
         try await refreshContents()
     }
 
-    func setGroup(_ groupName: String?, for todo: Todo) async throws {
+    func deleteTodo(_ todo: Todo, undoManager: UndoManager? = nil) async throws {
+        try await db.dbQueue.write { db in
+            try Todo.filter(Column("id") == todo.id).deleteAll(db)
+        }
+        undoManager?.registerUndo(withTarget: self) { store in
+            Task { @MainActor in try? await store.restoreTodo(todo) }
+        }
+        try await refreshContents()
+    }
+
+    func setGroup(_ groupName: String?, for todo: Todo, undoManager: UndoManager? = nil) async throws {
+        let oldGroupName = todo.groupName
         try await db.dbQueue.write { db in
             try Todo
                 .filter(Column("id") == todo.id)
                 .updateAll(db, [Column("groupName").set(to: groupName)])
+        }
+        undoManager?.registerUndo(withTarget: self) { store in
+            Task { @MainActor in try? await store.setGroup(oldGroupName, for: todo) }
+        }
+        try await refreshContents()
+    }
+
+    private func restoreTodo(_ todo: Todo) async throws {
+        guard let pageID = page?.id else { return }
+        try await db.dbQueue.write { db in
+            var restored = Todo(
+                id: nil,
+                pageID: pageID,
+                title: todo.title,
+                shouldMigrate: todo.shouldMigrate,
+                status: todo.status,
+                sortOrder: todo.sortOrder,
+                groupName: todo.groupName,
+                externalURL: todo.externalURL,
+                firstAddedDate: todo.firstAddedDate
+            )
+            try restored.insert(db)
         }
         try await refreshContents()
     }

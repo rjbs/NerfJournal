@@ -98,8 +98,7 @@ struct TodoRow: View {
                     }
                 }
             } label: {
-                Image(systemName: todo.status == .done ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(todo.status == .done ? Color.green : Color.secondary)
+                statusIcon
             }
             .buttonStyle(.plain)
             .disabled(todo.status == .abandoned)
@@ -120,17 +119,17 @@ struct TodoRow: View {
             Menu("Mark") {
                 if todo.status != .pending {
                     Button("Pending") {
-                        Task { try? await store.setStatus(.pending, for: todo) }
+                        Task { try? await store.setStatus(.pending, for: todo, undoManager: undoManager) }
                     }
                 }
                 if todo.status != .done {
                     Button("Complete") {
-                        Task { try? await store.setStatus(.done, for: todo) }
+                        Task { try? await store.setStatus(.done, for: todo, undoManager: undoManager) }
                     }
                 }
                 if todo.status != .abandoned {
                     Button("Abandoned") {
-                        Task { try? await store.setStatus(.abandoned, for: todo) }
+                        Task { try? await store.setStatus(.abandoned, for: todo, undoManager: undoManager) }
                     }
                 }
             }
@@ -138,7 +137,7 @@ struct TodoRow: View {
             Menu("Add to group") {
                 ForEach(existingGroups, id: \.self) { group in
                     Button(group) {
-                        Task { try? await store.setGroup(group, for: todo) }
+                        Task { try? await store.setGroup(group, for: todo, undoManager: undoManager) }
                     }
                 }
                 if !existingGroups.isEmpty {
@@ -152,7 +151,7 @@ struct TodoRow: View {
             Divider()
 
             Button("Delete", role: .destructive) {
-                Task { try? await store.deleteTodo(todo) }
+                Task { try? await store.deleteTodo(todo, undoManager: undoManager) }
             }
         }
         .alert("New Group Name", isPresented: $showingNewGroupAlert) {
@@ -160,11 +159,28 @@ struct TodoRow: View {
             Button("Add") {
                 let name = newGroupName.trimmingCharacters(in: .whitespaces)
                 if !name.isEmpty {
-                    Task { try? await store.setGroup(name, for: todo) }
+                    Task { try? await store.setGroup(name, for: todo, undoManager: undoManager) }
                 }
                 newGroupName = ""
             }
             Button("Cancel", role: .cancel) { newGroupName = "" }
+        }
+    }
+
+    @ViewBuilder
+    private var statusIcon: some View {
+        switch todo.status {
+        case .done:
+            Image(systemName: "checkmark.circle.fill")
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(.white, Color.green)
+        case .abandoned:
+            Image(systemName: "xmark.circle.fill")
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(.white, Color(white: 0.4))
+        default:
+            Image(systemName: "circle")
+                .foregroundStyle(Color.secondary)
         }
     }
 
