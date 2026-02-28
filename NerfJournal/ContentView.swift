@@ -79,7 +79,7 @@ struct ContentView: View {
         let named = grouped
             .compactMap { key, value in key.map { (name: $0, todos: value) } }
             .sorted { $0.name < $1.name }
-        let ungrouped = grouped[nil].map { [(name: nil, todos: $0)] } ?? []
+        let ungrouped = grouped[nil].map { [(name: nil as String?, todos: $0)] } ?? []
         return named + ungrouped
     }
 

@@ -7,23 +7,24 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3DA15FB52F537A45004D38F5 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 3DA15FB42F537A45004D38F5 /* GRDB */; };
 		83CBBA111A601CBA00E9B192 /* NerfJournalApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA071A601CBA00E9B192 /* NerfJournalApp.swift */; };
 		83CBBA121A601CBA00E9B192 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA081A601CBA00E9B192 /* ContentView.swift */; };
+		83CBBA141A601CBA00E9B192 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 83CBBA0C1A601CBA00E9B192 /* Assets.xcassets */; };
 		83CBBA161A601CBA00E9B192 /* AppDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA1E1A601CBA00E9B192 /* AppDatabase.swift */; };
 		83CBBA171A601CBA00E9B192 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA1F1A601CBA00E9B192 /* Models.swift */; };
 		83CBBA181A601CBA00E9B192 /* LocalJournalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA201A601CBA00E9B192 /* LocalJournalStore.swift */; };
-		83CBBA141A601CBA00E9B192 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 83CBBA0C1A601CBA00E9B192 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		83CBBA061A601CBA00E9B192 /* NerfJournal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NerfJournal.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		83CBBA071A601CBA00E9B192 /* NerfJournalApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NerfJournalApp.swift; sourceTree = "<group>"; };
 		83CBBA081A601CBA00E9B192 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		83CBBA0C1A601CBA00E9B192 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		83CBBA0D1A601CBA00E9B192 /* NerfJournal.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NerfJournal.entitlements; sourceTree = "<group>"; };
 		83CBBA1E1A601CBA00E9B192 /* AppDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDatabase.swift; sourceTree = "<group>"; };
 		83CBBA1F1A601CBA00E9B192 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		83CBBA201A601CBA00E9B192 /* LocalJournalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalJournalStore.swift; sourceTree = "<group>"; };
-		83CBBA0C1A601CBA00E9B192 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		83CBBA0D1A601CBA00E9B192 /* NerfJournal.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NerfJournal.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -31,6 +32,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3DA15FB52F537A45004D38F5 /* GRDB in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -111,6 +113,9 @@
 				Base,
 			);
 			mainGroup = 83CBB9F81A601CBA00E9B192;
+			packageReferences = (
+				3DA15FB32F537A45004D38F5 /* XCRemoteSwiftPackageReference "GRDB" */,
+			);
 			productRefGroup = 83CBBA0B1A601CBA00E9B192 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -271,7 +276,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = "org.rjbs.nerfjournal";
+				PRODUCT_BUNDLE_IDENTIFIER = org.rjbs.nerfjournal;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -299,7 +304,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = "org.rjbs.nerfjournal";
+				PRODUCT_BUNDLE_IDENTIFIER = org.rjbs.nerfjournal;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -329,6 +334,24 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		3DA15FB32F537A45004D38F5 /* XCRemoteSwiftPackageReference "GRDB" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/groue/GRDB.swift";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		3DA15FB42F537A45004D38F5 /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3DA15FB32F537A45004D38F5 /* XCRemoteSwiftPackageReference "GRDB" */;
+			productName = GRDB;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 83CBB9F71A601CBA00E9B192 /* Project object */;
 }

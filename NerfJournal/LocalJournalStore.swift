@@ -112,6 +112,7 @@ final class LocalJournalStore: ObservableObject {
     func addTodo(title: String, shouldMigrate: Bool, groupName: String? = nil) async throws {
         guard let pageID = page?.id else { return }
         let nextOrder = (todos.map(\.sortOrder).max() ?? -1) + 1
+        let today = Self.startOfToday
         try await db.dbQueue.write { db in
             var todo = Todo(
                 id: nil,
@@ -122,7 +123,7 @@ final class LocalJournalStore: ObservableObject {
                 sortOrder: nextOrder,
                 groupName: groupName,
                 externalURL: nil,
-                firstAddedDate: Self.startOfToday
+                firstAddedDate: today
             )
             try todo.insert(db)
         }
