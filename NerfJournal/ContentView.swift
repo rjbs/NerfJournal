@@ -2,12 +2,20 @@ import EventKit
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var store = RemindersStore()
+    @EnvironmentObject private var store: RemindersStore
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         content
             .navigationTitle("Pending Reminders")
             .toolbar {
+                ToolbarItem {
+                    Button {
+                        openWindow(id: "calendar-picker")
+                    } label: {
+                        Label("Choose Calendars", systemImage: "line.3.horizontal.decrease.circle")
+                    }
+                }
                 ToolbarItem {
                     Button {
                         Task { await store.refresh() }

@@ -10,6 +10,7 @@
 		83CBBA111A601CBA00E9B192 /* NerfJournalApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA071A601CBA00E9B192 /* NerfJournalApp.swift */; };
 		83CBBA121A601CBA00E9B192 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA081A601CBA00E9B192 /* ContentView.swift */; };
 		83CBBA131A601CBA00E9B192 /* RemindersStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA091A601CBA00E9B192 /* RemindersStore.swift */; };
+		83CBBA151A601CBA00E9B192 /* CalendarPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA0E1A601CBA00E9B193 /* CalendarPickerView.swift */; };
 		83CBBA141A601CBA00E9B192 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 83CBBA0C1A601CBA00E9B192 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -18,6 +19,7 @@
 		83CBBA071A601CBA00E9B192 /* NerfJournalApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NerfJournalApp.swift; sourceTree = "<group>"; };
 		83CBBA081A601CBA00E9B192 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		83CBBA091A601CBA00E9B192 /* RemindersStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemindersStore.swift; sourceTree = "<group>"; };
+		83CBBA0E1A601CBA00E9B193 /* CalendarPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarPickerView.swift; sourceTree = "<group>"; };
 		83CBBA0C1A601CBA00E9B192 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		83CBBA0D1A601CBA00E9B192 /* NerfJournal.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NerfJournal.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -47,6 +49,7 @@
 				83CBBA071A601CBA00E9B192 /* NerfJournalApp.swift */,
 				83CBBA081A601CBA00E9B192 /* ContentView.swift */,
 				83CBBA091A601CBA00E9B192 /* RemindersStore.swift */,
+				83CBBA0E1A601CBA00E9B193 /* CalendarPickerView.swift */,
 				83CBBA0C1A601CBA00E9B192 /* Assets.xcassets */,
 				83CBBA0D1A601CBA00E9B192 /* NerfJournal.entitlements */,
 			);
@@ -133,6 +136,7 @@
 				83CBBA111A601CBA00E9B192 /* NerfJournalApp.swift in Sources */,
 				83CBBA121A601CBA00E9B192 /* ContentView.swift in Sources */,
 				83CBBA131A601CBA00E9B192 /* RemindersStore.swift in Sources */,
+				83CBBA151A601CBA00E9B192 /* CalendarPickerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
