@@ -14,6 +14,7 @@ struct ContentView: View {
             }
         }
         .navigationTitle(navigationTitle)
+        .focusedSceneObject(store)
         .task {
             try? await store.load()
         }

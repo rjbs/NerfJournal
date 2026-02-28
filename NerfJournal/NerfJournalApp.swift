@@ -13,6 +13,7 @@ struct NerfJournalApp: App {
             .environmentObject(store)
         }
         .defaultSize(width: 420, height: 640)
+        .commands { DebugCommands() }
 
         Window("Work Diary", id: "diary") {
             DiaryView()
