@@ -234,6 +234,22 @@ final class LocalJournalStore: ObservableObject {
         try await refreshContents()
     }
 
+    func exportData() async throws -> Data {
+        try await db.exportData()
+    }
+
+    func importDatabase(_ data: Data) async throws {
+        try await db.importData(data)
+        try await load()
+        NotificationCenter.default.post(name: .nerfJournalDatabaseDidChange, object: nil)
+    }
+
+    func factoryReset() async throws {
+        try await db.factoryReset()
+        try await load()
+        NotificationCenter.default.post(name: .nerfJournalDatabaseDidChange, object: nil)
+    }
+
     private func refreshContents() async throws {
         guard let pageID = page?.id else {
             todos = []

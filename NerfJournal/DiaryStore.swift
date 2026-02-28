@@ -13,6 +13,20 @@ final class DiaryStore: ObservableObject {
 
     init(database: AppDatabase = .shared) {
         self.db = database
+        NotificationCenter.default.addObserver(
+            forName: .nerfJournalDatabaseDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                try? await self.loadIndex()
+                self.selectedDate = nil
+                self.selectedPage = nil
+                self.selectedTodos = []
+                self.selectedNotes = []
+            }
+        }
     }
 
     func loadIndex() async throws {
