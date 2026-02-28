@@ -10,6 +10,12 @@ final class RemindersStore: ObservableObject {
     @Published var authorizationStatus: EKAuthorizationStatus =
         EKEventStore.authorizationStatus(for: .reminder)
 
+    private var storeObservationTask: Task<Void, Never>?
+
+    deinit {
+        storeObservationTask?.cancel()
+    }
+
     func load() async {
         isLoading = true
         defer { isLoading = false }
@@ -21,7 +27,17 @@ final class RemindersStore: ObservableObject {
 
         guard authorizationStatus == .fullAccess else { return }
 
+        startObserving()
         await fetchReminders()
+    }
+
+    private func startObserving() {
+        guard storeObservationTask == nil else { return }
+        storeObservationTask = Task { [weak self] in
+            for await _ in NotificationCenter.default.notifications(named: .EKEventStoreChanged) {
+                await self?.fetchReminders()
+            }
+        }
     }
 
     func refresh() async {
