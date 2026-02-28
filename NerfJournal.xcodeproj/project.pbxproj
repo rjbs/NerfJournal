@@ -14,6 +14,8 @@
 		83CBBA161A601CBA00E9B192 /* AppDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA1E1A601CBA00E9B192 /* AppDatabase.swift */; };
 		83CBBA171A601CBA00E9B192 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA1F1A601CBA00E9B192 /* Models.swift */; };
 		83CBBA181A601CBA00E9B192 /* LocalJournalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA201A601CBA00E9B192 /* LocalJournalStore.swift */; };
+		83CBBA191A601CBA00E9B192 /* DiaryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA211A601CBA00E9B192 /* DiaryStore.swift */; };
+		83CBBA1A1A601CBA00E9B192 /* DiaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA221A601CBA00E9B192 /* DiaryView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,6 +27,8 @@
 		83CBBA1E1A601CBA00E9B192 /* AppDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDatabase.swift; sourceTree = "<group>"; };
 		83CBBA1F1A601CBA00E9B192 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		83CBBA201A601CBA00E9B192 /* LocalJournalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalJournalStore.swift; sourceTree = "<group>"; };
+		83CBBA211A601CBA00E9B192 /* DiaryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiaryStore.swift; sourceTree = "<group>"; };
+		83CBBA221A601CBA00E9B192 /* DiaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiaryView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -55,6 +59,8 @@
 				83CBBA1E1A601CBA00E9B192 /* AppDatabase.swift */,
 				83CBBA1F1A601CBA00E9B192 /* Models.swift */,
 				83CBBA201A601CBA00E9B192 /* LocalJournalStore.swift */,
+				83CBBA211A601CBA00E9B192 /* DiaryStore.swift */,
+				83CBBA221A601CBA00E9B192 /* DiaryView.swift */,
 				83CBBA0C1A601CBA00E9B192 /* Assets.xcassets */,
 				83CBBA0D1A601CBA00E9B192 /* NerfJournal.entitlements */,
 			);
@@ -146,6 +152,8 @@
 				83CBBA161A601CBA00E9B192 /* AppDatabase.swift in Sources */,
 				83CBBA171A601CBA00E9B192 /* Models.swift in Sources */,
 				83CBBA181A601CBA00E9B192 /* LocalJournalStore.swift in Sources */,
+				83CBBA191A601CBA00E9B192 /* DiaryStore.swift in Sources */,
+				83CBBA1A1A601CBA00E9B192 /* DiaryView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -271,13 +279,23 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = RF24M9W2UV;
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = NO;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = NerfJournal;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
-				INFOPLIST_KEY_NSRemindersUsageDescription = "NerfJournal needs access to your reminders.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -300,13 +318,23 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = RF24M9W2UV;
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = NO;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = NerfJournal;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
-				INFOPLIST_KEY_NSRemindersUsageDescription = "NerfJournal needs access to your reminders.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

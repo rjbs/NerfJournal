@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct NerfJournalApp: App {
     @StateObject private var store = LocalJournalStore()
+    @StateObject private var diaryStore = DiaryStore()
 
     var body: some Scene {
         WindowGroup {
@@ -12,5 +13,11 @@ struct NerfJournalApp: App {
             .environmentObject(store)
         }
         .defaultSize(width: 420, height: 640)
+
+        Window("Work Diary", id: "diary") {
+            DiaryView()
+                .environmentObject(diaryStore)
+        }
+        .defaultSize(width: 700, height: 520)
     }
 }
