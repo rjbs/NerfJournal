@@ -42,6 +42,15 @@ struct ContentView: View {
                     ForEach(group.todos) { todo in
                         TodoRow(todo: todo)
                     }
+                    .onMove { offsets, destination in
+                        Task {
+                            try? await store.moveTodos(
+                                in: group.name,
+                                from: offsets,
+                                to: destination
+                            )
+                        }
+                    }
                 }
             }
             Section {
@@ -74,6 +83,8 @@ struct ContentView: View {
 struct TodoRow: View {
     @EnvironmentObject private var store: LocalJournalStore
     @Environment(\.undoManager) private var undoManager
+    @State private var showingNewGroupAlert = false
+    @State private var newGroupName = ""
     let todo: Todo
 
     var body: some View {
@@ -105,11 +116,65 @@ struct TodoRow: View {
             }
         }
         .padding(.vertical, 2)
+        .contextMenu {
+            Menu("Mark") {
+                if todo.status != .pending {
+                    Button("Pending") {
+                        Task { try? await store.setStatus(.pending, for: todo) }
+                    }
+                }
+                if todo.status != .done {
+                    Button("Complete") {
+                        Task { try? await store.setStatus(.done, for: todo) }
+                    }
+                }
+                if todo.status != .abandoned {
+                    Button("Abandoned") {
+                        Task { try? await store.setStatus(.abandoned, for: todo) }
+                    }
+                }
+            }
+
+            Menu("Add to group") {
+                ForEach(existingGroups, id: \.self) { group in
+                    Button(group) {
+                        Task { try? await store.setGroup(group, for: todo) }
+                    }
+                }
+                if !existingGroups.isEmpty {
+                    Divider()
+                }
+                Button("New group\u{2026}") {
+                    showingNewGroupAlert = true
+                }
+            }
+
+            Divider()
+
+            Button("Delete", role: .destructive) {
+                Task { try? await store.deleteTodo(todo) }
+            }
+        }
+        .alert("New Group Name", isPresented: $showingNewGroupAlert) {
+            TextField("Group name", text: $newGroupName)
+            Button("Add") {
+                let name = newGroupName.trimmingCharacters(in: .whitespaces)
+                if !name.isEmpty {
+                    Task { try? await store.setGroup(name, for: todo) }
+                }
+                newGroupName = ""
+            }
+            Button("Cancel", role: .cancel) { newGroupName = "" }
+        }
     }
 
     private var daysCarried: Int {
         let today = Calendar.current.startOfDay(for: Date())
         let added = Calendar.current.startOfDay(for: todo.firstAddedDate)
         return Calendar.current.dateComponents([.day], from: added, to: today).day ?? 0
+    }
+
+    private var existingGroups: [String] {
+        Array(Set(store.todos.compactMap(\.groupName))).sorted()
     }
 }

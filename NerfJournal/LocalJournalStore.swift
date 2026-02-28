@@ -163,6 +163,47 @@ final class LocalJournalStore: ObservableObject {
         try await refreshContents()
     }
 
+    func setStatus(_ status: TodoStatus, for todo: Todo) async throws {
+        try await db.dbQueue.write { db in
+            try Todo
+                .filter(Column("id") == todo.id)
+                .updateAll(db, [Column("status").set(to: status)])
+        }
+        try await refreshContents()
+    }
+
+    func deleteTodo(_ todo: Todo) async throws {
+        try await db.dbQueue.write { db in
+            try Todo.filter(Column("id") == todo.id).deleteAll(db)
+        }
+        try await refreshContents()
+    }
+
+    func setGroup(_ groupName: String?, for todo: Todo) async throws {
+        try await db.dbQueue.write { db in
+            try Todo
+                .filter(Column("id") == todo.id)
+                .updateAll(db, [Column("groupName").set(to: groupName)])
+        }
+        try await refreshContents()
+    }
+
+    // Re-orders todos within a single group by updating their sortOrder values.
+    func moveTodos(in groupName: String?, from offsets: IndexSet, to destination: Int) async throws {
+        var groupTodos = todos
+            .filter { $0.groupName == groupName }
+            .sorted { $0.sortOrder < $1.sortOrder }
+        groupTodos.move(fromOffsets: offsets, toOffset: destination)
+        try await db.dbQueue.write { db in
+            for (index, todo) in groupTodos.enumerated() {
+                try Todo
+                    .filter(Column("id") == todo.id)
+                    .updateAll(db, [Column("sortOrder").set(to: index)])
+            }
+        }
+        try await refreshContents()
+    }
+
     private func refreshContents() async throws {
         guard let pageID = page?.id else {
             todos = []
