@@ -90,27 +90,34 @@ struct TodoRow: View {
     @State private var showingNewGroupAlert = false
     @State private var newGroupName = ""
     let todo: Todo
+    var readOnly: Bool = false
 
     var body: some View {
         HStack(spacing: 8) {
-            Button {
-                Task {
-                    if todo.status == .pending {
-                        try? await store.completeTodo(todo, undoManager: undoManager)
-                    } else if todo.status == .done {
-                        try? await store.uncompleteTodo(todo, undoManager: undoManager)
-                    }
-                }
-            } label: {
+            if readOnly {
                 statusIcon
+            } else {
+                Button {
+                    Task {
+                        if todo.status == .pending {
+                            try? await store.completeTodo(todo, undoManager: undoManager)
+                        } else if todo.status == .done {
+                            try? await store.uncompleteTodo(todo, undoManager: undoManager)
+                        }
+                    }
+                } label: {
+                    statusIcon
+                }
+                .buttonStyle(.plain)
+                .disabled(todo.status == .abandoned)
             }
-            .buttonStyle(.plain)
-            .disabled(todo.status == .abandoned)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(todo.title)
-                    .strikethrough(todo.status == .done)
-                    .foregroundStyle(todo.status == .abandoned ? .secondary : .primary)
+                    .strikethrough(todo.status == .done || (readOnly && todo.status == .migrated))
+                    .foregroundStyle(
+                        (todo.status == .abandoned || (readOnly && todo.status == .migrated)) ? .secondary : .primary
+                    )
                 if daysCarried > 0 {
                     Text("Carried over \u{b7} \(daysCarried) day\(daysCarried == 1 ? "" : "s") ago")
                         .font(.caption)
@@ -120,42 +127,44 @@ struct TodoRow: View {
         }
         .padding(.vertical, 2)
         .contextMenu {
-            Menu("Mark") {
-                if todo.status != .pending {
-                    Button("Pending") {
-                        Task { try? await store.setStatus(.pending, for: todo, undoManager: undoManager) }
+            if !readOnly {
+                Menu("Mark") {
+                    if todo.status != .pending {
+                        Button("Pending") {
+                            Task { try? await store.setStatus(.pending, for: todo, undoManager: undoManager) }
+                        }
+                    }
+                    if todo.status != .done {
+                        Button("Complete") {
+                            Task { try? await store.setStatus(.done, for: todo, undoManager: undoManager) }
+                        }
+                    }
+                    if todo.status != .abandoned {
+                        Button("Abandoned") {
+                            Task { try? await store.setStatus(.abandoned, for: todo, undoManager: undoManager) }
+                        }
                     }
                 }
-                if todo.status != .done {
-                    Button("Complete") {
-                        Task { try? await store.setStatus(.done, for: todo, undoManager: undoManager) }
-                    }
-                }
-                if todo.status != .abandoned {
-                    Button("Abandoned") {
-                        Task { try? await store.setStatus(.abandoned, for: todo, undoManager: undoManager) }
-                    }
-                }
-            }
 
-            Menu("Add to group") {
-                ForEach(existingGroups, id: \.self) { group in
-                    Button(group) {
-                        Task { try? await store.setGroup(group, for: todo, undoManager: undoManager) }
+                Menu("Add to group") {
+                    ForEach(existingGroups, id: \.self) { group in
+                        Button(group) {
+                            Task { try? await store.setGroup(group, for: todo, undoManager: undoManager) }
+                        }
+                    }
+                    if !existingGroups.isEmpty {
+                        Divider()
+                    }
+                    Button("New group\u{2026}") {
+                        showingNewGroupAlert = true
                     }
                 }
-                if !existingGroups.isEmpty {
-                    Divider()
-                }
-                Button("New group\u{2026}") {
-                    showingNewGroupAlert = true
-                }
-            }
 
-            Divider()
+                Divider()
 
-            Button("Delete", role: .destructive) {
-                Task { try? await store.deleteTodo(todo, undoManager: undoManager) }
+                Button("Delete", role: .destructive) {
+                    Task { try? await store.deleteTodo(todo, undoManager: undoManager) }
+                }
             }
         }
         .alert("New Group Name", isPresented: $showingNewGroupAlert) {
@@ -182,6 +191,10 @@ struct TodoRow: View {
             Image(systemName: "xmark.circle.fill")
                 .symbolRenderingMode(.palette)
                 .foregroundStyle(.white, Color(white: 0.4))
+        case .migrated:
+            Image(systemName: "arrow.right.circle.fill")
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(.white, Color.orange)
         default:
             Image(systemName: "circle")
                 .foregroundStyle(Color.secondary)

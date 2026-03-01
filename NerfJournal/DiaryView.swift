@@ -214,7 +214,7 @@ struct DiaryPageDetailView: View {
                     ForEach(todoGroups, id: \.name) { group in
                         Section(group.name ?? "Tasks") {
                             ForEach(group.todos) { todo in
-                                DiaryTodoRow(todo: todo)
+                                TodoRow(todo: todo, readOnly: true)
                             }
                         }
                     }
@@ -248,44 +248,5 @@ struct DiaryPageDetailView: View {
 
     private var textNotes: [Note] {
         notes.filter { $0.text != nil }
-    }
-}
-
-// MARK: - DiaryTodoRow
-
-struct DiaryTodoRow: View {
-    let todo: Todo
-
-    var body: some View {
-        HStack(spacing: 8) {
-            statusIcon
-            Text(todo.title)
-                .strikethrough(todo.status == .done || todo.status == .migrated)
-                .foregroundStyle(
-                    (todo.status == .abandoned || todo.status == .migrated) ? .secondary : .primary
-                )
-        }
-        .padding(.vertical, 2)
-    }
-
-    @ViewBuilder
-    private var statusIcon: some View {
-        switch todo.status {
-        case .done:
-            Image(systemName: "checkmark.circle.fill")
-                .symbolRenderingMode(.palette)
-                .foregroundStyle(.white, Color.green)
-        case .abandoned:
-            Image(systemName: "xmark.circle.fill")
-                .symbolRenderingMode(.palette)
-                .foregroundStyle(.white, Color(white: 0.4))
-        case .migrated:
-            Image(systemName: "arrow.right.circle.fill")
-                .symbolRenderingMode(.palette)
-                .foregroundStyle(.white, Color.orange)
-        default:
-            Image(systemName: "circle")
-                .foregroundStyle(Color.secondary)
-        }
     }
 }
