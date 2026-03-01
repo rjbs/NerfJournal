@@ -1,5 +1,70 @@
 {
-   "bundleTodos" : [],
+   "bundleTodos" : [
+      {
+         "bundleID" : 1,
+         "categoryID" : null,
+         "externalURL" : null,
+         "id" : 1,
+         "sortOrder" : 0,
+         "title" : "Review sprint board"
+      },
+      {
+         "bundleID" : 1,
+         "categoryID" : null,
+         "externalURL" : null,
+         "id" : 2,
+         "sortOrder" : 1,
+         "title" : "Update Jira tickets"
+      },
+      {
+         "bundleID" : 1,
+         "categoryID" : 1,
+         "externalURL" : null,
+         "id" : 3,
+         "sortOrder" : 2,
+         "title" : "Fix flaky CI tests"
+      },
+      {
+         "bundleID" : 1,
+         "categoryID" : 2,
+         "externalURL" : null,
+         "id" : 4,
+         "sortOrder" : 3,
+         "title" : "Sprint planning"
+      },
+      {
+         "bundleID" : 2,
+         "categoryID" : null,
+         "externalURL" : null,
+         "id" : 5,
+         "sortOrder" : 0,
+         "title" : "Review infrastructure costs"
+      },
+      {
+         "bundleID" : 2,
+         "categoryID" : 1,
+         "externalURL" : null,
+         "id" : 6,
+         "sortOrder" : 1,
+         "title" : "Check error dashboards"
+      },
+      {
+         "bundleID" : 2,
+         "categoryID" : 1,
+         "externalURL" : null,
+         "id" : 7,
+         "sortOrder" : 2,
+         "title" : "Update runbook"
+      },
+      {
+         "bundleID" : 2,
+         "categoryID" : 2,
+         "externalURL" : null,
+         "id" : 8,
+         "sortOrder" : 3,
+         "title" : "Handoff sync"
+      }
+   ],
    "categories" : [
       {
          "color" : "blue",
@@ -14,7 +79,7 @@
          "sortOrder" : 1
       }
    ],
-   "exportedAt" : "2026-03-01T18:24:39Z",
+   "exportedAt" : "2026-03-01T18:46:50Z",
    "journalPages" : [
       {
          "date" : "2026-02-08T05:00:00Z",
@@ -411,7 +476,20 @@
          "timestamp" : "2026-02-27T06:00:00Z"
       }
    ],
-   "taskBundles" : [],
+   "taskBundles" : [
+      {
+         "id" : 1,
+         "name" : "Sprint Kickoff",
+         "sortOrder" : 0,
+         "todosShouldMigrate" : true
+      },
+      {
+         "id" : 2,
+         "name" : "On-Call Handoff",
+         "sortOrder" : 1,
+         "todosShouldMigrate" : false
+      }
+   ],
    "todos" : [
       {
          "added" : "2026-02-08T05:00:00Z",

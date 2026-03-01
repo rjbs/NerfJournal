@@ -150,14 +150,53 @@ for my $pi (0 .. $#DAYS) {
     }
 }
 
+# -- bundles -----------------------------------------------------------------
+
+my @BUNDLES = (
+    {
+        bundle => { id => 1, name => 'Sprint Kickoff', sortOrder => 0, todosShouldMigrate => JSON::PP::true },
+        todos  => [
+            { title => 'Review sprint board',       categoryID => undef,         sortOrder => 0 },
+            { title => 'Update Jira tickets',        categoryID => undef,         sortOrder => 1 },
+            { title => 'Fix flaky CI tests',         categoryID => $CAT_ID{Engineering}, sortOrder => 2 },
+            { title => 'Sprint planning',            categoryID => $CAT_ID{Meetings},    sortOrder => 3 },
+        ],
+    },
+    {
+        bundle => { id => 2, name => 'On-Call Handoff', sortOrder => 1, todosShouldMigrate => JSON::PP::false },
+        todos  => [
+            { title => 'Review infrastructure costs', categoryID => undef,                  sortOrder => 0 },
+            { title => 'Check error dashboards',      categoryID => $CAT_ID{Engineering},   sortOrder => 1 },
+            { title => 'Update runbook',              categoryID => $CAT_ID{Engineering},   sortOrder => 2 },
+            { title => 'Handoff sync',                categoryID => $CAT_ID{Meetings},      sortOrder => 3 },
+        ],
+    },
+);
+
+my (@bundles_out, @bundle_todos_out);
+my $bt_id = 1;
+for my $b (@BUNDLES) {
+    push @bundles_out, $b->{bundle};
+    for my $t (@{ $b->{todos} }) {
+        push @bundle_todos_out, {
+            id         => $bt_id++,
+            bundleID   => $b->{bundle}{id},
+            title      => $t->{title},
+            sortOrder  => $t->{sortOrder},
+            categoryID => $t->{categoryID},
+            externalURL => undef,
+        };
+    }
+}
+
 # -- output ------------------------------------------------------------------
 
 my %export = (
     version      => 3,
     exportedAt   => iso8601(time),
     categories   => \@CATEGORIES,
-    taskBundles  => [],
-    bundleTodos  => [],
+    taskBundles  => \@bundles_out,
+    bundleTodos  => \@bundle_todos_out,
     journalPages => \@pages_out,
     todos        => \@todos_out,
     notes        => \@notes_out,
