@@ -9,6 +9,16 @@ final class CategoryStore: ObservableObject {
 
     init(database: AppDatabase = .shared) {
         self.db = database
+        NotificationCenter.default.addObserver(
+            forName: .nerfJournalDatabaseDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                try? await self.load()
+            }
+        }
     }
 
     func load() async throws {

@@ -43,6 +43,7 @@ struct NerfJournalApp: App {
             BundleManagerView()
                 .environmentObject(bundleStore)
                 .environmentObject(categoryStore)
+                .focusedSceneObject(journalStore)
         }
         .defaultSize(width: 600, height: 480)
     }

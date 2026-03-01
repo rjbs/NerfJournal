@@ -69,7 +69,7 @@ struct DebugCommands: Commands {
         alert.messageText = "Factory Reset"
         alert.informativeText = """
             This will permanently delete all journal pages, todos, notes, \
-            and task bundles. This cannot be undone.
+            task bundles, and categories. This cannot be undone.
             """
         alert.alertStyle = .critical
         alert.addButton(withTitle: "Delete Everything")
