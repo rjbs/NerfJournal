@@ -90,7 +90,12 @@ struct AppDatabase {
         }
 
         migrator.registerMigration("v2") { db in
-            // DELETE cascades to note (pageID FK) and old todo (pageID FK).
+            // GRDB defers FK checks during migrations, so cascade actions
+            // don't fire. Delete in dependency order so FK checks pass at
+            // commit: note first (references both todo and journalPage),
+            // then todo (references journalPage), then journalPage.
+            try db.execute(sql: "DELETE FROM note")
+            try db.execute(sql: "DELETE FROM todo")
             try db.execute(sql: "DELETE FROM journalPage")
             try db.execute(sql: "DROP TABLE todo")
             try db.create(table: "todo") { t in
