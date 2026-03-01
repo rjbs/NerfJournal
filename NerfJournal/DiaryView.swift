@@ -3,24 +3,46 @@ import SwiftUI
 // MARK: - DiaryView
 
 struct DiaryView: View {
-    @EnvironmentObject private var store: DiaryStore
+    @EnvironmentObject private var diaryStore: DiaryStore
+    @EnvironmentObject private var journalStore: LocalJournalStore
+
+    @State private var sidebarVisible = true
 
     var body: some View {
-        HSplitView {
-            calendarSidebar
-            pageDetail
+        Group {
+            if sidebarVisible {
+                HSplitView {
+                    calendarSidebar
+                    pageDetail
+                }
+            } else {
+                pageDetail
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Button {
+                    sidebarVisible.toggle()
+                } label: {
+                    Image(systemName: "sidebar.left")
+                }
+            }
         }
         .task {
-            try? await store.loadIndex()
+            try? await diaryStore.loadIndex()
+            if let latest = diaryStore.pageDates.max() {
+                try? await diaryStore.selectDate(latest)
+            }
+            try? await journalStore.load()
         }
     }
 
     private var calendarSidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
             MonthCalendarView(
-                selectedDate: store.selectedDate,
-                highlightedDates: store.pageDates,
-                onSelect: { date in Task { try? await store.selectDate(date) } }
+                selectedDate: diaryStore.selectedDate,
+                highlightedDates: diaryStore.pageDates,
+                onSelect: { date in Task { try? await diaryStore.selectDate(date) } }
             )
             .padding()
             Spacer()
@@ -30,25 +52,71 @@ struct DiaryView: View {
 
     private var pageDetail: some View {
         Group {
-            if store.selectedDate == nil {
+            if diaryStore.selectedDate == nil {
                 Text("Select a date to view its journal page.")
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if store.selectedPage == nil {
-                VStack(spacing: 8) {
-                    Text(store.selectedDate!.formatted(date: .long, time: .omitted))
-                        .font(.title2).bold()
-                    Text("No journal page for this date.")
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if diaryStore.isSelectedPageLast {
+                lastPageDetail
+            } else if diaryStore.selectedPage == nil {
+                noPageDetail
             } else {
                 DiaryPageDetailView(
-                    date: store.selectedDate!,
-                    todos: store.selectedTodos,
-                    notes: store.selectedNotes
+                    date: diaryStore.selectedDate!,
+                    todos: diaryStore.selectedTodos,
+                    notes: diaryStore.selectedNotes,
+                    readOnly: true
                 )
             }
+        }
+    }
+
+    // The most recent diary page may be mutable if journalStore has it loaded.
+    private var lastPageDetail: some View {
+        Group {
+            if journalStore.page == nil {
+                startTodayPrompt
+            } else {
+                DiaryPageDetailView(
+                    date: journalStore.page!.date,
+                    todos: journalStore.todos,
+                    notes: journalStore.notes,
+                    readOnly: false
+                )
+            }
+        }
+    }
+
+    private var noPageDetail: some View {
+        VStack(spacing: 8) {
+            Text(diaryStore.selectedDate!.formatted(date: .long, time: .omitted))
+                .font(.title2).bold()
+            Text("No journal page for this date.")
+                .foregroundStyle(.secondary)
+            if Calendar.current.isDateInToday(diaryStore.selectedDate!) {
+                Button("Start Today") { startToday() }
+                    .buttonStyle(.borderedProminent)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var startTodayPrompt: some View {
+        VStack(spacing: 16) {
+            Text("No journal page for today.")
+                .foregroundStyle(.secondary)
+            Button("Start Today") { startToday() }
+                .buttonStyle(.borderedProminent)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func startToday() {
+        Task {
+            try? await journalStore.startToday()
+            try? await diaryStore.loadIndex()
+            let today = Calendar.current.startOfDay(for: Date())
+            try? await diaryStore.selectDate(today)
         }
     }
 }
@@ -192,9 +260,15 @@ struct DayCell: View {
 // MARK: - DiaryPageDetailView
 
 struct DiaryPageDetailView: View {
+    @EnvironmentObject private var journalStore: LocalJournalStore
+
     let date: Date
     let todos: [Todo]
     let notes: [Note]
+    var readOnly: Bool = true
+
+    @State private var newTodoTitle = ""
+    @FocusState private var addFieldFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -207,15 +281,31 @@ struct DiaryPageDetailView: View {
             Divider()
 
             List {
-                if todos.isEmpty {
+                if todos.isEmpty && readOnly {
                     Text("No tasks recorded for this day.")
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(todoGroups, id: \.name) { group in
                         Section(group.name ?? "Tasks") {
                             ForEach(group.todos) { todo in
-                                TodoRow(todo: todo, pageDate: date, readOnly: true)
+                                TodoRow(todo: todo, pageDate: date, readOnly: readOnly)
                             }
+                            .onMove(perform: readOnly ? nil : { offsets, destination in
+                                Task {
+                                    try? await journalStore.moveTodos(
+                                        in: group.name,
+                                        from: offsets,
+                                        to: destination
+                                    )
+                                }
+                            })
+                        }
+                    }
+                    if !readOnly {
+                        Section {
+                            TextField("Add task\u{2026}", text: $newTodoTitle)
+                                .focused($addFieldFocused)
+                                .onSubmit { submitNewTodo() }
                         }
                     }
                 }
@@ -248,5 +338,15 @@ struct DiaryPageDetailView: View {
 
     private var textNotes: [Note] {
         notes.filter { $0.text != nil }
+    }
+
+    private func submitNewTodo() {
+        let title = newTodoTitle.trimmingCharacters(in: .whitespaces)
+        guard !title.isEmpty else { return }
+        Task {
+            try? await journalStore.addTodo(title: title, shouldMigrate: true)
+            newTodoTitle = ""
+            addFieldFocused = true
+        }
     }
 }
