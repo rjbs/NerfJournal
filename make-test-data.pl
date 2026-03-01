@@ -23,7 +23,16 @@ srand(20260228);  # fixed seed — change to get different task assignments
 # Spacing mimics a typical work pattern with skipped weekends and absences.
 my @DAYS = (21, 20, 18, 17, 15, 14, 12, 11, 9, 8, 6, 4, 2, 0);
 
-# Task pool: [title, group_or_undef, should_migrate]
+# Hardcoded categories. IDs must match the categoryID values used in @POOL.
+my @CATEGORIES = (
+    { id => 1, name => 'Engineering', color => 'blue',   sortOrder => 0 },
+    { id => 2, name => 'Meetings',    color => 'orange', sortOrder => 1 },
+);
+
+# Map category name to its ID for use in the pool below.
+my %CAT_ID = map { $_->{name} => $_->{id} } @CATEGORIES;
+
+# Task pool: [title, category_name_or_undef, should_migrate]
 # should_migrate: 1 = stays pending on future pages if not done; 0 = abandoned
 my @POOL = (
     [ 'Review sprint board',           undef,         0 ],
@@ -105,7 +114,7 @@ for my $pi (0 .. $#DAYS) {
     for (1 .. $new_count) {
         # Skip pool entries whose title is already carried over from a prior day.
         ++$pool_i while $active_titles{ $POOL[$pool_i % @POOL][0] };
-        my ($title, $group, $migrate) = @{ $POOL[$pool_i++ % @POOL] };
+        my ($title, $cat_name, $migrate) = @{ $POOL[$pool_i++ % @POOL] };
         my $cur_tid = $todo_id++;
         my $ending;
 
@@ -125,7 +134,7 @@ for my $pi (0 .. $#DAYS) {
             shouldMigrate => $migrate ? JSON::PP::true : JSON::PP::false,
             added         => iso8601($page_ts),
             ending        => $ending,
-            groupName     => $group,
+            categoryID    => (defined $cat_name ? $CAT_ID{$cat_name} : undef),
             externalURL   => undef,
         };
 
@@ -144,8 +153,9 @@ for my $pi (0 .. $#DAYS) {
 # -- output ------------------------------------------------------------------
 
 my %export = (
-    version      => 2,
+    version      => 3,
     exportedAt   => iso8601(time),
+    categories   => \@CATEGORIES,
     taskBundles  => [],
     bundleTodos  => [],
     journalPages => \@pages_out,

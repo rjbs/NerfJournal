@@ -9,11 +9,38 @@ extension Notification.Name {
 struct DatabaseExport: Codable {
     let version: Int
     let exportedAt: Date
+    let categories: [Category]
     let taskBundles: [TaskBundle]
     let bundleTodos: [BundleTodo]
     let journalPages: [JournalPage]
     let todos: [Todo]
     let notes: [Note]
+
+    init(version: Int, exportedAt: Date, categories: [Category], taskBundles: [TaskBundle],
+         bundleTodos: [BundleTodo], journalPages: [JournalPage], todos: [Todo], notes: [Note]) {
+        self.version      = version
+        self.exportedAt   = exportedAt
+        self.categories   = categories
+        self.taskBundles  = taskBundles
+        self.bundleTodos  = bundleTodos
+        self.journalPages = journalPages
+        self.todos        = todos
+        self.notes        = notes
+    }
+
+    // Custom decoder so that imports of pre-v3 exports (lacking `categories`)
+    // succeed with an empty category list rather than a decode error.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        version     = try c.decode(Int.self,           forKey: .version)
+        exportedAt  = try c.decode(Date.self,          forKey: .exportedAt)
+        categories  = try c.decodeIfPresent([Category].self,    forKey: .categories)  ?? []
+        taskBundles = try c.decode([TaskBundle].self,  forKey: .taskBundles)
+        bundleTodos = try c.decode([BundleTodo].self,  forKey: .bundleTodos)
+        journalPages = try c.decode([JournalPage].self, forKey: .journalPages)
+        todos       = try c.decode([Todo].self,        forKey: .todos)
+        notes       = try c.decode([Note].self,        forKey: .notes)
+    }
 }
 
 struct AppDatabase {
@@ -111,14 +138,86 @@ struct AppDatabase {
             }
         }
 
+        migrator.registerMigration("v3") { db in
+            // Wipe in FK-dependency order (children first).
+            try db.execute(sql: "DELETE FROM note")
+            try db.execute(sql: "DELETE FROM todo")
+            try db.execute(sql: "DELETE FROM bundleTodo")
+            try db.execute(sql: "DELETE FROM journalPage")
+            try db.execute(sql: "DELETE FROM taskBundle")
+            try db.execute(sql: "DROP TABLE note")
+            try db.execute(sql: "DROP TABLE todo")
+            try db.execute(sql: "DROP TABLE bundleTodo")
+            try db.execute(sql: "DROP TABLE journalPage")
+            try db.execute(sql: "DROP TABLE taskBundle")
+
+            // category is new; todo loses groupName and gains categoryID;
+            // bundleTodo gains categoryID.
+            try db.create(table: "category") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("name", .text).notNull()
+                t.column("color", .text).notNull().defaults(to: "blue")
+                t.column("sortOrder", .integer).notNull().defaults(to: 0)
+            }
+
+            try db.create(table: "taskBundle") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("name", .text).notNull()
+                t.column("sortOrder", .integer).notNull().defaults(to: 0)
+                t.column("todosShouldMigrate", .boolean).notNull().defaults(to: true)
+            }
+
+            try db.create(table: "bundleTodo") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("bundleID", .integer).notNull()
+                    .references("taskBundle", onDelete: .cascade)
+                t.column("title", .text).notNull()
+                t.column("sortOrder", .integer).notNull().defaults(to: 0)
+                t.column("externalURL", .text)
+                t.column("categoryID", .integer)
+                    .references("category", onDelete: .setNull)
+            }
+
+            try db.create(table: "journalPage") { t in
+                t.autoIncrementedPrimaryKey("id")
+                // Stored as start-of-day in the local timezone; must be normalized
+                // before insert to ensure the unique constraint behaves correctly.
+                t.column("date", .datetime).notNull().unique()
+            }
+
+            try db.create(table: "todo") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("title", .text).notNull()
+                t.column("shouldMigrate", .boolean).notNull().defaults(to: true)
+                // Start-of-day timestamp for the day the todo was first created.
+                t.column("added", .datetime).notNull()
+                // JSON-encoded TodoEnding; NULL means still pending.
+                t.column("ending", .text)
+                t.column("categoryID", .integer)
+                    .references("category", onDelete: .setNull)
+                t.column("externalURL", .text)
+            }
+
+            try db.create(table: "note") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("pageID", .integer).notNull()
+                    .references("journalPage", onDelete: .cascade)
+                t.column("timestamp", .datetime).notNull()
+                t.column("text", .text)
+                t.column("relatedTodoID", .integer)
+                    .references("todo", onDelete: .setNull)
+            }
+        }
+
         try migrator.migrate(db)
     }
 
     func exportData() async throws -> Data {
         let snapshot = try await dbQueue.read { db in
             DatabaseExport(
-                version: 2,
+                version: 3,
                 exportedAt: Date(),
+                categories: try Category.order(Column("sortOrder")).fetchAll(db),
                 taskBundles: try TaskBundle.order(Column("id")).fetchAll(db),
                 bundleTodos: try BundleTodo.order(Column("id")).fetchAll(db),
                 journalPages: try JournalPage.order(Column("date")).fetchAll(db),
@@ -141,9 +240,11 @@ struct AppDatabase {
         try await dbQueue.write { db in
             try Note.deleteAll(db)
             try Todo.deleteAll(db)
-            try JournalPage.deleteAll(db)
             try BundleTodo.deleteAll(db)
+            try JournalPage.deleteAll(db)
             try TaskBundle.deleteAll(db)
+            try Category.deleteAll(db)
+            for var r in snapshot.categories   { try r.insert(db) }
             for var r in snapshot.taskBundles  { try r.insert(db) }
             for var r in snapshot.bundleTodos  { try r.insert(db) }
             for var r in snapshot.journalPages { try r.insert(db) }
@@ -156,9 +257,10 @@ struct AppDatabase {
         try await dbQueue.write { db in
             try Note.deleteAll(db)
             try Todo.deleteAll(db)
-            try JournalPage.deleteAll(db)
             try BundleTodo.deleteAll(db)
+            try JournalPage.deleteAll(db)
             try TaskBundle.deleteAll(db)
+            try Category.deleteAll(db)
             return
         }
     }

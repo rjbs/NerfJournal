@@ -82,11 +82,18 @@ final class BundleStore: ObservableObject {
         }
     }
 
-    func addTodo(title: String) async throws {
+    func addTodo(title: String, categoryID: Int64? = nil) async throws {
         guard let bundleID = selectedBundle?.id else { return }
         let nextOrder = (selectedBundleTodos.map(\.sortOrder).max() ?? -1) + 1
         try await db.dbQueue.write { db in
-            var todo = BundleTodo(id: nil, bundleID: bundleID, title: title, sortOrder: nextOrder, externalURL: nil)
+            var todo = BundleTodo(
+                id: nil,
+                bundleID: bundleID,
+                title: title,
+                sortOrder: nextOrder,
+                externalURL: nil,
+                categoryID: categoryID
+            )
             try todo.insert(db)
         }
         try await refreshTodos()
@@ -95,6 +102,16 @@ final class BundleStore: ObservableObject {
     func deleteTodo(_ todo: BundleTodo) async throws {
         try await db.dbQueue.write { db in
             try BundleTodo.filter(Column("id") == todo.id).deleteAll(db)
+            return
+        }
+        try await refreshTodos()
+    }
+
+    func setCategoryForTodo(_ todo: BundleTodo, categoryID: Int64?) async throws {
+        try await db.dbQueue.write { db in
+            try BundleTodo
+                .filter(Column("id") == todo.id)
+                .updateAll(db, [Column("categoryID").set(to: categoryID)])
             return
         }
         try await refreshTodos()

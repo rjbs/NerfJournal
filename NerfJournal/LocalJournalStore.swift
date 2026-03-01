@@ -120,7 +120,7 @@ final class LocalJournalStore: ObservableObject {
         try await refreshContents()
     }
 
-    func addTodo(title: String, shouldMigrate: Bool, groupName: String? = nil) async throws {
+    func addTodo(title: String, shouldMigrate: Bool, categoryID: Int64? = nil) async throws {
         guard page != nil else { return }
         let today = Self.startOfToday
         try await db.dbQueue.write { db in
@@ -130,7 +130,7 @@ final class LocalJournalStore: ObservableObject {
                 shouldMigrate: shouldMigrate,
                 added: today,
                 ending: nil,
-                groupName: groupName,
+                categoryID: categoryID,
                 externalURL: nil
             )
             try todo.insert(db)
@@ -178,16 +178,16 @@ final class LocalJournalStore: ObservableObject {
         try await refreshContents()
     }
 
-    func setGroup(_ groupName: String?, for todo: Todo, undoManager: UndoManager? = nil) async throws {
-        let oldGroupName = todo.groupName
+    func setCategory(_ categoryID: Int64?, for todo: Todo, undoManager: UndoManager? = nil) async throws {
+        let oldCategoryID = todo.categoryID
         try await db.dbQueue.write { db in
             try Todo
                 .filter(Column("id") == todo.id)
-                .updateAll(db, [Column("groupName").set(to: groupName)])
+                .updateAll(db, [Column("categoryID").set(to: categoryID)])
             return
         }
         undoManager?.registerUndo(withTarget: self) { store in
-            Task { @MainActor in try? await store.setGroup(oldGroupName, for: todo, undoManager: undoManager) }
+            Task { @MainActor in try? await store.setCategory(oldCategoryID, for: todo, undoManager: undoManager) }
         }
         try await refreshContents()
     }
@@ -201,7 +201,7 @@ final class LocalJournalStore: ObservableObject {
                 shouldMigrate: todo.shouldMigrate,
                 added: todo.added,
                 ending: todo.ending,
-                groupName: todo.groupName,
+                categoryID: todo.categoryID,
                 externalURL: todo.externalURL
             )
             try restored.insert(db)
@@ -226,7 +226,7 @@ final class LocalJournalStore: ObservableObject {
                     shouldMigrate: bundle.todosShouldMigrate,
                     added: today,
                     ending: nil,
-                    groupName: bundle.name,
+                    categoryID: bundleTodo.categoryID,
                     externalURL: bundleTodo.externalURL
                 )
                 try todo.insert(db)

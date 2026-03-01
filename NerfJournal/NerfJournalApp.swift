@@ -17,6 +17,7 @@ struct NerfJournalApp: App {
     @StateObject private var journalStore = LocalJournalStore()
     @StateObject private var diaryStore = DiaryStore()
     @StateObject private var bundleStore = BundleStore()
+    @StateObject private var categoryStore = CategoryStore()
 
     var body: some Scene {
         WindowGroup {
@@ -24,6 +25,7 @@ struct NerfJournalApp: App {
                 .environmentObject(diaryStore)
                 .environmentObject(journalStore)
                 .environmentObject(bundleStore)
+                .environmentObject(categoryStore)
                 .focusedSceneObject(journalStore)
         }
         .defaultSize(width: 700, height: 520)
@@ -35,6 +37,7 @@ struct NerfJournalApp: App {
         Window("Bundle Manager", id: "bundle-manager") {
             BundleManagerView()
                 .environmentObject(bundleStore)
+                .environmentObject(categoryStore)
         }
         .defaultSize(width: 600, height: 480)
     }

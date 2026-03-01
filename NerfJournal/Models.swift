@@ -1,5 +1,43 @@
 import Foundation
+import SwiftUI
 import GRDB
+
+enum CategoryColor: String, CaseIterable, Codable, DatabaseValueConvertible {
+    case blue, red, green, orange, purple, pink, teal, gray
+
+    var databaseValue: DatabaseValue { rawValue.databaseValue }
+
+    static func fromDatabaseValue(_ dbValue: DatabaseValue) -> CategoryColor? {
+        guard let s = String.fromDatabaseValue(dbValue) else { return nil }
+        return CategoryColor(rawValue: s)
+    }
+
+    var swatch: Color {
+        switch self {
+        case .blue:   return .blue
+        case .red:    return .red
+        case .green:  return .green
+        case .orange: return .orange
+        case .purple: return .purple
+        case .pink:   return .pink
+        case .teal:   return .teal
+        case .gray:   return .gray
+        }
+    }
+}
+
+struct Category: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
+    var id: Int64?
+    var name: String
+    var color: CategoryColor
+    var sortOrder: Int
+
+    static let databaseTableName = "category"
+
+    mutating func didInsert(_ inserted: InsertionSuccess) {
+        id = inserted.rowID
+    }
+}
 
 // NOTE: Named TaskBundle rather than Bundle to avoid shadowing Foundation.Bundle.
 struct TaskBundle: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
@@ -21,6 +59,7 @@ struct BundleTodo: Identifiable, Codable, FetchableRecord, MutablePersistableRec
     var title: String
     var sortOrder: Int
     var externalURL: String?
+    var categoryID: Int64?
 
     static let databaseTableName = "bundleTodo"
 
@@ -73,7 +112,7 @@ struct Todo: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
     var shouldMigrate: Bool
     var added: Date     // start-of-day timestamp when first created
     var ending: TodoEnding?
-    var groupName: String?
+    var categoryID: Int64?
     var externalURL: String?
 
     static let databaseTableName = "todo"
@@ -102,16 +141,9 @@ struct Note: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
 }
 
 extension [Todo] {
-    // Sort by groupName (named groups alphabetically, ungrouped last), then by
-    // insertion order (id) within each group.
+    // Sort by insertion order (id); cross-category ordering is done in the view
+    // using category.sortOrder.
     func sortedForDisplay() -> [Todo] {
-        sorted {
-            switch ($0.groupName, $1.groupName) {
-            case (nil, nil):   return ($0.id ?? 0) < ($1.id ?? 0)
-            case (nil, _):     return false
-            case (_, nil):     return true
-            case let (a?, b?): return a == b ? ($0.id ?? 0) < ($1.id ?? 0) : a < b
-            }
-        }
+        sorted { ($0.id ?? 0) < ($1.id ?? 0) }
     }
 }

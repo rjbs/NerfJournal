@@ -7,6 +7,7 @@ struct DiaryView: View {
     @EnvironmentObject private var diaryStore: DiaryStore
     @EnvironmentObject private var journalStore: LocalJournalStore
     @EnvironmentObject private var bundleStore: BundleStore
+    @EnvironmentObject private var categoryStore: CategoryStore
 
     @AppStorage("sidebarVisible") private var sidebarVisible = true
 
@@ -42,6 +43,7 @@ struct DiaryView: View {
             }
             try? await journalStore.load()
             try? await bundleStore.load()
+            try? await categoryStore.load()
         }
     }
 
@@ -141,6 +143,7 @@ struct DiaryView: View {
     private func startToday() {
         Task {
             try? await journalStore.startToday()
+            try? await categoryStore.load()
             try? await diaryStore.loadIndex()
             let today = Calendar.current.startOfDay(for: Date())
             try? await diaryStore.selectDate(today)
@@ -289,6 +292,7 @@ struct DayCell: View {
 struct DiaryPageDetailView: View {
     @EnvironmentObject private var journalStore: LocalJournalStore
     @EnvironmentObject private var bundleStore: BundleStore
+    @EnvironmentObject private var categoryStore: CategoryStore
     @Environment(\.openWindow) private var openWindow
 
     let date: Date
@@ -318,8 +322,8 @@ struct DiaryPageDetailView: View {
                     Text("No tasks recorded for this day.")
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(todoGroups, id: \.name) { group in
-                        Section(group.name ?? "Tasks") {
+                    ForEach(todoGroups, id: \.id) { group in
+                        Section {
                             ForEach(group.todos) { todo in
                                 TodoRow(
                                     todo: todo,
@@ -336,6 +340,8 @@ struct DiaryPageDetailView: View {
                                 )
                                 .tag(todo.id!)
                             }
+                        } header: {
+                            categoryHeader(group.category)
                         }
                     }
                     if !readOnly {
@@ -404,13 +410,42 @@ struct DiaryPageDetailView: View {
         ))
     }
 
-    private var todoGroups: [(name: String?, todos: [Todo])] {
-        let grouped = Dictionary(grouping: todos, by: \.groupName)
-        let named = grouped
-            .compactMap { key, value in key.map { (name: $0, todos: value) } }
-            .sorted { $0.name < $1.name }
-        let ungrouped = grouped[nil].map { [(name: nil as String?, todos: $0)] } ?? []
-        return named + ungrouped
+    @ViewBuilder
+    private func categoryHeader(_ category: Category?) -> some View {
+        if let category {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(category.color.swatch)
+                    .frame(width: 8, height: 8)
+                Text(category.name)
+            }
+        } else {
+            Text("Other")
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    // Groups todos by categoryID, sorted by category.sortOrder (uncategorized last).
+    // Todos with a categoryID that no longer has a matching category are folded into
+    // the "Other" bucket along with nil-categoryID todos.
+    private var todoGroups: [(id: String, category: Category?, todos: [Todo])] {
+        let grouped = Dictionary(grouping: todos, by: \.categoryID)
+        var named: [(id: String, category: Category?, todos: [Todo])] = []
+        var other: [Todo] = grouped[nil] ?? []
+
+        for (categoryID, groupTodos) in grouped {
+            guard let categoryID else { continue }
+            if let cat = categoryStore.categories.first(where: { $0.id == categoryID }) {
+                named.append((id: "\(categoryID)", category: cat, todos: groupTodos))
+            } else {
+                other.append(contentsOf: groupTodos)
+            }
+        }
+        named.sort { $0.category!.sortOrder < $1.category!.sortOrder }
+        if !other.isEmpty {
+            named.append((id: "other", category: nil, todos: other))
+        }
+        return named
     }
 
     private var textNotes: [Note] {
@@ -432,9 +467,8 @@ struct DiaryPageDetailView: View {
 
 struct TodoRow: View {
     @EnvironmentObject private var store: LocalJournalStore
+    @EnvironmentObject private var categoryStore: CategoryStore
     @Environment(\.undoManager) private var undoManager
-    @State private var showingNewGroupAlert = false
-    @State private var newGroupName = ""
     let todo: Todo
     var pageDate: Date = Calendar.current.startOfDay(for: Date())
     var readOnly: Bool = false
@@ -531,19 +565,18 @@ struct TodoRow: View {
                     }
                 }
 
-                Menu("Add to group") {
-                    ForEach(existingGroups, id: \.self) { group in
-                        Button(group) {
-                            Task { try? await store.setGroup(group, for: todo, undoManager: undoManager) }
-                        }
+                Picker("Category", selection: Binding(
+                    get: { todo.categoryID },
+                    set: { newID in
+                        Task { try? await store.setCategory(newID, for: todo, undoManager: undoManager) }
                     }
-                    if !existingGroups.isEmpty {
-                        Divider()
-                    }
-                    Button("New group\u{2026}") {
-                        showingNewGroupAlert = true
+                )) {
+                    Text("None").tag(nil as Int64?)
+                    ForEach(categoryStore.categories) { category in
+                        Text(category.name).tag(category.id as Int64?)
                     }
                 }
+                .pickerStyle(.inline)
 
                 Divider()
 
@@ -557,17 +590,6 @@ struct TodoRow: View {
             Button("Copy section as mrkdwn") {
                 copyGroupAsMrkdwn()
             }
-        }
-        .alert("New Group Name", isPresented: $showingNewGroupAlert) {
-            TextField("Group name", text: $newGroupName)
-            Button("Add") {
-                let name = newGroupName.trimmingCharacters(in: .whitespaces)
-                if !name.isEmpty {
-                    Task { try? await store.setGroup(name, for: todo, undoManager: undoManager) }
-                }
-                newGroupName = ""
-            }
-            Button("Cancel", role: .cancel) { newGroupName = "" }
         }
     }
 
@@ -633,13 +655,9 @@ struct TodoRow: View {
         }
     }
 
-    private var existingGroups: [String] {
-        Array(Set(store.todos.compactMap(\.groupName))).sorted()
-    }
-
     private func copyGroupAsMrkdwn() {
         let lines = store.todos
-            .filter { $0.groupName == todo.groupName }
+            .filter { $0.categoryID == todo.categoryID }
             .compactMap { t -> String? in
                 if t.isPending { return "* \(t.title)" }
                 if t.isDone    { return "* :white_check_mark: \(t.title)" }
