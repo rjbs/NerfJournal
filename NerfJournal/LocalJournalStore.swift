@@ -111,6 +111,7 @@ final class LocalJournalStore: ObservableObject {
             try Note
                 .filter(Column("relatedTodoID") == todo.id)
                 .deleteAll(db)
+            return
         }
         undoManager?.registerUndo(withTarget: self) { store in
             Task { @MainActor in try? await store.completeTodo(todo) }
@@ -123,6 +124,7 @@ final class LocalJournalStore: ObservableObject {
             try Todo
                 .filter(Column("id") == todo.id)
                 .updateAll(db, [Column("status").set(to: TodoStatus.abandoned)])
+            return
         }
         try await refreshContents()
     }
@@ -169,6 +171,7 @@ final class LocalJournalStore: ObservableObject {
             try Todo
                 .filter(Column("id") == todo.id)
                 .updateAll(db, [Column("status").set(to: status)])
+            return
         }
         undoManager?.registerUndo(withTarget: self) { store in
             Task { @MainActor in try? await store.setStatus(oldStatus, for: todo) }
@@ -179,6 +182,7 @@ final class LocalJournalStore: ObservableObject {
     func deleteTodo(_ todo: Todo, undoManager: UndoManager? = nil) async throws {
         try await db.dbQueue.write { db in
             try Todo.filter(Column("id") == todo.id).deleteAll(db)
+            return
         }
         undoManager?.registerUndo(withTarget: self) { store in
             Task { @MainActor in try? await store.restoreTodo(todo) }
@@ -192,6 +196,7 @@ final class LocalJournalStore: ObservableObject {
             try Todo
                 .filter(Column("id") == todo.id)
                 .updateAll(db, [Column("groupName").set(to: groupName)])
+            return
         }
         undoManager?.registerUndo(withTarget: self) { store in
             Task { @MainActor in try? await store.setGroup(oldGroupName, for: todo) }

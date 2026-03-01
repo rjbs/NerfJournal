@@ -137,6 +137,7 @@ struct AppDatabase {
             try JournalPage.deleteAll(db)
             try BundleTodo.deleteAll(db)
             try TaskBundle.deleteAll(db)
+            return
         }
     }
 }
