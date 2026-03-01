@@ -282,7 +282,7 @@ struct DiaryTodoRow: View {
         case .migrated:
             Image(systemName: "arrow.right.circle.fill")
                 .symbolRenderingMode(.palette)
-                .foregroundStyle(.white, Color.secondary)
+                .foregroundStyle(.white, Color.orange)
         default:
             Image(systemName: "circle")
                 .foregroundStyle(Color.secondary)
