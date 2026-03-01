@@ -100,8 +100,11 @@ for my $pi (0 .. $#DAYS) {
     @active = @still_active;
 
     # --- add new todos for this page ----------------------------------------
+    my %active_titles = map { $_->{title} => 1 } @active;
     my $new_count = 3 + int(rand 3);    # 3–5 fresh tasks per day
     for (1 .. $new_count) {
+        # Skip pool entries whose title is already carried over from a prior day.
+        ++$pool_i while $active_titles{ $POOL[$pool_i % @POOL][0] };
         my ($title, $group, $migrate) = @{ $POOL[$pool_i++ % @POOL] };
         my $cur_tid = $todo_id++;
         my $ending;
@@ -111,7 +114,7 @@ for my $pi (0 .. $#DAYS) {
         } elsif (!$migrate && rand() < 0.12) {
             $ending = { date => iso8601($page_ts + 3600), kind => 'abandoned' };
         } elsif ($migrate && rand() < 0.28) {
-            push @active, { id => $cur_tid, migrate => $migrate };
+            push @active, { id => $cur_tid, migrate => $migrate, title => $title };
         } else {
             $ending = { date => iso8601($page_ts + 3600), kind => 'done' };
         }
