@@ -547,6 +547,16 @@ struct TodoRow: View {
                     titleFieldFocused = true
                 }
             }
+
+            if let urlString = todo.externalURL,
+               let url = URL(string: urlString) {
+                Link(destination: url) {
+                    Image(systemName: "link")
+                        .foregroundStyle(.secondary)
+                }
+                .help(urlString)
+                .buttonStyle(.plain)
+            }
         }
         .padding(.vertical, 2)
         .contextMenu {

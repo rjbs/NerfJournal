@@ -107,6 +107,16 @@ final class BundleStore: ObservableObject {
         try await refreshTodos()
     }
 
+    func setURLForTodo(_ todo: BundleTodo, url: String?) async throws {
+        try await db.dbQueue.write { db in
+            try BundleTodo
+                .filter(Column("id") == todo.id)
+                .updateAll(db, [Column("externalURL").set(to: url)])
+            return
+        }
+        try await refreshTodos()
+    }
+
     func setCategoryForTodo(_ todo: BundleTodo, categoryID: Int64?) async throws {
         try await db.dbQueue.write { db in
             try BundleTodo

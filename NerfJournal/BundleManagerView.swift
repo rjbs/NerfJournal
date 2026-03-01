@@ -195,6 +195,10 @@ struct BundleDetailView: View {
     @State private var newTodoTitle = ""
     @FocusState private var addFieldFocused: Bool
 
+    @State private var todoToSetURL: BundleTodo? = nil
+    @State private var urlText = ""
+    @State private var showingInvalidURLAlert = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline) {
@@ -217,28 +221,47 @@ struct BundleDetailView: View {
                 ForEach(bundleTodoGroups, id: \.id) { group in
                     Section {
                         ForEach(group.todos) { todo in
-                            Text(todo.title)
-                                .padding(.vertical, 2)
-                                .contextMenu {
-                                    Picker("Category", selection: Binding(
-                                        get: { todo.categoryID },
-                                        set: { newID in
-                                            Task { try? await bundleStore.setCategoryForTodo(todo, categoryID: newID) }
-                                        }
-                                    )) {
-                                        Text("None").tag(nil as Int64?)
-                                        ForEach(categoryStore.categories) { category in
-                                            Text(category.name).tag(category.id as Int64?)
-                                        }
+                            HStack {
+                                Text(todo.title)
+                                Spacer()
+                                if let urlString = todo.externalURL,
+                                   let url = URL(string: urlString) {
+                                    Link(destination: url) {
+                                        Image(systemName: "link")
+                                            .foregroundStyle(.secondary)
                                     }
-                                    .pickerStyle(.inline)
-
-                                    Divider()
-
-                                    Button("Delete", role: .destructive) {
-                                        Task { try? await bundleStore.deleteTodo(todo) }
+                                    .help(urlString)
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.vertical, 2)
+                            .contextMenu {
+                                Picker("Category", selection: Binding(
+                                    get: { todo.categoryID },
+                                    set: { newID in
+                                        Task { try? await bundleStore.setCategoryForTodo(todo, categoryID: newID) }
+                                    }
+                                )) {
+                                    Text("None").tag(nil as Int64?)
+                                    ForEach(categoryStore.categories) { category in
+                                        Text(category.name).tag(category.id as Int64?)
                                     }
                                 }
+                                .pickerStyle(.inline)
+
+                                Divider()
+
+                                Button("Set URL\u{2026}") {
+                                    urlText = todo.externalURL ?? ""
+                                    todoToSetURL = todo
+                                }
+
+                                Divider()
+
+                                Button("Delete", role: .destructive) {
+                                    Task { try? await bundleStore.deleteTodo(todo) }
+                                }
+                            }
                         }
                         .onMove { offsets, destination in
                             Task { try? await bundleStore.moveTodosInGroup(group.todos, from: offsets, to: destination) }
@@ -254,7 +277,38 @@ struct BundleDetailView: View {
                         .onSubmit { submitNewTodo() }
                 }
             }
+            .alert("Set URL", isPresented: Binding(
+                get: { todoToSetURL != nil },
+                set: { if !$0 { todoToSetURL = nil } }
+            )) {
+                TextField("URL", text: $urlText)
+                Button("Set") { commitURL() }
+                Button("Cancel", role: .cancel) {
+                    todoToSetURL = nil
+                    urlText = ""
+                }
+            }
+            .alert("Invalid URL", isPresented: $showingInvalidURLAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Please enter a valid URL (e.g. https://example.com) or clear the field to remove the URL.")
+            }
         }
+    }
+
+    private func commitURL() {
+        guard let todo = todoToSetURL else { return }
+        let trimmed = urlText.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty {
+            Task { try? await bundleStore.setURLForTodo(todo, url: nil) }
+        } else if URL(string: trimmed)?.scheme != nil {
+            Task { try? await bundleStore.setURLForTodo(todo, url: trimmed) }
+        } else {
+            showingInvalidURLAlert = true
+            return
+        }
+        todoToSetURL = nil
+        urlText = ""
     }
 
     @ViewBuilder
