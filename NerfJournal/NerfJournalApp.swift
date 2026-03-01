@@ -2,12 +2,17 @@ import SwiftUI
 
 struct TodoCommands: Commands {
     @FocusedValue(\.focusAddTodo) var focusAddTodo: Binding<Bool>?
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
             Button("Add Todo") { focusAddTodo?.wrappedValue = true }
                 .keyboardShortcut("n", modifiers: .command)
                 .disabled(focusAddTodo == nil)
+        }
+        CommandGroup(after: .windowArrangement) {
+            Button("Open Work Diary") { openWindow(id: "diary") }
+                .keyboardShortcut("1", modifiers: .command)
         }
     }
 }
@@ -20,7 +25,7 @@ struct NerfJournalApp: App {
     @StateObject private var categoryStore = CategoryStore()
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(id: "diary") {
             DiaryView()
                 .environmentObject(diaryStore)
                 .environmentObject(journalStore)
