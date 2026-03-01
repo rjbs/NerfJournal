@@ -229,7 +229,7 @@ final class LocalJournalStore: ObservableObject {
             .filter { $0.groupName == groupName }
             .sorted { $0.sortOrder < $1.sortOrder }
         groupTodos.move(fromOffsets: offsets, toOffset: destination)
-        try await db.dbQueue.write { db in
+        try await db.dbQueue.write { [groupTodos] db in
             for (index, todo) in groupTodos.enumerated() {
                 try Todo
                     .filter(Column("id") == todo.id)
