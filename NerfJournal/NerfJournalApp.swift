@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TodoCommands: Commands {
     @FocusedValue(\.focusAddTodo) var focusAddTodo: Binding<Bool>?
+    @FocusedObject var diaryStore: DiaryStore?
     @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
@@ -9,6 +10,14 @@ struct TodoCommands: Commands {
             Button("Add Todo") { focusAddTodo?.wrappedValue = true }
                 .keyboardShortcut("n", modifiers: .command)
                 .disabled(focusAddTodo == nil)
+        }
+        CommandGroup(after: .newItem) {
+            Button("Go to Today") {
+                let today = Calendar.current.startOfDay(for: Date())
+                Task { try? await diaryStore?.selectDate(today) }
+            }
+            .keyboardShortcut("t", modifiers: .command)
+            .disabled(diaryStore == nil)
         }
         CommandGroup(after: .windowArrangement) {
             Button("Open Work Diary") { openWindow(id: "diary") }
@@ -32,6 +41,7 @@ struct NerfJournalApp: App {
                 .environmentObject(bundleStore)
                 .environmentObject(categoryStore)
                 .focusedSceneObject(journalStore)
+                .focusedSceneObject(diaryStore)
         }
         .defaultSize(width: 700, height: 520)
         .commands {
