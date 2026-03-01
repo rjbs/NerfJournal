@@ -265,22 +265,22 @@ struct DayCell: View {
 
     var body: some View {
         Button(action: onTap) {
-            VStack(spacing: 2) {
-                Text("\(Calendar.current.component(.day, from: date))")
-                    .font(.system(.callout))
-                    .fontWeight(isToday ? .semibold : .regular)
-                    .frame(width: 26, height: 26)
-                    .background(Circle().fill(isSelected ? Color.accentColor : Color.clear))
-                    .foregroundStyle(isSelected ? Color.white : .primary)
-
-                Circle()
-                    .fill(hasEntry && !isSelected ? Color.accentColor : Color.clear)
-                    .frame(width: 4, height: 4)
-            }
+            Text("\(Calendar.current.component(.day, from: date))")
+                .font(.system(.callout))
+                .fontWeight(isToday ? .semibold : .regular)
+                .frame(width: 26, height: 26)
+                .background(Circle().fill(circleColor))
+                .foregroundStyle(isSelected ? Color.white : .primary)
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
         .padding(.vertical, 1)
+    }
+
+    private var circleColor: Color {
+        if isSelected  { return Color.accentColor }
+        if hasEntry    { return Color.accentColor.opacity(0.15) }
+        return Color.clear
     }
 }
 
