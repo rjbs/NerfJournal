@@ -257,7 +257,7 @@ final class LocalJournalStore: ObservableObject {
                     shouldMigrate: bundle.todosShouldMigrate,
                     status: .pending,
                     sortOrder: nextOrder + index,
-                    groupName: nil,
+                    groupName: bundle.name,
                     externalURL: bundleTodo.externalURL,
                     firstAddedDate: today
                 )
