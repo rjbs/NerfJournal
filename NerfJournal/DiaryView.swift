@@ -576,15 +576,17 @@ struct TodoRow: View {
     private var statusIcon: some View {
         let shape = todo.shouldMigrate ? "circle" : "square"
         switch rowState {
-        case .doneToday, .migratedResolved(.done, _):
+        case .doneToday:
             Image(systemName: "checkmark.\(shape).fill")
                 .symbolRenderingMode(.palette)
                 .foregroundStyle(.white, Color.green)
-        case .abandonedToday, .migratedResolved(.abandoned, _):
+        case .abandonedToday:
             Image(systemName: "xmark.\(shape).fill")
                 .symbolRenderingMode(.palette)
                 .foregroundStyle(.white, Color(white: 0.4))
-        case .migratedOpen:
+        case .migratedOpen, .migratedResolved:
+            // On this past page the task was still open, regardless of how it
+            // eventually resolved; the arrow conveys "carried forward".
             Image(systemName: "arrow.right.\(shape).fill")
                 .symbolRenderingMode(.palette)
                 .foregroundStyle(.white, Color.orange)
@@ -609,18 +611,22 @@ struct TodoRow: View {
     }
 
     private var captionText: String? {
+        let cal = Calendar.current
+        func daysCarried() -> Int {
+            let addedDay = cal.startOfDay(for: todo.added)
+            let pageDay  = cal.startOfDay(for: pageDate)
+            return cal.dateComponents([.day], from: addedDay, to: pageDay).day ?? 0
+        }
         switch rowState {
-        case .pending:
-            let addedDay = Calendar.current.startOfDay(for: todo.added)
-            let pageDay  = Calendar.current.startOfDay(for: pageDate)
-            let days = Calendar.current.dateComponents([.day], from: addedDay, to: pageDay).day ?? 0
+        case .pending, .doneToday:
+            let days = daysCarried()
             return days > 0 ? "Carried over \u{b7} \(days) day\(days == 1 ? "" : "s") ago" : nil
         case .migratedOpen:
             return "Still open"
         case .migratedResolved(let kind, let date):
-            let pageDay  = Calendar.current.startOfDay(for: pageDate)
-            let endedDay = Calendar.current.startOfDay(for: date)
-            let days = Calendar.current.dateComponents([.day], from: pageDay, to: endedDay).day ?? 0
+            let pageDay  = cal.startOfDay(for: pageDate)
+            let endedDay = cal.startOfDay(for: date)
+            let days = cal.dateComponents([.day], from: pageDay, to: endedDay).day ?? 0
             let action = kind == .done ? "Done" : "Abandoned"
             return "\(action) \(days) day\(days == 1 ? "" : "s") later"
         default:
