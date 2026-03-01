@@ -43,22 +43,17 @@ final class DiaryStore: ObservableObject {
 
     func selectDate(_ date: Date) async throws {
         let start = Calendar.current.startOfDay(for: date)
-        selectedDate = start
 
-        let foundPage = try await db.dbQueue.read { db in
-            try JournalPage
+        // Fetch everything in one read so all published properties can be
+        // updated synchronously below — SwiftUI then coalesces them into a
+        // single view pass instead of animating through intermediate states.
+        let (foundPage, allTodos, notes) = try await db.dbQueue.read { db in
+            let page = try JournalPage
                 .filter(Column("date") == start)
                 .fetchOne(db)
-        }
-        selectedPage = foundPage
-
-        guard let pageID = foundPage?.id else {
-            selectedTodos = []
-            selectedNotes = []
-            return
-        }
-
-        let (allTodos, notes) = try await db.dbQueue.read { db in
+            guard let pageID = page?.id else {
+                return (page, [Todo](), [Note]())
+            }
             let t = try Todo
                 .filter(Column("added") <= start)
                 .fetchAll(db)
@@ -66,8 +61,11 @@ final class DiaryStore: ObservableObject {
                 .filter(Column("pageID") == pageID)
                 .order(Column("timestamp"))
                 .fetchAll(db)
-            return (t, n)
+            return (page, t, n)
         }
+
+        selectedDate = start
+        selectedPage = foundPage
         // Visible on this day: added on or before it, and ended on or after it
         // (or not yet ended).
         selectedTodos = allTodos
