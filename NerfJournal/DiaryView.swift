@@ -552,6 +552,8 @@ struct TodoRow: View {
                 }
             }
 
+            Spacer()
+
             if let urlString = todo.externalURL,
                let url = URL(string: urlString) {
                 Link(destination: url) {
