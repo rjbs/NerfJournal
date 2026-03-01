@@ -197,6 +197,7 @@ struct BundleDetailView: View {
 
     @State private var todoToSetURL: BundleTodo? = nil
     @State private var urlText = ""
+    @State private var showingSetURLAlert = false
     @State private var showingInvalidURLAlert = false
 
     var body: some View {
@@ -252,8 +253,10 @@ struct BundleDetailView: View {
                                 Divider()
 
                                 Button("Set URL\u{2026}") {
-                                    urlText = todo.externalURL ?? ""
-                                    todoToSetURL = todo
+                                    let current = bundleStore.selectedBundleTodos.first { $0.id == todo.id } ?? todo
+                                    urlText = current.externalURL ?? ""
+                                    todoToSetURL = current
+                                    showingSetURLAlert = true
                                 }
 
                                 Divider()
@@ -277,10 +280,7 @@ struct BundleDetailView: View {
                         .onSubmit { submitNewTodo() }
                 }
             }
-            .alert("Set URL", isPresented: Binding(
-                get: { todoToSetURL != nil },
-                set: { if !$0 { todoToSetURL = nil } }
-            )) {
+            .alert("Set URL", isPresented: $showingSetURLAlert) {
                 TextField("URL", text: $urlText)
                 Button("Set") { commitURL() }
                 Button("Cancel", role: .cancel) {
