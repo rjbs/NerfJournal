@@ -75,6 +75,12 @@ Roughly in priority order:
 - Notes UI (view and add notes on a page)
 - Work diary view (read-only log of past pages)
 
+**Deferred / needs design**
+- Calendar-aware migration routing: a todo could specify which days of
+  the week it migrates to, so e.g. a Friday work task carries to Monday
+  rather than Saturday, while a personal task carries to Saturday.
+  Likely expressed as a property on the todo or its source bundle.
+
 **Medium term**
 - Slack integration: post today's one-off todos to a configured channel
   at the start of the day; individual items can be marked private to
