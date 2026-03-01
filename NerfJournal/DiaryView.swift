@@ -381,21 +381,20 @@ struct DiaryPageDetailView: View {
             .onChange(of: selectedTodoID) { _, _ in editingTodoID = nil }
         }
         .toolbar {
-            if !readOnly {
-                ToolbarItem {
-                    Menu {
-                        ForEach(bundleStore.bundles) { bundle in
-                            Button("Apply \u{201c}\(bundle.name)\u{201d}") {
-                                Task { try? await journalStore.applyBundle(bundle) }
-                            }
+            ToolbarItem {
+                Menu {
+                    ForEach(bundleStore.bundles) { bundle in
+                        Button("Apply \u{201c}\(bundle.name)\u{201d}") {
+                            Task { try? await journalStore.applyBundle(bundle) }
                         }
-                        Divider()
-                        Button("Show Bundle Manager") {
-                            openWindow(id: "bundle-manager")
-                        }
-                    } label: {
-                        Image(systemName: "square.stack")
+                        .disabled(readOnly)
                     }
+                    Divider()
+                    Button("Show Bundle Manager") {
+                        openWindow(id: "bundle-manager")
+                    }
+                } label: {
+                    Image(systemName: "square.stack")
                 }
             }
         }
