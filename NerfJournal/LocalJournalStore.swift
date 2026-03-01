@@ -205,15 +205,7 @@ final class LocalJournalStore: ObservableObject {
     private func restoreTodo(_ todo: Todo) async throws {
         guard page != nil else { return }
         try await db.dbQueue.write { db in
-            var restored = Todo(
-                id: nil,
-                title: todo.title,
-                shouldMigrate: todo.shouldMigrate,
-                added: todo.added,
-                ending: todo.ending,
-                categoryID: todo.categoryID,
-                externalURL: todo.externalURL
-            )
+            var restored = todo
             try restored.insert(db)
         }
         try await refreshContents()
