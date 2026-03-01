@@ -192,6 +192,16 @@ final class LocalJournalStore: ObservableObject {
         try await refreshContents()
     }
 
+    func setURL(_ url: String?, for todo: Todo) async throws {
+        try await db.dbQueue.write { db in
+            try Todo
+                .filter(Column("id") == todo.id)
+                .updateAll(db, [Column("externalURL").set(to: url)])
+            return
+        }
+        try await refreshContents()
+    }
+
     private func restoreTodo(_ todo: Todo) async throws {
         guard page != nil else { return }
         try await db.dbQueue.write { db in

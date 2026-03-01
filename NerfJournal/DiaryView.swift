@@ -483,6 +483,10 @@ struct TodoRow: View {
     @State private var editTitle = ""
     @FocusState private var titleFieldFocused: Bool
 
+    @State private var showingSetURLAlert = false
+    @State private var urlText = ""
+    @State private var showingInvalidURLAlert = false
+
     // The display state of this todo relative to the page it is shown on.
     private enum RowState {
         case pending                                 // open on today's page
@@ -594,6 +598,13 @@ struct TodoRow: View {
 
                 Divider()
 
+                Button("Set URL\u{2026}") {
+                    urlText = todo.externalURL ?? ""
+                    showingSetURLAlert = true
+                }
+
+                Divider()
+
                 Button("Delete", role: .destructive) {
                     Task { try? await store.deleteTodo(todo, undoManager: undoManager) }
                 }
@@ -605,6 +616,29 @@ struct TodoRow: View {
                 copyGroupAsMrkdwn()
             }
         }
+        .alert("Set URL", isPresented: $showingSetURLAlert) {
+            TextField("URL", text: $urlText)
+            Button("Set") { commitURL() }
+            Button("Cancel", role: .cancel) { urlText = "" }
+        }
+        .alert("Invalid URL", isPresented: $showingInvalidURLAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Please enter a valid URL (e.g. https://example.com) or clear the field to remove the URL.")
+        }
+    }
+
+    private func commitURL() {
+        let trimmed = urlText.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty {
+            Task { try? await store.setURL(nil, for: todo) }
+        } else if URL(string: trimmed)?.scheme != nil {
+            Task { try? await store.setURL(trimmed, for: todo) }
+        } else {
+            showingInvalidURLAlert = true
+            return
+        }
+        urlText = ""
     }
 
     @ViewBuilder
