@@ -8,7 +8,7 @@ struct DiaryView: View {
     @EnvironmentObject private var journalStore: LocalJournalStore
     @EnvironmentObject private var bundleStore: BundleStore
 
-    @State private var sidebarVisible = true
+    @AppStorage("sidebarVisible") private var sidebarVisible = true
 
     var body: some View {
         Group {
