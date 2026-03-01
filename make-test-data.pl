@@ -6,11 +6,13 @@
 #
 # Produces 14 journal pages spread across the last 30 days, ending today.
 # Each task is a single todo record with an "added" date and an optional
-# "ending" (done or abandoned with a timestamp). A note is created on the
-# page where a task was completed. Todos with no ending are still-pending at
-# the close of the generated data. Output is deterministic (fixed srand seed)
-# so you get the same task assignments on every run.
+# "ending" (done or abandoned with a timestamp). Each page gets 0–2 freeform
+# notes drawn from a pool, timestamped at random times during the workday.
+# Todos with no ending are still-pending at the close of the generated data.
+# Output is deterministic (fixed srand seed) so you get the same assignments
+# on every run.
 
+use utf8;
 use strict;
 use warnings;
 use POSIX       qw(strftime);
@@ -55,6 +57,30 @@ my @POOL = (
     [ 'Schedule 1:1 with Bob',         'Meetings',    0 ],
     [ 'Post-mortem writeup',           undef,         1 ],
     [ 'Set up new dev environment',    'Engineering', 1 ],
+);
+
+# Freeform note text pool. Each page gets 0–2 notes drawn from this list.
+my @NOTE_POOL = (
+    'Build is broken on main — blocked until CI goes green.',
+    'Way more scope than expected. Splitting into two tickets.',
+    'Found the root cause: stale cache entry. Fixed.',
+    'Pushed a workaround; will clean up properly later.',
+    'Pairing with Alice was helpful — got unstuck.',
+    'Sync with ops about the deploy window: Thursday afternoon.',
+    'Quick check-in with Bob, realigned on priorities.',
+    'Waiting on legal to review before we can ship.',
+    'Meeting ran long, pushed afternoon items to tomorrow.',
+    'Lost most of the morning to Slack fires.',
+    'Good session — found a cleaner solution than expected.',
+    'Need to follow up with infra team about the quota increase.',
+    'Turns out we already have a library for this.',
+    'Blocked on staging access. Ticket filed.',
+    'Deployment went smoothly.',
+    'Had to roll back — something off in prod. Investigating.',
+    'Documented the edge case in the PR description.',
+    'Interruption-heavy day; less done than hoped.',
+    'Got a second opinion from the platform team — on the right track.',
+    'Finished earlier than expected and pulled in the next item.',
 );
 
 # -- helpers -----------------------------------------------------------------
@@ -147,6 +173,21 @@ for my $pi (0 .. $#DAYS) {
                 relatedTodoID => $cur_tid,
             };
         }
+    }
+
+    # --- add freeform notes for this page -----------------------------------
+    # 0 notes ~40% of the time, 1 note ~40%, 2 notes ~20%.
+    my $note_count = (rand() < 0.40) ? 0 : (rand() < 0.67) ? 1 : 2;
+    for (1 .. $note_count) {
+        # Random time during a notional 9am–5pm workday.
+        my $note_ts = $page_ts + 9 * 3600 + int(rand(8 * 3600));
+        push @notes_out, {
+            id            => $note_id++,
+            pageID        => $cur_pid,
+            timestamp     => iso8601($note_ts),
+            text          => $NOTE_POOL[ int(rand @NOTE_POOL) ],
+            relatedTodoID => undef,
+        };
     }
 }
 
