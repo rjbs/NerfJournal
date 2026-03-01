@@ -214,7 +214,7 @@ struct DiaryPageDetailView: View {
                     ForEach(todoGroups, id: \.name) { group in
                         Section(group.name ?? "Tasks") {
                             ForEach(group.todos) { todo in
-                                TodoRow(todo: todo, readOnly: true)
+                                TodoRow(todo: todo, pageDate: date, readOnly: true)
                             }
                         }
                     }

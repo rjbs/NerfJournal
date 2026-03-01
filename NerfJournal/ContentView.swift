@@ -42,7 +42,7 @@ struct ContentView: View {
             ForEach(todoGroups, id: \.name) { group in
                 Section(group.name ?? "Tasks") {
                     ForEach(group.todos) { todo in
-                        TodoRow(todo: todo)
+                        TodoRow(todo: todo, pageDate: store.page?.date ?? Date())
                     }
                     .onMove { offsets, destination in
                         Task {
@@ -90,6 +90,7 @@ struct TodoRow: View {
     @State private var showingNewGroupAlert = false
     @State private var newGroupName = ""
     let todo: Todo
+    var pageDate: Date = Calendar.current.startOfDay(for: Date())
     var readOnly: Bool = false
 
     var body: some View {
@@ -202,9 +203,8 @@ struct TodoRow: View {
     }
 
     private var daysCarried: Int {
-        let today = Calendar.current.startOfDay(for: Date())
         let added = Calendar.current.startOfDay(for: todo.firstAddedDate)
-        return Calendar.current.dateComponents([.day], from: added, to: today).day ?? 0
+        return Calendar.current.dateComponents([.day], from: added, to: pageDate).day ?? 0
     }
 
     private var existingGroups: [String] {
