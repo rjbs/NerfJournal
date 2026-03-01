@@ -24,58 +24,71 @@ abandoned (struck through).
 
 ## Data Model
 
-**JournalPage** — one per calendar day. Created manually with "Start
-Today", which closes out the previous page.
+**JournalPage** — one per calendar day. Created when you press "Start
+Today".
 
-**Todo** — a task on a page. Key fields:
-- `shouldMigrate`: if true and left pending at day-close, a fresh copy
-  appears on tomorrow's page. If false, it's marked abandoned.
-- `status`: `pending`, `done`, `abandoned`, or `migrated`.
-- `firstAddedDate`: the date this task was *originally* added, carried
-  forward across migrations. Shows how long a task has been deferred.
-- `groupName`: used for display grouping; set automatically when a todo
-  is instantiated from a Bundle.
+**Todo** — a task. A todo is not duplicated across pages; it is visible
+on any day from its `added` date until it ends. Key fields:
+- `shouldMigrate`: if true, the todo carries forward indefinitely until
+  completed or explicitly abandoned. If false, pressing "Start Today"
+  automatically abandons it.
+- `added`: the date the task was first created.
+- `ending`: nil if still pending; otherwise a `TodoEnding` with a `date`
+  and `kind` (`.done` or `.abandoned`).
+- `categoryID`: optional FK to a `Category` for display grouping.
+- `externalURL`: optional URL, shown as a clickable link icon on the row.
 
-**Note** — a timestamped log entry on a page. Can be freeform text, or
-a system event (like task completion) linked back to a Todo via
-`relatedTodoID`. Completing a todo automatically creates a Note.
+**Category** — a named, colored grouping. Fields: `name`,
+`color` (one of eight named swatches: blue, red, green, orange, purple,
+pink, teal, yellow), `sortOrder`. Todos on a page are grouped by
+category, sorted by `sortOrder`, with uncategorized todos in an "Other"
+section at the end.
 
-**TaskBundle** — a named collection of todos that can be applied to a
-page all at once. Examples: "Daily" (applied every work day), "Monday"
-(applied on Mondays), "Sprint Start". Each bundle has a
-`todosShouldMigrate` flag that determines carryover behavior for all
-its todos.
+**Note** — a timestamped freeform text entry attached to a page.
 
-**BundleTodo** — one item within a TaskBundle.
+**TaskBundle** — a named collection of todos that can be applied to
+today's page all at once. Examples: "Daily", "Sprint Start", "On-Call
+Handoff". Has a `todosShouldMigrate` flag that sets `shouldMigrate` on
+all todos it creates.
+
+**BundleTodo** — one item within a TaskBundle. Has `categoryID` and
+`externalURL`, both carried over to the live Todo when the bundle is
+applied.
 
 ## Architecture
 
 - **`AppDatabase`** — wraps a GRDB `DatabaseQueue`, owns the SQLite
-  file at `~/Library/Application Support/NerfJournal/journal.sqlite`,
-  and runs schema migrations.
+  file, and runs schema migrations. The file lives under the app's
+  sandbox container:
+  `~/Library/Containers/<bundle-id>/Data/Library/Application Support/journal.sqlite`
 - **`LocalJournalStore`** — `@MainActor ObservableObject` that
-  publishes the current (most recent) page's todos and notes, and
-  exposes mutating actions: start today, complete/uncomplete/abandon
-  todo, add todo, move todos, rename todo, apply bundle. The day-start
-  logic runs atomically: previous page todos are migrated/abandoned and
-  carried-over items are inserted on the new page in one transaction.
+  publishes the current page's todos and notes, and exposes mutating
+  actions: start today, complete/uncomplete/abandon/mark-pending todo,
+  add todo, delete todo, rename todo, set category, set URL, apply
+  bundle. "Start Today" creates a new page and abandons any pending
+  non-migratable todos from before today in one atomic transaction.
 - **`DiaryStore`** — `@MainActor ObservableObject` that indexes all
   pages and provides read-only access to any past page's todos and
   notes. Drives the calendar sidebar's highlighted dates.
 - **`BundleStore`** — `@MainActor ObservableObject` that manages
   TaskBundles and their BundleTodos.
-- **`DiaryView`** — the main window. A calendar sidebar (toggleable,
-  state persisted, window expands left when shown into a narrow window)
-  sits beside a detail pane. The most recent page is editable via
+- **`CategoryStore`** — `@MainActor ObservableObject` that manages
+  Categories: add, delete, rename, recolor, reorder.
+- **`DiaryView`** — the main window. A calendar sidebar (toggleable)
+  sits beside a detail pane. Today's page is editable via
   `LocalJournalStore`; older pages are shown read-only from
-  `DiaryStore`. Keyboard navigation: arrow keys select rows, Return
-  edits a title, cmd-Return toggles done/pending, cmd-N focuses the
-  add-todo field.
-- **`BundleManagerView`** — a separate window for creating and editing
-  bundles. Bundles can be applied to today's page from a toolbar menu
-  in the main window.
+  `DiaryStore`. Todos are grouped by category. Keyboard navigation:
+  arrow keys select rows, Return edits a title, Cmd-Return toggles
+  done/pending, Escape deselects, Cmd-N focuses the add-todo field,
+  Cmd-T jumps to today.
+- **`BundleManagerView`** — a separate window for managing bundles and
+  categories. The left panel is split: bundles on top, categories below
+  (drag to reorder, color and name editable via context menu). The right
+  panel shows the selected bundle's todos, grouped by category, with
+  drag-to-reorder within each group. Bundles are applied to today's page
+  from a toolbar menu in the main window.
 
-Storage is local SQLite only. No iCloud sync or server component yet.
+Storage is local SQLite only. No iCloud sync or server component.
 
 ## Future Plans
 
@@ -90,7 +103,6 @@ Roughly in priority order:
 - Calendar-aware migration routing: a todo could specify which days of
   the week it migrates to, so e.g. a Friday work task carries to Monday
   rather than Saturday, while a personal task carries to Saturday.
-  Likely expressed as a property on the todo or its source bundle.
 
 **Medium term**
 - Slack integration: post today's one-off todos to a configured channel
@@ -102,8 +114,6 @@ Roughly in priority order:
 **Longer term**
 - Linear sprint integration: show your current sprint, pick tasks to add
   as todos
-- External ticket linking: associate a todo with a Linear, GitHub, or
-  GitLab issue URL
 - Notion publishing: generate a "work diary" page summarizing a day's
   page and post it to a configured Notion database
 - Server sync: a small personal server component to allow other agents
@@ -115,5 +125,5 @@ Requires macOS 14+, Xcode 15+. Uses [GRDB](https://github.com/groue/GRDB.swift)
 for local persistence, added as a Swift Package dependency. No other
 external dependencies.
 
-No App Sandbox. TCC still gates any future permissions
-(Reminders, Contacts, etc.) via the generated Info.plist.
+The app is sandboxed. Set your Development Team in Xcode's Signing &
+Capabilities tab before building.
