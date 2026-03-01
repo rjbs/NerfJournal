@@ -40,32 +40,51 @@ struct JournalPage: Identifiable, Codable, FetchableRecord, MutablePersistableRe
     }
 }
 
-enum TodoStatus: String, Codable, DatabaseValueConvertible {
-    case pending, done, abandoned, migrated
+// Completion or abandonment record. Stored as a JSON string in SQLite
+// (via DatabaseValueConvertible); encoded as a nested object in export JSON
+// (via Codable). These are distinct code paths with no conflict.
+struct TodoEnding: Codable, DatabaseValueConvertible {
+    enum Kind: String, Codable { case done, abandoned }
+    var date: Date
+    var kind: Kind
 
-    var databaseValue: DatabaseValue { rawValue.databaseValue }
+    var databaseValue: DatabaseValue {
+        let enc = JSONEncoder()
+        enc.dateEncodingStrategy = .iso8601
+        let data = try! enc.encode(self)
+        return String(data: data, encoding: .utf8)!.databaseValue
+    }
 
-    static func fromDatabaseValue(_ dbValue: DatabaseValue) -> TodoStatus? {
-        String.fromDatabaseValue(dbValue).flatMap(Self.init(rawValue:))
+    static func fromDatabaseValue(_ dbValue: DatabaseValue) -> TodoEnding? {
+        guard let s = String.fromDatabaseValue(dbValue),
+              let d = s.data(using: .utf8) else { return nil }
+        let dec = JSONDecoder()
+        dec.dateDecodingStrategy = .iso8601
+        return try? dec.decode(TodoEnding.self, from: d)
     }
 }
 
+// A todo spans journal pages naturally: it is visible on any day from its
+// `added` date until the day it ends. No per-page duplication; "migration"
+// is an emergent display property, not a status value.
 struct Todo: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
     var id: Int64?
-    var pageID: Int64
     var title: String
     var shouldMigrate: Bool
-    var status: TodoStatus
-    var sortOrder: Int
+    var added: Date     // start-of-day timestamp when first created
+    var ending: TodoEnding?
     var groupName: String?
     var externalURL: String?
-    var firstAddedDate: Date
 
     static let databaseTableName = "todo"
 
     mutating func didInsert(_ inserted: InsertionSuccess) {
         id = inserted.rowID
     }
+
+    var isPending:   Bool { ending == nil }
+    var isDone:      Bool { ending?.kind == .done }
+    var isAbandoned: Bool { ending?.kind == .abandoned }
 }
 
 struct Note: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
@@ -79,5 +98,20 @@ struct Note: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
 
     mutating func didInsert(_ inserted: InsertionSuccess) {
         id = inserted.rowID
+    }
+}
+
+extension [Todo] {
+    // Sort by groupName (named groups alphabetically, ungrouped last), then by
+    // insertion order (id) within each group.
+    func sortedForDisplay() -> [Todo] {
+        sorted {
+            switch ($0.groupName, $1.groupName) {
+            case (nil, nil):   return ($0.id ?? 0) < ($1.id ?? 0)
+            case (nil, _):     return false
+            case (_, nil):     return true
+            case let (a?, b?): return a == b ? ($0.id ?? 0) < ($1.id ?? 0) : a < b
+            }
+        }
     }
 }

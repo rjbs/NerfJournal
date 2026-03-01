@@ -4,10 +4,12 @@
 # Outputs JSON to stdout; redirect to a file and import via Debug > Import:
 #   perl make-test-data.pl > test-data.json
 #
-# Produces 14 journal pages spread across the current month with a mix of
-# done, abandoned, migrated, and pending todos in a few group categories.
-# Output is deterministic (fixed srand seed) so you get the same task
-# assignments on every run.
+# Produces 14 journal pages spread across the current month. Each task is
+# a single todo record with an "added" date and an optional "ending" (done
+# or abandoned with a timestamp). A note is created on the page where a task
+# was completed. Todos with no ending are still-pending at the close of the
+# generated data. Output is deterministic (fixed srand seed) so you get the
+# same task assignments on every run.
 
 use strict;
 use warnings;
@@ -26,7 +28,7 @@ my $month = $now[4] + 1;
 my @DAYS = (1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 16, 18, 20, 22);
 
 # Task pool: [title, group_or_undef, should_migrate]
-# should_migrate: 1 = carries forward if left pending; 0 = abandoned instead
+# should_migrate: 1 = stays pending on future pages if not done; 0 = abandoned
 my @POOL = (
     [ 'Review sprint board',           undef,         0 ],
     [ 'Code review: auth PR',          'Engineering', 0 ],
@@ -64,9 +66,10 @@ sub day_ts {
 my (@pages_out, @todos_out, @notes_out);
 my ($page_id, $todo_id, $note_id) = (1, 1, 1);
 
-# Each element: [$title, $group, $migrate, $first_added_ts]
-my @carry  = ();
-my $pool_i = 0;
+# Active pool: todos still pending at end of each day.
+# Each entry: { id, migrate, added_ts }
+my @active  = ();
+my $pool_i  = 0;
 
 for my $pi (0 .. $#DAYS) {
     my $day     = $DAYS[$pi];
@@ -76,93 +79,72 @@ for my $pi (0 .. $#DAYS) {
     push @pages_out, { id => $page_id, date => iso8601($page_ts) };
     my $cur_pid = $page_id++;
 
-    my $sort = 0;
-    my @next_carry;
-
-    # --- carried-over todos from the previous page --------------------------
-    for my $ct (@carry) {
-        my ($title, $group, $migrate, $first_ts) = @$ct;
-
-        my $status;
-        if ($is_last) {
-            $status = 'pending';
-        } elsif ($migrate && rand() < 0.35) {
-            $status = 'migrated';
-            push @next_carry, $ct;
+    # --- resolve active (carried-over) todos --------------------------------
+    my @still_active;
+    for my $t (@active) {
+        if ($is_last || ($t->{migrate} && rand() < 0.35)) {
+            push @still_active, $t;    # carries forward to next day
         } else {
-            $status = 'done';
-        }
-
-        my $cur_tid = $todo_id;
-        push @todos_out, {
-            id             => $todo_id++,
-            pageID         => $cur_pid,
-            title          => $title,
-            shouldMigrate  => $migrate ? JSON::PP::true : JSON::PP::false,
-            status         => $status,
-            sortOrder      => $sort++,
-            groupName      => $group,
-            externalURL    => undef,
-            firstAddedDate => iso8601($first_ts),
-        };
-        if ($status eq 'done') {
+            # Completed on this page.
+            my $done_ts = $page_ts + 3600;
+            $todos_out[ $t->{id} - 1 ]{ending} = {
+                date => iso8601($done_ts),
+                kind => 'done',
+            };
             push @notes_out, {
                 id            => $note_id++,
                 pageID        => $cur_pid,
-                timestamp     => iso8601($page_ts + 3600 * $sort),
+                timestamp     => iso8601($done_ts),
                 text          => undef,
-                relatedTodoID => $cur_tid,
+                relatedTodoID => $t->{id},
             };
         }
     }
+    @active = @still_active;
 
-    # --- new todos for this page --------------------------------------------
-    my $new_count = 3 + int(rand 3);    # 3–5 fresh tasks
+    # --- add new todos for this page ----------------------------------------
+    my $new_count = 3 + int(rand 3);    # 3–5 fresh tasks per day
     for (1 .. $new_count) {
         my ($title, $group, $migrate) = @{ $POOL[$pool_i++ % @POOL] };
+        my $cur_tid = $todo_id++;
+        my $ending;
 
-        my $status;
         if ($is_last) {
-            $status = 'pending';
+            # Last page: everything stays pending.
         } elsif (!$migrate && rand() < 0.12) {
-            $status = 'abandoned';
+            $ending = { date => iso8601($page_ts + 3600), kind => 'abandoned' };
         } elsif ($migrate && rand() < 0.28) {
-            $status = 'migrated';
-            push @next_carry, [$title, $group, $migrate, $page_ts];
+            push @active, { id => $cur_tid, migrate => $migrate };
         } else {
-            $status = 'done';
+            $ending = { date => iso8601($page_ts + 3600), kind => 'done' };
         }
 
-        my $cur_tid = $todo_id;
         push @todos_out, {
-            id             => $todo_id++,
-            pageID         => $cur_pid,
-            title          => $title,
-            shouldMigrate  => $migrate ? JSON::PP::true : JSON::PP::false,
-            status         => $status,
-            sortOrder      => $sort++,
-            groupName      => $group,
-            externalURL    => undef,
-            firstAddedDate => iso8601($page_ts),
+            id            => $cur_tid,
+            title         => $title,
+            shouldMigrate => $migrate ? JSON::PP::true : JSON::PP::false,
+            added         => iso8601($page_ts),
+            ending        => $ending,
+            groupName     => $group,
+            externalURL   => undef,
         };
-        if ($status eq 'done') {
+
+        if (defined($ending) && $ending->{kind} eq 'done') {
             push @notes_out, {
                 id            => $note_id++,
                 pageID        => $cur_pid,
-                timestamp     => iso8601($page_ts + 3600 * $sort),
+                timestamp     => iso8601($page_ts + 3600),
                 text          => undef,
                 relatedTodoID => $cur_tid,
             };
         }
     }
-
-    @carry = @next_carry;
 }
 
 # -- output ------------------------------------------------------------------
 
 my %export = (
-    version      => 1,
+    version      => 2,
     exportedAt   => iso8601(time),
     taskBundles  => [],
     bundleTodos  => [],

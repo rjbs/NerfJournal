@@ -45,23 +45,22 @@ final class DiaryStore: ObservableObject {
         let start = Calendar.current.startOfDay(for: date)
         selectedDate = start
 
-        let page = try await db.dbQueue.read { db in
+        let foundPage = try await db.dbQueue.read { db in
             try JournalPage
                 .filter(Column("date") == start)
                 .fetchOne(db)
         }
-        selectedPage = page
+        selectedPage = foundPage
 
-        guard let pageID = page?.id else {
+        guard let pageID = foundPage?.id else {
             selectedTodos = []
             selectedNotes = []
             return
         }
 
-        let (todos, notes) = try await db.dbQueue.read { db in
+        let (allTodos, notes) = try await db.dbQueue.read { db in
             let t = try Todo
-                .filter(Column("pageID") == pageID)
-                .order(Column("sortOrder"))
+                .filter(Column("added") <= start)
                 .fetchAll(db)
             let n = try Note
                 .filter(Column("pageID") == pageID)
@@ -69,7 +68,14 @@ final class DiaryStore: ObservableObject {
                 .fetchAll(db)
             return (t, n)
         }
-        selectedTodos = todos
+        // Visible on this day: added on or before it, and ended on or after it
+        // (or not yet ended).
+        selectedTodos = allTodos
+            .filter { todo in
+                guard let ending = todo.ending else { return true }
+                return ending.date >= start
+            }
+            .sortedForDisplay()
         selectedNotes = notes
     }
 }

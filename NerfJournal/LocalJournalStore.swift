@@ -23,58 +23,24 @@ final class LocalJournalStore: ObservableObject {
         try await refreshContents()
     }
 
-    // Create today's page and carry over any migratable todos from the most
-    // recent previous page. All pending todos on that previous page are closed
-    // out: shouldMigrate=true ones become .migrated; others become .abandoned.
+    // Create today's page. Pending non-migratable todos from before today are
+    // abandoned; migratable ones carry forward naturally (no action needed).
     func startToday() async throws {
         let today = Self.startOfToday
+        let now = Date()
 
         let newPage: JournalPage = try await db.dbQueue.write { db in
-            let previous = try JournalPage
-                .filter(Column("date") < today)
-                .order(Column("date").desc)
-                .fetchOne(db)
+            var p = JournalPage(id: nil, date: today)
+            try p.insert(db)
 
-            var page = JournalPage(id: nil, date: today)
-            try page.insert(db)
+            let abandonment = TodoEnding(date: now, kind: .abandoned)
+            try Todo
+                .filter(Column("added") < today)
+                .filter(Column("shouldMigrate") == false)
+                .filter(Column("ending") == nil)
+                .updateAll(db, [Column("ending").set(to: abandonment)])
 
-            if let prevID = previous?.id, let pageID = page.id {
-                let toCarry = try Todo
-                    .filter(Column("pageID") == prevID)
-                    .filter(Column("status") == TodoStatus.pending)
-                    .filter(Column("shouldMigrate") == true)
-                    .order(Column("sortOrder"))
-                    .fetchAll(db)
-
-                try Todo
-                    .filter(Column("pageID") == prevID)
-                    .filter(Column("status") == TodoStatus.pending)
-                    .filter(Column("shouldMigrate") == true)
-                    .updateAll(db, [Column("status").set(to: TodoStatus.migrated)])
-
-                try Todo
-                    .filter(Column("pageID") == prevID)
-                    .filter(Column("status") == TodoStatus.pending)
-                    .filter(Column("shouldMigrate") == false)
-                    .updateAll(db, [Column("status").set(to: TodoStatus.abandoned)])
-
-                for (index, old) in toCarry.enumerated() {
-                    var todo = Todo(
-                        id: nil,
-                        pageID: pageID,
-                        title: old.title,
-                        shouldMigrate: old.shouldMigrate,
-                        status: .pending,
-                        sortOrder: index,
-                        groupName: old.groupName,
-                        externalURL: old.externalURL,
-                        firstAddedDate: old.firstAddedDate
-                    )
-                    try todo.insert(db)
-                }
-            }
-
-            return page
+            return p
         }
 
         page = newPage
@@ -83,21 +49,22 @@ final class LocalJournalStore: ObservableObject {
 
     func completeTodo(_ todo: Todo, undoManager: UndoManager? = nil) async throws {
         guard let pageID = page?.id else { return }
+        let ending = TodoEnding(date: Date(), kind: .done)
         try await db.dbQueue.write { db in
             try Todo
                 .filter(Column("id") == todo.id)
-                .updateAll(db, [Column("status").set(to: TodoStatus.done)])
+                .updateAll(db, [Column("ending").set(to: ending)])
             var note = Note(
                 id: nil,
                 pageID: pageID,
-                timestamp: Date(),
+                timestamp: ending.date,
                 text: nil,
                 relatedTodoID: todo.id
             )
             try note.insert(db)
         }
         undoManager?.registerUndo(withTarget: self) { store in
-            Task { @MainActor in try? await store.uncompleteTodo(todo) }
+            Task { @MainActor in try? await store.uncompleteTodo(todo, undoManager: undoManager) }
         }
         try await refreshContents()
     }
@@ -106,43 +73,65 @@ final class LocalJournalStore: ObservableObject {
         try await db.dbQueue.write { db in
             try Todo
                 .filter(Column("id") == todo.id)
-                .updateAll(db, [Column("status").set(to: TodoStatus.pending)])
+                .updateAll(db, [Column("ending").set(to: nil as TodoEnding?)])
             try Note
                 .filter(Column("relatedTodoID") == todo.id)
                 .deleteAll(db)
             return
         }
         undoManager?.registerUndo(withTarget: self) { store in
-            Task { @MainActor in try? await store.completeTodo(todo) }
+            Task { @MainActor in try? await store.completeTodo(todo, undoManager: undoManager) }
         }
         try await refreshContents()
     }
 
     func abandonTodo(_ todo: Todo) async throws {
+        let ending = TodoEnding(date: Date(), kind: .abandoned)
         try await db.dbQueue.write { db in
             try Todo
                 .filter(Column("id") == todo.id)
-                .updateAll(db, [Column("status").set(to: TodoStatus.abandoned)])
+                .updateAll(db, [Column("ending").set(to: ending)])
             return
         }
         try await refreshContents()
     }
 
+    // Mark any non-pending todo as pending. Used by the context menu.
+    func markPending(_ todo: Todo, undoManager: UndoManager? = nil) async throws {
+        let oldEnding = todo.ending
+        try await db.dbQueue.write { db in
+            try Todo
+                .filter(Column("id") == todo.id)
+                .updateAll(db, [Column("ending").set(to: nil as TodoEnding?)])
+            try Note
+                .filter(Column("relatedTodoID") == todo.id)
+                .deleteAll(db)
+            return
+        }
+        undoManager?.registerUndo(withTarget: self) { store in
+            Task { @MainActor in
+                if oldEnding?.kind == .done {
+                    try? await store.completeTodo(todo, undoManager: undoManager)
+                } else if oldEnding?.kind == .abandoned {
+                    try? await store.abandonTodo(todo)
+                }
+            }
+        }
+        try await refreshContents()
+    }
+
     func addTodo(title: String, shouldMigrate: Bool, groupName: String? = nil) async throws {
-        guard let pageID = page?.id else { return }
-        let nextOrder = (todos.map(\.sortOrder).max() ?? -1) + 1
+        guard page != nil else { return }
         let today = Self.startOfToday
         try await db.dbQueue.write { db in
             var todo = Todo(
                 id: nil,
-                pageID: pageID,
                 title: title,
                 shouldMigrate: shouldMigrate,
-                status: .pending,
-                sortOrder: nextOrder,
+                added: today,
+                ending: nil,
                 groupName: groupName,
-                externalURL: nil,
-                firstAddedDate: today
+                externalURL: nil
             )
             try todo.insert(db)
         }
@@ -164,20 +153,6 @@ final class LocalJournalStore: ObservableObject {
         try await refreshContents()
     }
 
-    func setStatus(_ status: TodoStatus, for todo: Todo, undoManager: UndoManager? = nil) async throws {
-        let oldStatus = todo.status
-        try await db.dbQueue.write { db in
-            try Todo
-                .filter(Column("id") == todo.id)
-                .updateAll(db, [Column("status").set(to: status)])
-            return
-        }
-        undoManager?.registerUndo(withTarget: self) { store in
-            Task { @MainActor in try? await store.setStatus(oldStatus, for: todo) }
-        }
-        try await refreshContents()
-    }
-
     func setTitle(_ title: String, for todo: Todo, undoManager: UndoManager? = nil) async throws {
         let oldTitle = todo.title
         try await db.dbQueue.write { db in
@@ -187,7 +162,7 @@ final class LocalJournalStore: ObservableObject {
             return
         }
         undoManager?.registerUndo(withTarget: self) { store in
-            Task { @MainActor in try? await store.setTitle(oldTitle, for: todo) }
+            Task { @MainActor in try? await store.setTitle(oldTitle, for: todo, undoManager: undoManager) }
         }
         try await refreshContents()
     }
@@ -212,68 +187,47 @@ final class LocalJournalStore: ObservableObject {
             return
         }
         undoManager?.registerUndo(withTarget: self) { store in
-            Task { @MainActor in try? await store.setGroup(oldGroupName, for: todo) }
+            Task { @MainActor in try? await store.setGroup(oldGroupName, for: todo, undoManager: undoManager) }
         }
         try await refreshContents()
     }
 
     private func restoreTodo(_ todo: Todo) async throws {
-        guard let pageID = page?.id else { return }
+        guard page != nil else { return }
         try await db.dbQueue.write { db in
             var restored = Todo(
                 id: nil,
-                pageID: pageID,
                 title: todo.title,
                 shouldMigrate: todo.shouldMigrate,
-                status: todo.status,
-                sortOrder: todo.sortOrder,
+                added: todo.added,
+                ending: todo.ending,
                 groupName: todo.groupName,
-                externalURL: todo.externalURL,
-                firstAddedDate: todo.firstAddedDate
+                externalURL: todo.externalURL
             )
             try restored.insert(db)
         }
         try await refreshContents()
     }
 
-    // Re-orders todos within a single group by updating their sortOrder values.
-    func moveTodos(in groupName: String?, from offsets: IndexSet, to destination: Int) async throws {
-        var groupTodos = todos
-            .filter { $0.groupName == groupName }
-            .sorted { $0.sortOrder < $1.sortOrder }
-        groupTodos.move(fromOffsets: offsets, toOffset: destination)
-        try await db.dbQueue.write { [groupTodos] db in
-            for (index, todo) in groupTodos.enumerated() {
-                try Todo
-                    .filter(Column("id") == todo.id)
-                    .updateAll(db, [Column("sortOrder").set(to: index)])
-            }
-        }
-        try await refreshContents()
-    }
-
     func applyBundle(_ bundle: TaskBundle) async throws {
-        guard let pageID = page?.id, let bundleID = bundle.id else { return }
+        guard page != nil, let bundleID = bundle.id else { return }
         let bundleTodos = try await db.dbQueue.read { db in
             try BundleTodo
                 .filter(Column("bundleID") == bundleID)
                 .order(Column("sortOrder"))
                 .fetchAll(db)
         }
-        let nextOrder = (todos.map(\.sortOrder).max() ?? -1) + 1
         let today = Self.startOfToday
         try await db.dbQueue.write { [bundleTodos] db in
-            for (index, bundleTodo) in bundleTodos.enumerated() {
+            for bundleTodo in bundleTodos {
                 var todo = Todo(
                     id: nil,
-                    pageID: pageID,
                     title: bundleTodo.title,
                     shouldMigrate: bundle.todosShouldMigrate,
-                    status: .pending,
-                    sortOrder: nextOrder + index,
+                    added: today,
+                    ending: nil,
                     groupName: bundle.name,
-                    externalURL: bundleTodo.externalURL,
-                    firstAddedDate: today
+                    externalURL: bundleTodo.externalURL
                 )
                 try todo.insert(db)
             }
@@ -298,23 +252,28 @@ final class LocalJournalStore: ObservableObject {
     }
 
     private func refreshContents() async throws {
-        guard let pageID = page?.id else {
+        guard page != nil, let pageID = page?.id else {
             todos = []
             notes = []
             return
         }
-        let (fetchedTodos, fetchedNotes) = try await db.dbQueue.read { db in
-            let todos = try Todo
-                .filter(Column("pageID") == pageID)
-                .order(Column("sortOrder"))
+        let today = Self.startOfToday
+        let (allTodos, fetchedNotes) = try await db.dbQueue.read { db in
+            let t = try Todo
+                .filter(Column("added") <= today)
                 .fetchAll(db)
-            let notes = try Note
+            let n = try Note
                 .filter(Column("pageID") == pageID)
                 .order(Column("timestamp"))
                 .fetchAll(db)
-            return (todos, notes)
+            return (t, n)
         }
-        todos = fetchedTodos
+        todos = allTodos
+            .filter { todo in
+                guard let ending = todo.ending else { return true }
+                return ending.date >= today
+            }
+            .sortedForDisplay()
         notes = fetchedNotes
     }
 

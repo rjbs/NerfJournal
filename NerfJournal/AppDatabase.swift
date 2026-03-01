@@ -89,13 +89,30 @@ struct AppDatabase {
             }
         }
 
+        migrator.registerMigration("v2") { db in
+            // DELETE cascades to note (pageID FK) and old todo (pageID FK).
+            try db.execute(sql: "DELETE FROM journalPage")
+            try db.execute(sql: "DROP TABLE todo")
+            try db.create(table: "todo") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("title", .text).notNull()
+                t.column("shouldMigrate", .boolean).notNull().defaults(to: true)
+                // Start-of-day timestamp for the day the todo was first created.
+                t.column("added", .datetime).notNull()
+                // JSON-encoded TodoEnding; NULL means still pending.
+                t.column("ending", .text)
+                t.column("groupName", .text)
+                t.column("externalURL", .text)
+            }
+        }
+
         try migrator.migrate(db)
     }
 
     func exportData() async throws -> Data {
         let snapshot = try await dbQueue.read { db in
             DatabaseExport(
-                version: 1,
+                version: 2,
                 exportedAt: Date(),
                 taskBundles: try TaskBundle.order(Column("id")).fetchAll(db),
                 bundleTodos: try BundleTodo.order(Column("id")).fetchAll(db),

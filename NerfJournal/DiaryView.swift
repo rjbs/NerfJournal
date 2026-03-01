@@ -336,15 +336,6 @@ struct DiaryPageDetailView: View {
                                 )
                                 .tag(todo.id!)
                             }
-                            .onMove(perform: readOnly ? nil : { offsets, destination in
-                                Task {
-                                    try? await journalStore.moveTodos(
-                                        in: group.name,
-                                        from: offsets,
-                                        to: destination
-                                    )
-                                }
-                            })
                         }
                     }
                     if !readOnly {
@@ -376,13 +367,10 @@ struct DiaryPageDetailView: View {
                 guard let id = selectedTodoID else { return .ignored }
                 if keyPress.modifiers.contains(.command) {
                     if let todo = todos.first(where: { $0.id == id }) {
-                        switch todo.status {
-                        case .pending:
+                        if todo.isPending {
                             Task { try? await journalStore.completeTodo(todo, undoManager: undoManager) }
-                        case .done:
+                        } else if todo.isDone {
                             Task { try? await journalStore.uncompleteTodo(todo, undoManager: undoManager) }
-                        default:
-                            break
                         }
                     }
                 } else {
@@ -458,6 +446,27 @@ struct TodoRow: View {
     @State private var editTitle = ""
     @FocusState private var titleFieldFocused: Bool
 
+    // The display state of this todo relative to the page it is shown on.
+    private enum RowState {
+        case pending                                 // open on today's page
+        case doneToday                               // completed on pageDate
+        case abandonedToday                          // abandoned on pageDate
+        case migratedOpen                            // still pending today (past page)
+        case migratedResolved(TodoEnding.Kind, Date) // ended after pageDate (past page)
+    }
+
+    private var rowState: RowState {
+        if let ending = todo.ending {
+            if Calendar.current.isDate(ending.date, inSameDayAs: pageDate) {
+                return ending.kind == .done ? .doneToday : .abandonedToday
+            } else {
+                return .migratedResolved(ending.kind, ending.date)
+            }
+        } else {
+            return Calendar.current.isDateInToday(pageDate) ? .pending : .migratedOpen
+        }
+    }
+
     var body: some View {
         HStack(spacing: 8) {
             if readOnly {
@@ -465,9 +474,9 @@ struct TodoRow: View {
             } else {
                 Button {
                     Task {
-                        if todo.status == .pending {
+                        if todo.isPending {
                             try? await store.completeTodo(todo, undoManager: undoManager)
-                        } else if todo.status == .done {
+                        } else if todo.isDone {
                             try? await store.uncompleteTodo(todo, undoManager: undoManager)
                         }
                     }
@@ -475,7 +484,7 @@ struct TodoRow: View {
                     statusIcon
                 }
                 .buttonStyle(.plain)
-                .disabled(todo.status == .abandoned)
+                .disabled(todo.isAbandoned)
             }
 
             VStack(alignment: .leading, spacing: 2) {
@@ -486,13 +495,11 @@ struct TodoRow: View {
                         .onKeyPress(.escape) { onCancelEdit(); return .handled }
                 } else {
                     Text(todo.title)
-                        .strikethrough(todo.status == .done || (readOnly && todo.status == .migrated))
-                        .foregroundStyle(
-                            (todo.status == .abandoned || (readOnly && todo.status == .migrated)) ? .secondary : .primary
-                        )
+                        .strikethrough(shouldStrikethrough)
+                        .foregroundStyle(isDimmed ? Color.secondary : Color.primary)
                 }
-                if daysCarried > 0 {
-                    Text("Carried over \u{b7} \(daysCarried) day\(daysCarried == 1 ? "" : "s") ago")
+                if let caption = captionText {
+                    Text(caption)
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
@@ -508,19 +515,19 @@ struct TodoRow: View {
         .contextMenu {
             if !readOnly {
                 Menu("Mark") {
-                    if todo.status != .pending {
+                    if !todo.isPending {
                         Button("Pending") {
-                            Task { try? await store.setStatus(.pending, for: todo, undoManager: undoManager) }
+                            Task { try? await store.markPending(todo, undoManager: undoManager) }
                         }
                     }
-                    if todo.status != .done {
+                    if !todo.isDone {
                         Button("Complete") {
-                            Task { try? await store.setStatus(.done, for: todo, undoManager: undoManager) }
+                            Task { try? await store.completeTodo(todo, undoManager: undoManager) }
                         }
                     }
-                    if todo.status != .abandoned {
+                    if !todo.isAbandoned {
                         Button("Abandoned") {
-                            Task { try? await store.setStatus(.abandoned, for: todo, undoManager: undoManager) }
+                            Task { try? await store.abandonTodo(todo) }
                         }
                     }
                 }
@@ -568,28 +575,57 @@ struct TodoRow: View {
     @ViewBuilder
     private var statusIcon: some View {
         let shape = todo.shouldMigrate ? "circle" : "square"
-        switch todo.status {
-        case .done:
+        switch rowState {
+        case .doneToday, .migratedResolved(.done, _):
             Image(systemName: "checkmark.\(shape).fill")
                 .symbolRenderingMode(.palette)
                 .foregroundStyle(.white, Color.green)
-        case .abandoned:
+        case .abandonedToday, .migratedResolved(.abandoned, _):
             Image(systemName: "xmark.\(shape).fill")
                 .symbolRenderingMode(.palette)
                 .foregroundStyle(.white, Color(white: 0.4))
-        case .migrated:
+        case .migratedOpen:
             Image(systemName: "arrow.right.\(shape).fill")
                 .symbolRenderingMode(.palette)
                 .foregroundStyle(.white, Color.orange)
-        default:
+        case .pending:
             Image(systemName: shape)
                 .foregroundStyle(Color.secondary)
         }
     }
 
-    private var daysCarried: Int {
-        let added = Calendar.current.startOfDay(for: todo.firstAddedDate)
-        return Calendar.current.dateComponents([.day], from: added, to: pageDate).day ?? 0
+    private var shouldStrikethrough: Bool {
+        switch rowState {
+        case .doneToday, .migratedResolved(.done, _): return true
+        default: return false
+        }
+    }
+
+    private var isDimmed: Bool {
+        switch rowState {
+        case .abandonedToday, .migratedResolved(.abandoned, _), .migratedOpen: return true
+        default: return false
+        }
+    }
+
+    private var captionText: String? {
+        switch rowState {
+        case .pending:
+            let addedDay = Calendar.current.startOfDay(for: todo.added)
+            let pageDay  = Calendar.current.startOfDay(for: pageDate)
+            let days = Calendar.current.dateComponents([.day], from: addedDay, to: pageDay).day ?? 0
+            return days > 0 ? "Carried over \u{b7} \(days) day\(days == 1 ? "" : "s") ago" : nil
+        case .migratedOpen:
+            return "Still open"
+        case .migratedResolved(let kind, let date):
+            let pageDay  = Calendar.current.startOfDay(for: pageDate)
+            let endedDay = Calendar.current.startOfDay(for: date)
+            let days = Calendar.current.dateComponents([.day], from: pageDay, to: endedDay).day ?? 0
+            let action = kind == .done ? "Done" : "Abandoned"
+            return "\(action) \(days) day\(days == 1 ? "" : "s") later"
+        default:
+            return nil
+        }
     }
 
     private var existingGroups: [String] {
@@ -599,13 +635,10 @@ struct TodoRow: View {
     private func copyGroupAsMrkdwn() {
         let lines = store.todos
             .filter { $0.groupName == todo.groupName }
-            .sorted { $0.sortOrder < $1.sortOrder }
             .compactMap { t -> String? in
-                switch t.status {
-                case .pending:  return "* \(t.title)"
-                case .done:     return "* :white_check_mark: \(t.title)"
-                case .abandoned, .migrated: return nil
-                }
+                if t.isPending { return "* \(t.title)" }
+                if t.isDone    { return "* :white_check_mark: \(t.title)" }
+                return nil
             }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(lines.joined(separator: "\n") + "\n", forType: .string)
