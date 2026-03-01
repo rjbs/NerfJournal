@@ -190,21 +190,22 @@ struct TodoRow: View {
 
     @ViewBuilder
     private var statusIcon: some View {
+        let shape = todo.shouldMigrate ? "circle" : "square"
         switch todo.status {
         case .done:
-            Image(systemName: "checkmark.circle.fill")
+            Image(systemName: "checkmark.\(shape).fill")
                 .symbolRenderingMode(.palette)
                 .foregroundStyle(.white, Color.green)
         case .abandoned:
-            Image(systemName: "xmark.circle.fill")
+            Image(systemName: "xmark.\(shape).fill")
                 .symbolRenderingMode(.palette)
                 .foregroundStyle(.white, Color(white: 0.4))
         case .migrated:
-            Image(systemName: "arrow.right.circle.fill")
+            Image(systemName: "arrow.right.\(shape).fill")
                 .symbolRenderingMode(.palette)
                 .foregroundStyle(.white, Color.orange)
         default:
-            Image(systemName: "circle")
+            Image(systemName: shape)
                 .foregroundStyle(Color.secondary)
         }
     }
