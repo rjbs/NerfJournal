@@ -5,6 +5,9 @@ import SwiftUI
 struct DiaryView: View {
     @EnvironmentObject private var diaryStore: DiaryStore
     @EnvironmentObject private var journalStore: LocalJournalStore
+    @EnvironmentObject private var bundleStore: BundleStore
+
+    @Environment(\.openWindow) private var openWindow
 
     @State private var sidebarVisible = true
 
@@ -27,6 +30,13 @@ struct DiaryView: View {
                     Image(systemName: "sidebar.left")
                 }
             }
+            ToolbarItem {
+                Button {
+                    openWindow(id: "bundle-manager")
+                } label: {
+                    Image(systemName: "square.stack")
+                }
+            }
         }
         .task {
             try? await diaryStore.loadIndex()
@@ -34,6 +44,7 @@ struct DiaryView: View {
                 try? await diaryStore.selectDate(latest)
             }
             try? await journalStore.load()
+            try? await bundleStore.load()
         }
     }
 
@@ -261,6 +272,7 @@ struct DayCell: View {
 
 struct DiaryPageDetailView: View {
     @EnvironmentObject private var journalStore: LocalJournalStore
+    @EnvironmentObject private var bundleStore: BundleStore
 
     let date: Date
     let todos: [Todo]
@@ -321,6 +333,21 @@ struct DiaryPageDetailView: View {
                             }
                             .padding(.vertical, 2)
                         }
+                    }
+                }
+            }
+        }
+        .toolbar {
+            if !readOnly && !bundleStore.bundles.isEmpty {
+                ToolbarItem {
+                    Menu {
+                        ForEach(bundleStore.bundles) { bundle in
+                            Button(bundle.name) {
+                                Task { try? await journalStore.applyBundle(bundle) }
+                            }
+                        }
+                    } label: {
+                        Label("Apply Bundle", systemImage: "square.stack")
                     }
                 }
             }

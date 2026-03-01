@@ -238,6 +238,35 @@ final class LocalJournalStore: ObservableObject {
         try await refreshContents()
     }
 
+    func applyBundle(_ bundle: TaskBundle) async throws {
+        guard let pageID = page?.id, let bundleID = bundle.id else { return }
+        let bundleTodos = try await db.dbQueue.read { db in
+            try BundleTodo
+                .filter(Column("bundleID") == bundleID)
+                .order(Column("sortOrder"))
+                .fetchAll(db)
+        }
+        let nextOrder = (todos.map(\.sortOrder).max() ?? -1) + 1
+        let today = Self.startOfToday
+        try await db.dbQueue.write { [bundleTodos] db in
+            for (index, bundleTodo) in bundleTodos.enumerated() {
+                var todo = Todo(
+                    id: nil,
+                    pageID: pageID,
+                    title: bundleTodo.title,
+                    shouldMigrate: bundle.todosShouldMigrate,
+                    status: .pending,
+                    sortOrder: nextOrder + index,
+                    groupName: nil,
+                    externalURL: bundleTodo.externalURL,
+                    firstAddedDate: today
+                )
+                try todo.insert(db)
+            }
+        }
+        try await refreshContents()
+    }
+
     func exportData() async throws -> Data {
         try await db.exportData()
     }
