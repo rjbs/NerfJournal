@@ -368,6 +368,10 @@ struct DiaryPageDetailView: View {
                 }
             }
             .onKeyPress(phases: .down) { keyPress in
+                if keyPress.key == .escape, selectedTodoID != nil {
+                    selectedTodoID = nil
+                    return .handled
+                }
                 guard !readOnly, editingTodoID == nil, !addFieldFocused else { return .ignored }
                 guard keyPress.key == .return else { return .ignored }
                 guard let id = selectedTodoID else { return .ignored }
@@ -406,7 +410,10 @@ struct DiaryPageDetailView: View {
         }
         .focusedValue(\.focusAddTodo, Binding(
             get: { addFieldFocused },
-            set: { addFieldFocused = $0 }
+            set: {
+                addFieldFocused = $0
+                if $0 { selectedTodoID = nil }
+            }
         ))
     }
 
