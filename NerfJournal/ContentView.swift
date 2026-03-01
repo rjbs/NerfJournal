@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct ContentView: View {
@@ -167,6 +168,12 @@ struct TodoRow: View {
                     Task { try? await store.deleteTodo(todo, undoManager: undoManager) }
                 }
             }
+
+            Divider()
+
+            Button("Copy section as mrkdwn") {
+                copyGroupAsMrkdwn()
+            }
         }
         .alert("New Group Name", isPresented: $showingNewGroupAlert) {
             TextField("Group name", text: $newGroupName)
@@ -209,5 +216,20 @@ struct TodoRow: View {
 
     private var existingGroups: [String] {
         Array(Set(store.todos.compactMap(\.groupName))).sorted()
+    }
+
+    private func copyGroupAsMrkdwn() {
+        let lines = store.todos
+            .filter { $0.groupName == todo.groupName }
+            .sorted { $0.sortOrder < $1.sortOrder }
+            .compactMap { t -> String? in
+                switch t.status {
+                case .pending:  return t.title
+                case .done:     return ":white_check_mark: \(t.title)"
+                case .abandoned, .migrated: return nil
+                }
+            }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(lines.joined(separator: "\n"), forType: .string)
     }
 }
