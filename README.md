@@ -33,13 +33,12 @@ Today", which closes out the previous page.
 - `status`: `pending`, `done`, `abandoned`, or `migrated`.
 - `firstAddedDate`: the date this task was *originally* added, carried
   forward across migrations. Shows how long a task has been deferred.
-- `groupName`: set when a todo is instantiated from a Bundle; used for
-  display grouping.
+- `groupName`: used for display grouping; set automatically when a todo
+  is instantiated from a Bundle.
 
 **Note** — a timestamped log entry on a page. Can be freeform text, or
 a system event (like task completion) linked back to a Todo via
-`relatedTodoID`. Completing a todo automatically creates a Note, which
-the user can later annotate.
+`relatedTodoID`. Completing a todo automatically creates a Note.
 
 **TaskBundle** — a named collection of todos that can be applied to a
 page all at once. Examples: "Daily" (applied every work day), "Monday"
@@ -55,13 +54,26 @@ its todos.
   file at `~/Library/Application Support/NerfJournal/journal.sqlite`,
   and runs schema migrations.
 - **`LocalJournalStore`** — `@MainActor ObservableObject` that
-  publishes the current page's todos and notes, and exposes actions
-  (start today, complete/abandon todo, add todo/note). The core
-  day-start logic runs atomically: previous page todos are
-  migrated/abandoned, and carried-over items are inserted on the new
-  page, all in one transaction.
-- **`ContentView`** — SwiftUI view showing today's page. Todos are
-  grouped by bundle name; ungrouped one-offs follow.
+  publishes the current (most recent) page's todos and notes, and
+  exposes mutating actions: start today, complete/uncomplete/abandon
+  todo, add todo, move todos, rename todo, apply bundle. The day-start
+  logic runs atomically: previous page todos are migrated/abandoned and
+  carried-over items are inserted on the new page in one transaction.
+- **`DiaryStore`** — `@MainActor ObservableObject` that indexes all
+  pages and provides read-only access to any past page's todos and
+  notes. Drives the calendar sidebar's highlighted dates.
+- **`BundleStore`** — `@MainActor ObservableObject` that manages
+  TaskBundles and their BundleTodos.
+- **`DiaryView`** — the main window. A calendar sidebar (toggleable,
+  state persisted, window expands left when shown into a narrow window)
+  sits beside a detail pane. The most recent page is editable via
+  `LocalJournalStore`; older pages are shown read-only from
+  `DiaryStore`. Keyboard navigation: arrow keys select rows, Return
+  edits a title, cmd-Return toggles done/pending, cmd-N focuses the
+  add-todo field.
+- **`BundleManagerView`** — a separate window for creating and editing
+  bundles. Bundles can be applied to today's page from a toolbar menu
+  in the main window.
 
 Storage is local SQLite only. No iCloud sync or server component yet.
 
@@ -70,12 +82,11 @@ Storage is local SQLite only. No iCloud sync or server component yet.
 Roughly in priority order:
 
 **Near term**
-- Bundle management UI (create bundles, add/remove todos, apply to page)
-- Mark a todo as abandoned manually (not just at day-close)
-- Notes UI (view and add notes on a page)
-- Work diary view (read-only log of past pages)
-
-**Deferred / needs design**
+- Notes UI: ability to add freeform notes to the current page (the data
+  model and display are in place; only the add UI is missing)
+- Bundle auto-apply: apply selected bundles automatically on "Start
+  Today" based on day of week, rather than requiring manual application
+  each morning
 - Calendar-aware migration routing: a todo could specify which days of
   the week it migrates to, so e.g. a Friday work task carries to Monday
   rather than Saturday, while a personal task carries to Saturday.
