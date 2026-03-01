@@ -178,6 +178,20 @@ final class LocalJournalStore: ObservableObject {
         try await refreshContents()
     }
 
+    func setTitle(_ title: String, for todo: Todo, undoManager: UndoManager? = nil) async throws {
+        let oldTitle = todo.title
+        try await db.dbQueue.write { db in
+            try Todo
+                .filter(Column("id") == todo.id)
+                .updateAll(db, [Column("title").set(to: title)])
+            return
+        }
+        undoManager?.registerUndo(withTarget: self) { store in
+            Task { @MainActor in try? await store.setTitle(oldTitle, for: todo) }
+        }
+        try await refreshContents()
+    }
+
     func deleteTodo(_ todo: Todo, undoManager: UndoManager? = nil) async throws {
         try await db.dbQueue.write { db in
             try Todo.filter(Column("id") == todo.id).deleteAll(db)

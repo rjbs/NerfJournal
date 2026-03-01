@@ -57,7 +57,7 @@ struct ContentView: View {
                 }
             }
             Section {
-                TextField("Add task\u{2026}", text: $newTodoTitle)
+                TextField("Add todo\u{2026}", text: $newTodoTitle)
                     .focused($addFieldFocused)
                     .onSubmit { submitNewTodo() }
             }
@@ -93,6 +93,12 @@ struct TodoRow: View {
     let todo: Todo
     var pageDate: Date = Calendar.current.startOfDay(for: Date())
     var readOnly: Bool = false
+    var isEditing: Bool = false
+    var onCommitEdit: (String) -> Void = { _ in }
+    var onCancelEdit: () -> Void = {}
+
+    @State private var editTitle = ""
+    @FocusState private var titleFieldFocused: Bool
 
     var body: some View {
         HStack(spacing: 8) {
@@ -115,15 +121,28 @@ struct TodoRow: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(todo.title)
-                    .strikethrough(todo.status == .done || (readOnly && todo.status == .migrated))
-                    .foregroundStyle(
-                        (todo.status == .abandoned || (readOnly && todo.status == .migrated)) ? .secondary : .primary
-                    )
+                if isEditing {
+                    TextField("", text: $editTitle)
+                        .focused($titleFieldFocused)
+                        .onSubmit { onCommitEdit(editTitle) }
+                        .onKeyPress(.escape) { onCancelEdit(); return .handled }
+                } else {
+                    Text(todo.title)
+                        .strikethrough(todo.status == .done || (readOnly && todo.status == .migrated))
+                        .foregroundStyle(
+                            (todo.status == .abandoned || (readOnly && todo.status == .migrated)) ? .secondary : .primary
+                        )
+                }
                 if daysCarried > 0 {
                     Text("Carried over \u{b7} \(daysCarried) day\(daysCarried == 1 ? "" : "s") ago")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
+                }
+            }
+            .onChange(of: isEditing) { _, editing in
+                if editing {
+                    editTitle = todo.title
+                    titleFieldFocused = true
                 }
             }
         }

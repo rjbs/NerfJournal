@@ -273,6 +273,10 @@ struct DiaryPageDetailView: View {
 
     @State private var newTodoTitle = ""
     @FocusState private var addFieldFocused: Bool
+    @State private var selectedTodoID: Int64? = nil
+    @State private var editingTodoID: Int64? = nil
+
+    @Environment(\.undoManager) private var undoManager
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -284,7 +288,7 @@ struct DiaryPageDetailView: View {
 
             Divider()
 
-            List {
+            List(selection: $selectedTodoID) {
                 if todos.isEmpty && readOnly {
                     Text("No tasks recorded for this day.")
                         .foregroundStyle(.secondary)
@@ -292,7 +296,20 @@ struct DiaryPageDetailView: View {
                     ForEach(todoGroups, id: \.name) { group in
                         Section(group.name ?? "Tasks") {
                             ForEach(group.todos) { todo in
-                                TodoRow(todo: todo, pageDate: date, readOnly: readOnly)
+                                TodoRow(
+                                    todo: todo,
+                                    pageDate: date,
+                                    readOnly: readOnly,
+                                    isEditing: editingTodoID == todo.id,
+                                    onCommitEdit: { newTitle in
+                                        let trimmed = newTitle.trimmingCharacters(in: .whitespaces)
+                                        editingTodoID = nil
+                                        guard !trimmed.isEmpty else { return }
+                                        Task { try? await journalStore.setTitle(trimmed, for: todo, undoManager: undoManager) }
+                                    },
+                                    onCancelEdit: { editingTodoID = nil }
+                                )
+                                .tag(todo.id!)
                             }
                             .onMove(perform: readOnly ? nil : { offsets, destination in
                                 Task {
@@ -307,7 +324,7 @@ struct DiaryPageDetailView: View {
                     }
                     if !readOnly {
                         Section {
-                            TextField("Add task\u{2026}", text: $newTodoTitle)
+                            TextField("Add todo\u{2026}", text: $newTodoTitle)
                                 .focused($addFieldFocused)
                                 .onSubmit { submitNewTodo() }
                         }
@@ -328,6 +345,27 @@ struct DiaryPageDetailView: View {
                     }
                 }
             }
+            .onKeyPress(phases: .down) { keyPress in
+                guard !readOnly, editingTodoID == nil, !addFieldFocused else { return .ignored }
+                guard keyPress.key == .return else { return .ignored }
+                guard let id = selectedTodoID else { return .ignored }
+                if keyPress.modifiers.contains(.command) {
+                    if let todo = todos.first(where: { $0.id == id }) {
+                        switch todo.status {
+                        case .pending:
+                            Task { try? await journalStore.completeTodo(todo, undoManager: undoManager) }
+                        case .done:
+                            Task { try? await journalStore.uncompleteTodo(todo, undoManager: undoManager) }
+                        default:
+                            break
+                        }
+                    }
+                } else {
+                    editingTodoID = id
+                }
+                return .handled
+            }
+            .onChange(of: selectedTodoID) { _, _ in editingTodoID = nil }
         }
         .toolbar {
             if !readOnly {
@@ -348,6 +386,10 @@ struct DiaryPageDetailView: View {
                 }
             }
         }
+        .focusedValue(\.focusAddTodo, Binding(
+            get: { addFieldFocused },
+            set: { addFieldFocused = $0 }
+        ))
     }
 
     private var todoGroups: [(name: String?, todos: [Todo])] {
@@ -371,5 +413,18 @@ struct DiaryPageDetailView: View {
             newTodoTitle = ""
             addFieldFocused = true
         }
+    }
+}
+
+// MARK: - FocusAddTodo
+
+struct FocusAddTodoKey: FocusedValueKey {
+    typealias Value = Binding<Bool>
+}
+
+extension FocusedValues {
+    var focusAddTodo: Binding<Bool>? {
+        get { self[FocusAddTodoKey.self] }
+        set { self[FocusAddTodoKey.self] = newValue }
     }
 }

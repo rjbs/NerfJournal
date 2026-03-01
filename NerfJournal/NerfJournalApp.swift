@@ -1,5 +1,17 @@
 import SwiftUI
 
+struct TodoCommands: Commands {
+    @FocusedValue(\.focusAddTodo) var focusAddTodo: Binding<Bool>?
+
+    var body: some Commands {
+        CommandGroup(replacing: .newItem) {
+            Button("Add Todo") { focusAddTodo?.wrappedValue = true }
+                .keyboardShortcut("n", modifiers: .command)
+                .disabled(focusAddTodo == nil)
+        }
+    }
+}
+
 @main
 struct NerfJournalApp: App {
     @StateObject private var journalStore = LocalJournalStore()
@@ -15,7 +27,10 @@ struct NerfJournalApp: App {
                 .focusedSceneObject(journalStore)
         }
         .defaultSize(width: 700, height: 520)
-        .commands { DebugCommands() }
+        .commands {
+            DebugCommands()
+            TodoCommands()
+        }
 
         Window("Bundle Manager", id: "bundle-manager") {
             BundleManagerView()
