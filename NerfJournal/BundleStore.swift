@@ -130,6 +130,22 @@ final class BundleStore: ObservableObject {
         try await refreshTodos()
     }
 
+    // Move within a category group. Redistributes only that group's existing
+    // sortOrder values among the reordered items; other todos are unchanged.
+    func moveTodosInGroup(_ groupTodos: [BundleTodo], from offsets: IndexSet, to destination: Int) async throws {
+        var reordered = groupTodos
+        reordered.move(fromOffsets: offsets, toOffset: destination)
+        let sortOrders = groupTodos.map(\.sortOrder)
+        try await db.dbQueue.write { [reordered, sortOrders] db in
+            for (sortOrder, todo) in zip(sortOrders, reordered) {
+                try BundleTodo
+                    .filter(Column("id") == todo.id)
+                    .updateAll(db, [Column("sortOrder").set(to: sortOrder)])
+            }
+        }
+        try await refreshTodos()
+    }
+
     private func refreshTodos() async throws {
         guard let bundleID = selectedBundle?.id else { return }
         selectedBundleTodos = try await db.dbQueue.read { db in

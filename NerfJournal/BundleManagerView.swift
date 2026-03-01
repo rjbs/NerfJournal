@@ -214,32 +214,38 @@ struct BundleDetailView: View {
             Divider()
 
             List {
-                ForEach(bundleStore.selectedBundleTodos) { todo in
-                    Text(todo.title)
-                        .padding(.vertical, 2)
-                        .contextMenu {
-                            Picker("Category", selection: Binding(
-                                get: { todo.categoryID },
-                                set: { newID in
-                                    Task { try? await bundleStore.setCategoryForTodo(todo, categoryID: newID) }
-                                }
-                            )) {
-                                Text("None").tag(nil as Int64?)
-                                ForEach(categoryStore.categories) { category in
-                                    Text(category.name).tag(category.id as Int64?)
-                                }
-                            }
-                            .pickerStyle(.inline)
+                ForEach(bundleTodoGroups, id: \.id) { group in
+                    Section {
+                        ForEach(group.todos) { todo in
+                            Text(todo.title)
+                                .padding(.vertical, 2)
+                                .contextMenu {
+                                    Picker("Category", selection: Binding(
+                                        get: { todo.categoryID },
+                                        set: { newID in
+                                            Task { try? await bundleStore.setCategoryForTodo(todo, categoryID: newID) }
+                                        }
+                                    )) {
+                                        Text("None").tag(nil as Int64?)
+                                        ForEach(categoryStore.categories) { category in
+                                            Text(category.name).tag(category.id as Int64?)
+                                        }
+                                    }
+                                    .pickerStyle(.inline)
 
-                            Divider()
+                                    Divider()
 
-                            Button("Delete", role: .destructive) {
-                                Task { try? await bundleStore.deleteTodo(todo) }
-                            }
+                                    Button("Delete", role: .destructive) {
+                                        Task { try? await bundleStore.deleteTodo(todo) }
+                                    }
+                                }
                         }
-                }
-                .onMove { offsets, destination in
-                    Task { try? await bundleStore.moveTodos(from: offsets, to: destination) }
+                        .onMove { offsets, destination in
+                            Task { try? await bundleStore.moveTodosInGroup(group.todos, from: offsets, to: destination) }
+                        }
+                    } header: {
+                        bundleTodoGroupHeader(group.category)
+                    }
                 }
 
                 Section {
@@ -249,6 +255,35 @@ struct BundleDetailView: View {
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func bundleTodoGroupHeader(_ category: Category?) -> some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(category.map { $0.color.swatch } ?? Color.gray)
+                .frame(width: 8, height: 8)
+            Text(category?.name ?? "Other")
+        }
+    }
+
+    private var bundleTodoGroups: [(id: String, category: Category?, todos: [BundleTodo])] {
+        let grouped = Dictionary(grouping: bundleStore.selectedBundleTodos, by: \.categoryID)
+        var named: [(id: String, category: Category?, todos: [BundleTodo])] = []
+        var other: [BundleTodo] = grouped[nil] ?? []
+        for (categoryID, groupTodos) in grouped {
+            guard let categoryID else { continue }
+            if let cat = categoryStore.categories.first(where: { $0.id == categoryID }) {
+                named.append((id: "\(categoryID)", category: cat, todos: groupTodos))
+            } else {
+                other.append(contentsOf: groupTodos)
+            }
+        }
+        named.sort { $0.category!.sortOrder < $1.category!.sortOrder }
+        if !other.isEmpty {
+            named.append((id: "other", category: nil, todos: other))
+        }
+        return named
     }
 
     private func submitNewTodo() {
