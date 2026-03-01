@@ -10,6 +10,11 @@ struct DiaryView: View {
 
     @AppStorage("sidebarVisible") private var sidebarVisible = true
 
+    // Nominal sidebar width used when expanding the window on show.
+    private let sidebarIdealWidth: CGFloat = 230
+    // Minimum usable width for the diary content pane.
+    private let contentMinWidth: CGFloat = 300
+
     var body: some View {
         Group {
             if sidebarVisible {
@@ -24,7 +29,7 @@ struct DiaryView: View {
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 Button {
-                    sidebarVisible.toggle()
+                    toggleSidebar()
                 } label: {
                     Image(systemName: "sidebar.left")
                 }
@@ -37,6 +42,25 @@ struct DiaryView: View {
             }
             try? await journalStore.load()
             try? await bundleStore.load()
+        }
+    }
+
+    private func toggleSidebar() {
+        if sidebarVisible {
+            sidebarVisible = false
+        } else {
+            // The clicked button's window is always the key window.
+            if let window = NSApplication.shared.keyWindow,
+               window.frame.width < sidebarIdealWidth + contentMinWidth {
+                var frame = window.frame
+                // Expand left, anchoring the right edge, clamped to the screen.
+                let expansion = min(sidebarIdealWidth,
+                                    frame.minX - (window.screen?.visibleFrame.minX ?? 0))
+                frame.origin.x -= expansion
+                frame.size.width += expansion
+                window.setFrame(frame, display: true, animate: true)
+            }
+            sidebarVisible = true
         }
     }
 
