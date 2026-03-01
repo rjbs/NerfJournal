@@ -224,12 +224,12 @@ struct TodoRow: View {
             .sorted { $0.sortOrder < $1.sortOrder }
             .compactMap { t -> String? in
                 switch t.status {
-                case .pending:  return t.title
-                case .done:     return ":white_check_mark: \(t.title)"
+                case .pending:  return "* \(t.title)"
+                case .done:     return "* :white_check_mark: \(t.title)"
                 case .abandoned, .migrated: return nil
                 }
             }
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(lines.joined(separator: "\n"), forType: .string)
+        NSPasteboard.general.setString(lines.joined(separator: "\n") + "\n", forType: .string)
     }
 }
