@@ -18,6 +18,8 @@ struct NerfJournalApp: App {
         Window("Work Diary", id: "diary") {
             DiaryView()
                 .environmentObject(diaryStore)
+                .environmentObject(store)
+                .focusedSceneObject(store)
         }
         .defaultSize(width: 700, height: 520)
     }
