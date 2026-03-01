@@ -7,8 +7,6 @@ struct DiaryView: View {
     @EnvironmentObject private var journalStore: LocalJournalStore
     @EnvironmentObject private var bundleStore: BundleStore
 
-    @Environment(\.openWindow) private var openWindow
-
     @State private var sidebarVisible = true
 
     var body: some View {
@@ -28,13 +26,6 @@ struct DiaryView: View {
                     sidebarVisible.toggle()
                 } label: {
                     Image(systemName: "sidebar.left")
-                }
-            }
-            ToolbarItem {
-                Button {
-                    openWindow(id: "bundle-manager")
-                } label: {
-                    Image(systemName: "square.stack")
                 }
             }
         }
@@ -273,6 +264,7 @@ struct DayCell: View {
 struct DiaryPageDetailView: View {
     @EnvironmentObject private var journalStore: LocalJournalStore
     @EnvironmentObject private var bundleStore: BundleStore
+    @Environment(\.openWindow) private var openWindow
 
     let date: Date
     let todos: [Todo]
@@ -338,16 +330,20 @@ struct DiaryPageDetailView: View {
             }
         }
         .toolbar {
-            if !readOnly && !bundleStore.bundles.isEmpty {
+            if !readOnly {
                 ToolbarItem {
                     Menu {
                         ForEach(bundleStore.bundles) { bundle in
-                            Button(bundle.name) {
+                            Button("Apply \u{201c}\(bundle.name)\u{201d}") {
                                 Task { try? await journalStore.applyBundle(bundle) }
                             }
                         }
+                        Divider()
+                        Button("Show Bundle Manager") {
+                            openWindow(id: "bundle-manager")
+                        }
                     } label: {
-                        Label("Apply Bundle", systemImage: "square.stack")
+                        Image(systemName: "square.stack")
                     }
                 }
             }
