@@ -3,7 +3,7 @@ import SwiftUI
 import GRDB
 
 enum CategoryColor: String, CaseIterable, Codable, DatabaseValueConvertible {
-    case blue, red, green, orange, purple, pink, teal, gray
+    case blue, red, green, orange, purple, pink, teal, yellow
 
     var databaseValue: DatabaseValue { rawValue.databaseValue }
 
@@ -21,7 +21,7 @@ enum CategoryColor: String, CaseIterable, Codable, DatabaseValueConvertible {
         case .purple: return .purple
         case .pink:   return .pink
         case .teal:   return .teal
-        case .gray:   return .gray
+        case .yellow: return .yellow
         }
     }
 }

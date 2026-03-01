@@ -420,8 +420,12 @@ struct DiaryPageDetailView: View {
                 Text(category.name)
             }
         } else {
-            Text("Other")
-                .foregroundStyle(.secondary)
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(Color.gray)
+                    .frame(width: 8, height: 8)
+                Text("Other")
+            }
         }
     }
 
