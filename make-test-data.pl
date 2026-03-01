@@ -1,15 +1,15 @@
 #!/usr/bin/env perl
-# make-test-data.pl — generates a NerfJournal import file for the current month.
+# make-test-data.pl — generates a NerfJournal import file for the last 30 days.
 #
 # Outputs JSON to stdout; redirect to a file and import via Debug > Import:
 #   perl make-test-data.pl > test-data.json
 #
-# Produces 14 journal pages spread across the current month. Each task is
-# a single todo record with an "added" date and an optional "ending" (done
-# or abandoned with a timestamp). A note is created on the page where a task
-# was completed. Todos with no ending are still-pending at the close of the
-# generated data. Output is deterministic (fixed srand seed) so you get the
-# same task assignments on every run.
+# Produces 14 journal pages spread across the last 30 days, ending today.
+# Each task is a single todo record with an "added" date and an optional
+# "ending" (done or abandoned with a timestamp). A note is created on the
+# page where a task was completed. Todos with no ending are still-pending at
+# the close of the generated data. Output is deterministic (fixed srand seed)
+# so you get the same task assignments on every run.
 
 use strict;
 use warnings;
@@ -19,13 +19,9 @@ use JSON::PP;
 
 srand(20260228);  # fixed seed — change to get different task assignments
 
-my @now   = localtime time;
-my $year  = $now[5] + 1900;
-my $month = $now[4] + 1;
-
-# 14 days spread through the month, simulating skipped weekends and absences.
-# All <= 22, so valid in any calendar month.
-my @DAYS = (1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 16, 18, 20, 22);
+# 14 days expressed as "N days ago" (0 = today), in chronological order.
+# Spacing mimics a typical work pattern with skipped weekends and absences.
+my @DAYS = (21, 20, 18, 17, 15, 14, 12, 11, 9, 8, 6, 4, 2, 0);
 
 # Task pool: [title, group_or_undef, should_migrate]
 # should_migrate: 1 = stays pending on future pages if not done; 0 = abandoned
@@ -57,8 +53,9 @@ my @POOL = (
 sub iso8601 { strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($_[0])) }
 
 sub day_ts {
-    # Unix timestamp for midnight local time on day $d of the current month.
-    timelocal(0, 0, 0, $_[0], $month - 1, $year - 1900);
+    # Unix timestamp for midnight local time, N days before today.
+    my @t = localtime(time - $_[0] * 86400);
+    timelocal(0, 0, 0, $t[3], $t[4], $t[5]);
 }
 
 # -- generation --------------------------------------------------------------
