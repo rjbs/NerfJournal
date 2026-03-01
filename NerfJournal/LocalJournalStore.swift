@@ -13,12 +13,11 @@ final class LocalJournalStore: ObservableObject {
         self.db = database
     }
 
-    // Load today's page if one already exists, without creating it.
+    // Load the most recent journal page, without creating one if none exists.
     func load() async throws {
-        let today = Self.startOfToday
         page = try await db.dbQueue.read { db in
             try JournalPage
-                .filter(Column("date") == today)
+                .order(Column("date").desc)
                 .fetchOne(db)
         }
         try await refreshContents()

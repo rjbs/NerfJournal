@@ -29,6 +29,11 @@ final class DiaryStore: ObservableObject {
         }
     }
 
+    var isSelectedPageLast: Bool {
+        guard let page = selectedPage, let lastDate = pageDates.max() else { return false }
+        return Calendar.current.startOfDay(for: page.date) == lastDate
+    }
+
     func loadIndex() async throws {
         let dates = try await db.dbQueue.read { db in
             try JournalPage.order(Column("date")).fetchAll(db).map(\.date)
