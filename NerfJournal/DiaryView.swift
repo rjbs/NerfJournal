@@ -324,7 +324,7 @@ struct DiaryPageDetailView: View {
                 List(selection: $selectedTodoIDs) {
                     // On past pages with resolvedWithNotes, the Activity section
                     // leads so you see "what happened" before the leftovers.
-                    if resolvedWithNotes && readOnly && !activityTodos.isEmpty {
+                    if resolvedWithNotes && readOnly && !activityItems.isEmpty {
                         activitySection
                     }
 
@@ -368,11 +368,11 @@ struct DiaryPageDetailView: View {
 
                     // On today's mutable page with resolvedWithNotes, the Activity
                     // section trails so open work stays front and centre.
-                    if resolvedWithNotes && !readOnly && !activityTodos.isEmpty {
+                    if resolvedWithNotes && !readOnly && !activityItems.isEmpty {
                         activitySection
                     }
 
-                    if !textNotes.isEmpty {
+                    if !resolvedWithNotes && !textNotes.isEmpty {
                         Section("Notes") {
                             ForEach(textNotes) { note in
                                 VStack(alignment: .leading, spacing: 2) {
@@ -497,6 +497,41 @@ struct DiaryPageDetailView: View {
         }
     }
 
+    // A single item in the Activity section: either a resolved todo or a note.
+    private enum ActivityItem: Identifiable {
+        case todo(Todo)
+        case note(Note)
+
+        var id: String {
+            switch self {
+            case .todo(let t): return "todo-\(t.id!)"
+            case .note(let n): return "note-\(n.id!)"
+            }
+        }
+
+        var timestamp: Date {
+            switch self {
+            case .todo(let t): return t.ending!.date
+            case .note(let n): return n.timestamp
+            }
+        }
+    }
+
+    // Resolved todos and notes merged into a single chronological sequence.
+    // On timestamp ties, todos sort before notes; within each kind, by id.
+    private var activityItems: [ActivityItem] {
+        let items = activityTodos.map(ActivityItem.todo) + textNotes.map(ActivityItem.note)
+        return items.sorted {
+            if $0.timestamp != $1.timestamp { return $0.timestamp < $1.timestamp }
+            switch ($0, $1) {
+            case (.todo(let a), .todo(let b)): return a.id! < b.id!
+            case (.note(let a), .note(let b)): return a.id! < b.id!
+            case (.todo, .note):               return true
+            case (.note, .todo):               return false
+            }
+        }
+    }
+
     // Groups todos by categoryID, sorted by category.sortOrder (uncategorized last).
     // Todos with a categoryID that no longer has a matching category are folded into
     // the "Other" bucket along with nil-categoryID todos.
@@ -523,23 +558,34 @@ struct DiaryPageDetailView: View {
     @ViewBuilder
     private var activitySection: some View {
         Section("Activity") {
-            ForEach(activityTodos) { todo in
-                TodoRow(
-                    todo: todo,
-                    pageDate: date,
-                    readOnly: readOnly,
-                    isEditing: editingTodoID == todo.id,
-                    selectedIDs: selectedTodoIDs,
-                    showCategoryDot: true,
-                    onCommitEdit: { newTitle in
-                        let trimmed = newTitle.trimmingCharacters(in: .whitespaces)
-                        editingTodoID = nil
-                        guard !trimmed.isEmpty else { return }
-                        Task { try? await journalStore.setTitle(trimmed, for: todo, undoManager: undoManager) }
-                    },
-                    onCancelEdit: { editingTodoID = nil }
-                )
-                .tag(todo.id!)
+            ForEach(activityItems) { item in
+                switch item {
+                case .todo(let todo):
+                    TodoRow(
+                        todo: todo,
+                        pageDate: date,
+                        readOnly: readOnly,
+                        isEditing: editingTodoID == todo.id,
+                        selectedIDs: selectedTodoIDs,
+                        showCategoryDot: true,
+                        onCommitEdit: { newTitle in
+                            let trimmed = newTitle.trimmingCharacters(in: .whitespaces)
+                            editingTodoID = nil
+                            guard !trimmed.isEmpty else { return }
+                            Task { try? await journalStore.setTitle(trimmed, for: todo, undoManager: undoManager) }
+                        },
+                        onCancelEdit: { editingTodoID = nil }
+                    )
+                    .tag(todo.id!)
+                case .note(let note):
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(note.text!)
+                        Text(note.timestamp.formatted(date: .omitted, time: .shortened))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 2)
+                }
             }
         }
     }
