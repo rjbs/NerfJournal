@@ -15,14 +15,50 @@ func exportPageHTML(date: Date, todos: [Todo], notes: [Note], categories: [Categ
 
     let catByID = Dictionary(uniqueKeysWithValues: categories.compactMap { c in c.id.map { ($0, c) } })
 
-    // Group todos by effective category; unknown IDs fall into "Other".
+    // ── Activity items ─────────────────────────────────────────────────────
+    // Todos resolved on this day, plus notes, merged chronologically.
+    // Mirrors DiaryPageDetailView.activityItems sort (timestamp, then todo
+    // before note on ties, then by id within kind).
+
+    enum ActivityItem {
+        case todo(Todo)
+        case note(Note)
+        var timestamp: Date {
+            switch self { case .todo(let t): t.ending!.date; case .note(let n): n.timestamp }
+        }
+    }
+
+    let activityTodos = todos.filter { t in
+        t.ending.map { cal.isDate($0.date, inSameDayAs: pageDay) } ?? false
+    }
+    let openTodos = todos.filter { t in
+        t.ending.map { !cal.isDate($0.date, inSameDayAs: pageDay) } ?? true
+    }
+    let visibleNotes = notes.filter { $0.text != nil }
+
+    let activityItems: [ActivityItem] = (activityTodos.map(ActivityItem.todo)
+                                       + visibleNotes.map(ActivityItem.note))
+        .sorted {
+            if $0.timestamp != $1.timestamp { return $0.timestamp < $1.timestamp }
+            switch ($0, $1) {
+            case (.todo(let a), .todo(let b)): return a.id! < b.id!
+            case (.note(let a), .note(let b)): return a.id! < b.id!
+            case (.todo, .note): return true
+            case (.note, .todo): return false
+            }
+        }
+
+    // ── Open todos grouped by category ────────────────────────────────────
+
     var todosByCat: [Int64?: [Todo]] = [:]
-    for todo in todos {
+    for todo in openTodos {
         let key: Int64? = todo.categoryID.flatMap { catByID[$0] != nil ? $0 : nil }
         todosByCat[key, default: []].append(todo)
     }
     let knownCatIDs = todosByCat.keys.compactMap { $0 }
         .sorted { (catByID[$0]?.sortOrder ?? 0) < (catByID[$1]?.sortOrder ?? 0) }
+
+    // ── HTML helpers ───────────────────────────────────────────────────────
 
     func esc(_ s: String) -> String {
         s.replacingOccurrences(of: "&", with: "&amp;")
@@ -30,28 +66,64 @@ func exportPageHTML(date: Date, todos: [Todo], notes: [Note], categories: [Categ
          .replacingOccurrences(of: ">", with: "&gt;")
     }
 
+    func linkTag(for urlString: String) -> String {
+        let domain = URL(string: urlString)?.host ?? urlString
+        return "<a class=\"exturl\" href=\"\(esc(urlString))\">\(esc(domain))</a>"
+    }
+
+    func dotSpan(color: String) -> String {
+        "<span class=\"dot\" style=\"background:\(color)\"></span>"
+    }
+
+    // ── Build body ─────────────────────────────────────────────────────────
+
     var body = ""
 
-    func renderGroup(category: Category?, groupTodos: [Todo]) {
-        let name = esc(category?.name ?? "Other")
-        let dot: String
-        if let hex = category?.color.cssHex {
-            dot = "<span class=\"dot\" style=\"background:\(hex)\"></span>"
-        } else {
-            dot = "<span class=\"dot\" style=\"background:#999\"></span>"
+    // Activity section — table layout keeps the dot/time columns narrow and
+    // the content column free to wrap naturally.
+    if !activityItems.isEmpty {
+        body += "<section>\n<h2>Activity</h2>\n<table class=\"act\">\n"
+        for item in activityItems {
+            switch item {
+            case .todo(let todo):
+                let (_, cls, cap) = todoDisplayState(todo, pageDay: pageDay, cal: cal)
+                let dotColor = todo.categoryID.flatMap { catByID[$0]?.color.cssHex } ?? "#999"
+                let ts = esc(timeFormatter.string(from: todo.ending!.date))
+                var titleHTML = cls == "done" ? "<s>\(esc(todo.title))</s>" : esc(todo.title)
+                if let url = todo.externalURL, !url.isEmpty {
+                    titleHTML += " \(linkTag(for: url))"
+                }
+                body += "<tr class=\"\(cls)\">"
+                body += "<td class=\"act-dot\">\(dotSpan(color: dotColor))</td>"
+                body += "<td class=\"act-ts\">\(ts)</td>"
+                body += "<td class=\"act-body\">\(titleHTML)"
+                if let cap { body += "<div class=\"cap\">\(esc(cap))</div>" }
+                body += "</td></tr>\n"
+
+            case .note(let note):
+                let ts = esc(timeFormatter.string(from: note.timestamp))
+                body += "<tr class=\"note-row\">"
+                body += "<td class=\"act-dot\"></td>"
+                body += "<td class=\"act-ts\">\(ts)</td>"
+                body += "<td class=\"act-body note-text\">\(esc(note.text!))</td>"
+                body += "</tr>\n"
+            }
         }
-        body += "<section>\n<h2>\(dot)\(name)</h2>\n<ul>\n"
+        body += "</table>\n</section>\n"
+    }
+
+    // Open/leftover todos — grouped by category, same structure as before.
+    func renderGroup(category: Category?, groupTodos: [Todo]) {
+        let dot = dotSpan(color: category?.color.cssHex ?? "#999")
+        body += "<section>\n<h2>\(dot)\(esc(category?.name ?? "Other"))</h2>\n<ul>\n"
         for todo in groupTodos {
             let (sym, cls, cap) = todoDisplayState(todo, pageDay: pageDay, cal: cal)
-            body += "<li class=\"\(cls)\">"
-            body += "<span class=\"sym\">\(sym)</span>"
-            body += cls == "done" ? "<s>\(esc(todo.title))</s>" : esc(todo.title)
+            var titleHTML = cls == "done" ? "<s>\(esc(todo.title))</s>" : esc(todo.title)
             if let url = todo.externalURL, !url.isEmpty {
-                body += "<div class=\"meta\"><a href=\"\(esc(url))\">\(esc(url))</a></div>"
+                titleHTML += " \(linkTag(for: url))"
             }
-            if let cap {
-                body += "<div class=\"meta\">\(esc(cap))</div>"
-            }
+            body += "<li class=\"\(cls)\"><span class=\"sym\">\(sym)</span>\(titleHTML)"
+            if let cap { body += "<div class=\"cap\">\(esc(cap))</div>" }
             body += "</li>\n"
         }
         body += "</ul>\n</section>\n"
@@ -60,17 +132,7 @@ func exportPageHTML(date: Date, todos: [Todo], notes: [Note], categories: [Categ
     for id in knownCatIDs { renderGroup(category: catByID[id], groupTodos: todosByCat[id]!) }
     if let uncategorized = todosByCat[nil] { renderGroup(category: nil, groupTodos: uncategorized) }
 
-    let visibleNotes = notes.filter { $0.text != nil }
-    if !visibleNotes.isEmpty {
-        body += "<section class=\"notes\">\n<h2>Notes</h2>\n"
-        for note in visibleNotes {
-            body += "<div class=\"note\">"
-            body += "<div class=\"note-text\">\(esc(note.text!))</div>"
-            body += "<div class=\"note-time\">\(esc(timeFormatter.string(from: note.timestamp)))</div>"
-            body += "</div>\n"
-        }
-        body += "</section>\n"
-    }
+    // ── Template ───────────────────────────────────────────────────────────
 
     return """
     <!DOCTYPE html>
@@ -80,20 +142,25 @@ func exportPageHTML(date: Date, todos: [Todo], notes: [Note], categories: [Categ
     <title>NerfJournal \u{2013} \(esc(pageTitle))</title>
     <style>
     body{font-family:-apple-system,Helvetica,sans-serif;max-width:680px;margin:2em auto;color:#1d1d1f;line-height:1.5}
-    h1{font-size:1.3em;margin:0 0 1em}
-    h2{font-size:.85em;font-weight:600;color:#666;margin:1.1em 0 .3em;display:flex;align-items:center;gap:.35em}
-    .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;display:inline-block}
-    ul{list-style:none;padding:0;margin:0}
-    li{padding:.2em 0}
+    h1{font-size:1.3em;margin:0 0 .8em}
+    h2{font-size:.8em;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#888;margin:1.3em 0 .3em;display:flex;align-items:center;gap:.4em}
+    .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;display:inline-block}
+    table.act{border-collapse:collapse;width:100%;margin-bottom:.5em}
+    .act td{padding:.15em 0;vertical-align:baseline}
+    .act-dot{width:16px;padding-right:2px}
+    .act-dot .dot{position:relative;top:.1em}
+    .act-ts{font-size:.8em;color:#888;white-space:nowrap;padding-right:.7em;text-align:right;font-variant-numeric:tabular-nums}
+    .act-body{width:100%}
+    ul{list-style:none;padding:0;margin:0 0 .5em}
+    li{padding:.15em 0}
     .sym{display:inline-block;width:1.3em}
     .done{color:#555}
     .abandoned{color:#bbb}
     .migrated{color:#bbb}
-    .meta{font-size:.8em;color:#888;margin-left:1.3em}
-    .notes{margin-top:1.5em;border-top:1px solid #ddd;padding-top:.5em}
-    .note{margin:.6em 0}
-    .note-text{white-space:pre-wrap}
-    .note-time{font-size:.8em;color:#888;margin-top:.15em}
+    .note-text{white-space:pre-wrap;color:#444}
+    .cap{font-size:.8em;color:#999;margin-left:1.3em}
+    a.exturl{font-size:.8em;color:#999;text-decoration:underline dashed;margin-left:.35em}
+    a.exturl:link,a.exturl:visited{color:#999}
     </style>
     </head>
     <body>
@@ -117,10 +184,8 @@ private func todoDisplayState(
     }
     let endDay = cal.startOfDay(for: ending.date)
     guard endDay > pageDay else {
-        // Ended on this page's day.
         return ending.kind == .done ? ("✓", "done", carried) : ("✗", "abandoned", nil)
     }
-    // Was open on this page, resolved on a later day.
     let n = cal.dateComponents([.day], from: pageDay, to: endDay).day ?? 0
     let cap = ending.kind == .done
         ? "Done \(n) day\(n == 1 ? "" : "s") later"
