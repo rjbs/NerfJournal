@@ -801,6 +801,10 @@ struct TodoRow: View {
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
                     .frame(width: activityTimeColumnWidth, alignment: .trailing)
+                Text(activityIndicator)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 14, alignment: .center)
             }
 
             VStack(alignment: .leading, spacing: 2) {
@@ -973,9 +977,31 @@ struct TodoRow: View {
     }
 
     private var shouldStrikethrough: Bool {
+        if activityTimestamp != nil {
+            // Activity log: abandoned is struck; done gets the ✔ indicator instead.
+            switch rowState {
+            case .abandonedToday, .migratedResolved(.abandoned, _): return true
+            default: return false
+            }
+        } else {
+            // Grouped view: both done and abandoned are struck through.
+            switch rowState {
+            case .doneToday, .abandonedToday,
+                 .migratedResolved(.done, _), .migratedResolved(.abandoned, _): return true
+            default: return false
+            }
+        }
+    }
+
+    // Fixed-width indicator shown in the activity log between the timestamp
+    // and the title: ✔ (U+2714) for done, ✗ (U+2717) for abandoned, empty
+    // otherwise.  Always occupies the same width so titles stay aligned.
+    private var activityIndicator: String {
+        guard activityTimestamp != nil else { return "" }
         switch rowState {
-        case .doneToday, .migratedResolved(.done, _): return true
-        default: return false
+        case .doneToday, .migratedResolved(.done, _):            return "\u{2714}"
+        case .abandonedToday, .migratedResolved(.abandoned, _):  return "\u{2717}"
+        default: return ""
         }
     }
 
@@ -1054,7 +1080,7 @@ struct NoteRow: View {
     var body: some View {
         Group {
             if let ts = activityTimestamp {
-                // Activity layout: [pip spacer] [fixed-width time] [text]
+                // Activity layout: [pip spacer] [fixed-width time] [indicator] [text]
                 HStack(spacing: 8) {
                     Color.clear.frame(width: 8, height: 8)
                     Text(ts.formatted(date: .omitted, time: .shortened))
@@ -1062,6 +1088,10 @@ struct NoteRow: View {
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                         .frame(width: activityTimeColumnWidth, alignment: .trailing)
+                    Text("\u{270e}")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .frame(width: 14, alignment: .center)
                     noteTextContent
                     Spacer()
                 }
