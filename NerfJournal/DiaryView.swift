@@ -318,83 +318,91 @@ struct DiaryPageDetailView: View {
 
             Divider()
 
-            List(selection: $selectedTodoIDs) {
-                if todos.isEmpty && readOnly {
-                    Text("No tasks recorded for this day.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(todoGroups, id: \.id) { group in
-                        Section {
-                            ForEach(group.todos) { todo in
-                                TodoRow(
-                                    todo: todo,
-                                    pageDate: date,
-                                    readOnly: readOnly,
-                                    isEditing: editingTodoID == todo.id,
-                                    selectedIDs: selectedTodoIDs,
-                                    onCommitEdit: { newTitle in
-                                        let trimmed = newTitle.trimmingCharacters(in: .whitespaces)
-                                        editingTodoID = nil
-                                        guard !trimmed.isEmpty else { return }
-                                        Task { try? await journalStore.setTitle(trimmed, for: todo, undoManager: undoManager) }
-                                    },
-                                    onCancelEdit: { editingTodoID = nil }
-                                )
-                                .tag(todo.id!)
+            ScrollViewReader { scrollProxy in
+                List(selection: $selectedTodoIDs) {
+                    if todos.isEmpty && readOnly {
+                        Text("No tasks recorded for this day.")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(todoGroups, id: \.id) { group in
+                            Section {
+                                ForEach(group.todos) { todo in
+                                    TodoRow(
+                                        todo: todo,
+                                        pageDate: date,
+                                        readOnly: readOnly,
+                                        isEditing: editingTodoID == todo.id,
+                                        selectedIDs: selectedTodoIDs,
+                                        onCommitEdit: { newTitle in
+                                            let trimmed = newTitle.trimmingCharacters(in: .whitespaces)
+                                            editingTodoID = nil
+                                            guard !trimmed.isEmpty else { return }
+                                            Task { try? await journalStore.setTitle(trimmed, for: todo, undoManager: undoManager) }
+                                        },
+                                        onCancelEdit: { editingTodoID = nil }
+                                    )
+                                    .tag(todo.id!)
+                                }
+                            } header: {
+                                categoryHeader(group.category)
                             }
-                        } header: {
-                            categoryHeader(group.category)
+                        }
+                        if !readOnly && showAddField {
+                            Section {
+                                TextField("Add todo\u{2026}", text: $newTodoTitle)
+                                    .focused($addFieldFocused)
+                                    .onSubmit { submitNewTodo() }
+                                    .onKeyPress(.escape) { addFieldFocused = false; return .handled }
+                                    .id("addTodoField")
+                            }
                         }
                     }
-                    if !readOnly && showAddField {
-                        Section {
-                            TextField("Add todo\u{2026}", text: $newTodoTitle)
-                                .focused($addFieldFocused)
-                                .onSubmit { submitNewTodo() }
-                                .onKeyPress(.escape) { addFieldFocused = false; return .handled }
-                        }
-                    }
-                }
 
-                if !textNotes.isEmpty {
-                    Section("Notes") {
-                        ForEach(textNotes) { note in
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(note.text!)
-                                Text(note.timestamp.formatted(date: .omitted, time: .shortened))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                    if !textNotes.isEmpty {
+                        Section("Notes") {
+                            ForEach(textNotes) { note in
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(note.text!)
+                                    Text(note.timestamp.formatted(date: .omitted, time: .shortened))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .padding(.vertical, 2)
                             }
-                            .padding(.vertical, 2)
                         }
                     }
                 }
-            }
-            .onKeyPress(phases: .down) { keyPress in
-                if keyPress.key == .escape, !selectedTodoIDs.isEmpty {
-                    selectedTodoIDs = []
-                    return .handled
-                }
-                guard !readOnly, editingTodoID == nil, !addFieldFocused else { return .ignored }
-                guard keyPress.key == .return else { return .ignored }
-                guard !selectedTodoIDs.isEmpty else { return .ignored }
-                if keyPress.modifiers.contains(.command) {
-                    let selectedTodos = todos.filter { selectedTodoIDs.contains($0.id!) }
-                    for todo in selectedTodos {
-                        if todo.isPending {
-                            Task { try? await journalStore.completeTodo(todo, undoManager: undoManager) }
-                        } else if todo.isDone {
-                            Task { try? await journalStore.uncompleteTodo(todo, undoManager: undoManager) }
-                        }
+                .onKeyPress(phases: .down) { keyPress in
+                    if keyPress.key == .escape, !selectedTodoIDs.isEmpty {
+                        selectedTodoIDs = []
+                        return .handled
                     }
-                    if !selectedTodos.isEmpty { return .handled }
-                } else if selectedTodoIDs.count == 1, let id = selectedTodoIDs.first {
-                    editingTodoID = id
-                    return .handled
+                    guard !readOnly, editingTodoID == nil, !addFieldFocused else { return .ignored }
+                    guard keyPress.key == .return else { return .ignored }
+                    guard !selectedTodoIDs.isEmpty else { return .ignored }
+                    if keyPress.modifiers.contains(.command) {
+                        let selectedTodos = todos.filter { selectedTodoIDs.contains($0.id!) }
+                        for todo in selectedTodos {
+                            if todo.isPending {
+                                Task { try? await journalStore.completeTodo(todo, undoManager: undoManager) }
+                            } else if todo.isDone {
+                                Task { try? await journalStore.uncompleteTodo(todo, undoManager: undoManager) }
+                            }
+                        }
+                        if !selectedTodos.isEmpty { return .handled }
+                    } else if selectedTodoIDs.count == 1, let id = selectedTodoIDs.first {
+                        editingTodoID = id
+                        return .handled
+                    }
+                    return .ignored
                 }
-                return .ignored
+                .onChange(of: selectedTodoIDs) { _, _ in editingTodoID = nil }
+                .onChange(of: showAddField) { _, show in
+                    if show {
+                        Task { @MainActor in scrollProxy.scrollTo("addTodoField", anchor: .bottom) }
+                    }
+                }
             }
-            .onChange(of: selectedTodoIDs) { _, _ in editingTodoID = nil }
         }
         .toolbar {
             ToolbarItem {
