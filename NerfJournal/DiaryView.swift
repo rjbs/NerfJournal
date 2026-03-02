@@ -431,6 +431,40 @@ struct DiaryPageDetailView: View {
                         if selectedNoteID != nil { selectedNoteID = nil; return .handled }
                         return .ignored
                     }
+                    // Notes are untagged and invisible to the List's built-in
+                    // arrow navigation. When the selection is inside the Activity
+                    // section, handle up/down manually using activityItems order.
+                    // -- claude, 2026-03-02
+                    if (keyPress.key == .upArrow || keyPress.key == .downArrow),
+                       resolvedWithNotes, !activityItems.isEmpty,
+                       editingTodoID == nil, editingNoteID == nil {
+                        let delta = keyPress.key == .downArrow ? 1 : -1
+                        let currentIndex: Int? = {
+                            if let noteID = selectedNoteID {
+                                return activityItems.firstIndex {
+                                    guard case .note(let n) = $0 else { return false }
+                                    return n.id == noteID
+                                }
+                            }
+                            if selectedTodoIDs.count == 1, let id = selectedTodoIDs.first {
+                                return activityItems.firstIndex {
+                                    guard case .todo(let t) = $0 else { return false }
+                                    return t.id == id
+                                }
+                            }
+                            return nil
+                        }()
+                        if let idx = currentIndex {
+                            let next = idx + delta
+                            if next >= 0, next < activityItems.count {
+                                switch activityItems[next] {
+                                case .todo(let t): selectedTodoIDs = [t.id!]; selectedNoteID = nil
+                                case .note(let n): selectedNoteID = n.id; selectedTodoIDs = []
+                                }
+                            }
+                            return .handled
+                        }
+                    }
                     guard !readOnly, editingTodoID == nil, editingNoteID == nil, !addFieldFocused, !addNoteFieldFocused else { return .ignored }
                     guard keyPress.key == .return else { return .ignored }
                     if let noteID = selectedNoteID {
