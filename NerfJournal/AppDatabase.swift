@@ -7,7 +7,12 @@ extension Notification.Name {
 
 // Snapshot of the entire database, used for export and import.
 struct DatabaseExport: Codable {
+    // version mirrors the DB schema version at export time. Not currently
+    // consumed on import, but retained so future code can gate on it if
+    // schema versions diverge. -- claude, 2026-03-02
     let version: Int
+    // exportedAt is informational metadata in the JSON; not used by the
+    // importer, but useful to a human inspecting an export file. -- claude, 2026-03-02
     let exportedAt: Date
     let categories: [Category]
     let taskBundles: [TaskBundle]
