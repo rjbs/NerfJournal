@@ -60,13 +60,16 @@ applied.
 - **`AppDatabase`** — wraps a GRDB `DatabaseQueue`, owns the SQLite
   file, and runs schema migrations. The file lives under the app's
   sandbox container:
-  `~/Library/Containers/<bundle-id>/Data/Library/Application Support/journal.sqlite`
+  `~/Library/Containers/org.rjbs.nerfjournal/Data/Library/Application Support/NerfJournal/journal.sqlite`
 - **`LocalJournalStore`** — `@MainActor ObservableObject` that
   publishes the current page's todos and notes, and exposes mutating
   actions: start today, complete/uncomplete/abandon/mark-pending todo,
   add todo, delete todo, rename todo, set category, set URL, apply
   bundle. "Start Today" creates a new page and abandons any pending
   non-migratable todos from before today in one atomic transaction.
+  Also observes `DistributedNotificationCenter` for
+  `org.rjbs.nerfjournal.externalChange` and refreshes when it fires,
+  so external writers (such as the CLI tool below) update the UI live.
 - **`DiaryStore`** — `@MainActor ObservableObject` that indexes all
   pages and provides read-only access to any past page's todos and
   notes. Drives the calendar sidebar's highlighted dates.
@@ -90,13 +93,43 @@ applied.
 
 Storage is local SQLite only. No iCloud sync or server component.
 
+## CLI Tool
+
+`cli/` contains a standalone Swift Package, `add-nerf-todo`, that
+inserts a todo into today's journal page directly via SQLite, then
+notifies the running app to refresh immediately. Useful for scripts that
+gather work items (GitHub PRs, Linear tickets, etc.) and add them
+programmatically with proper exit-code feedback.
+
+```
+cd cli && swift build -c release
+cp .build/release/add-nerf-todo /usr/local/bin/
+```
+
+```
+add-nerf-todo [--no-migrate] [--category NAME] [--url URL] TITLE...
+```
+
+- `--no-migrate`: mark the todo as non-migratable (default: migratable)
+- `--category NAME`: assign to a named category (case-insensitive; warns
+  and continues without category if not found)
+- `--url URL`: set an `externalURL` on the todo
+- `--database PATH`: override the default database path (for testing)
+
+Exits 0 on success (quiet), 1 on any error (message to stderr). The
+tool requires today's journal page to already exist.
+
+From Perl:
+```perl
+system('add-nerf-todo', '--category', 'GitHub', "Review PR #$pr_number")
+    == 0 or die "add-nerf-todo failed: $?";
+```
+
 ## Future Plans
 
 Roughly in priority order:
 
 **Near term**
-- Notes UI: ability to add freeform notes to the current page (the data
-  model and display are in place; only the add UI is missing)
 - Bundle auto-apply: apply selected bundles automatically on "Start
   Today" based on day of week, rather than requiring manual application
   each morning
@@ -116,8 +149,6 @@ Roughly in priority order:
   as todos
 - Notion publishing: generate a "work diary" page summarizing a day's
   page and post it to a configured Notion database
-- Server sync: a small personal server component to allow other agents
-  or devices to add todos; would unlock mobile access and automation
 
 ## Building
 

@@ -11,6 +11,13 @@ final class LocalJournalStore: ObservableObject {
 
     init(database: AppDatabase = .shared) {
         self.db = database
+        DistributedNotificationCenter.default().addObserver(
+            forName: NSNotification.Name("org.rjbs.nerfjournal.externalChange"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in try? await self?.refreshContents() }
+        }
     }
 
     // Load the most recent journal page, without creating one if none exists.
