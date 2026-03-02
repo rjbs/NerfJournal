@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TodoCommands: Commands {
     @FocusedValue(\.focusAddTodo) var focusAddTodo: Binding<Bool>?
+    @FocusedValue(\.focusAddNote) var focusAddNote: Binding<Bool>?
     @FocusedObject var diaryStore: DiaryStore?
     @Environment(\.openWindow) private var openWindow
 
@@ -10,6 +11,9 @@ struct TodoCommands: Commands {
             Button("Add Todo") { focusAddTodo?.wrappedValue = true }
                 .keyboardShortcut("n", modifiers: .command)
                 .disabled(focusAddTodo == nil)
+            Button("Add Note") { focusAddNote?.wrappedValue = true }
+                .keyboardShortcut("n", modifiers: [.command, .shift])
+                .disabled(focusAddNote == nil)
         }
         CommandGroup(after: .newItem) {
             Button("Go to Today") {

@@ -305,6 +305,11 @@ struct DiaryPageDetailView: View {
     @FocusState private var addFieldFocused: Bool
     @State private var selectedTodoIDs: Set<Int64> = []
     @State private var editingTodoID: Int64? = nil
+    @State private var newNoteText = ""
+    @State private var showAddNoteField = false
+    @FocusState private var addNoteFieldFocused: Bool
+    @State private var editingNoteID: Int64? = nil
+    @State private var selectedNoteID: Int64? = nil
 
     @AppStorage("resolvedWithNotes") private var resolvedWithNotes = false
 
@@ -375,24 +380,49 @@ struct DiaryPageDetailView: View {
                     if !resolvedWithNotes && !textNotes.isEmpty {
                         Section("Notes") {
                             ForEach(textNotes) { note in
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(note.text!)
-                                    Text(note.timestamp.formatted(date: .omitted, time: .shortened))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                NoteRow(
+                                    note: note,
+                                    readOnly: readOnly,
+                                    isEditing: editingNoteID == note.id,
+                                    isSelected: selectedNoteID == note.id,
+                                    onCommitEdit: { newText in
+                                        let trimmed = newText.trimmingCharacters(in: .whitespaces)
+                                        editingNoteID = nil
+                                        guard !trimmed.isEmpty else { return }
+                                        Task { try? await journalStore.setNoteText(trimmed, for: note, undoManager: undoManager) }
+                                    },
+                                    onCancelEdit: { editingNoteID = nil }
+                                )
+                                .onTapGesture {
+                                    guard !readOnly else { return }
+                                    selectedNoteID = note.id
+                                    selectedTodoIDs = []
                                 }
-                                .padding(.vertical, 2)
                             }
+                        }
+                    }
+                    if !readOnly && showAddNoteField {
+                        Section {
+                            TextField("Add note\u{2026}", text: $newNoteText)
+                                .focused($addNoteFieldFocused)
+                                .onSubmit { submitNewNote() }
+                                .onKeyPress(.escape) { addNoteFieldFocused = false; return .handled }
+                                .id("addNoteField")
                         }
                     }
                 }
                 .onKeyPress(phases: .down) { keyPress in
-                    if keyPress.key == .escape, !selectedTodoIDs.isEmpty {
-                        selectedTodoIDs = []
+                    if keyPress.key == .escape {
+                        if !selectedTodoIDs.isEmpty { selectedTodoIDs = []; return .handled }
+                        if selectedNoteID != nil { selectedNoteID = nil; return .handled }
+                        return .ignored
+                    }
+                    guard !readOnly, editingTodoID == nil, editingNoteID == nil, !addFieldFocused, !addNoteFieldFocused else { return .ignored }
+                    guard keyPress.key == .return else { return .ignored }
+                    if let noteID = selectedNoteID {
+                        editingNoteID = noteID
                         return .handled
                     }
-                    guard !readOnly, editingTodoID == nil, !addFieldFocused else { return .ignored }
-                    guard keyPress.key == .return else { return .ignored }
                     guard !selectedTodoIDs.isEmpty else { return .ignored }
                     if keyPress.modifiers.contains(.command) {
                         let selectedTodos = todos.filter { selectedTodoIDs.contains($0.id!) }
@@ -410,10 +440,18 @@ struct DiaryPageDetailView: View {
                     }
                     return .ignored
                 }
-                .onChange(of: selectedTodoIDs) { _, _ in editingTodoID = nil }
+                .onChange(of: selectedTodoIDs) { _, newIDs in
+                    editingTodoID = nil
+                    if !newIDs.isEmpty { selectedNoteID = nil }
+                }
                 .onChange(of: showAddField) { _, show in
                     if show {
                         Task { @MainActor in scrollProxy.scrollTo("addTodoField", anchor: .bottom) }
+                    }
+                }
+                .onChange(of: showAddNoteField) { _, show in
+                    if show {
+                        Task { @MainActor in scrollProxy.scrollTo("addNoteField", anchor: .bottom) }
                     }
                 }
             }
@@ -447,11 +485,22 @@ struct DiaryPageDetailView: View {
         .onChange(of: addFieldFocused) { _, focused in
             if !focused { showAddField = false; newTodoTitle = "" }
         }
+        .onChange(of: addNoteFieldFocused) { _, focused in
+            if !focused { showAddNoteField = false; newNoteText = "" }
+        }
+        .onChange(of: selectedNoteID) { _, _ in editingNoteID = nil }
         .focusedValue(\.focusAddTodo, Binding(
             get: { addFieldFocused },
             set: {
                 if $0 { showAddField = true; selectedTodoIDs = [] }
                 addFieldFocused = $0
+            }
+        ))
+        .focusedValue(\.focusAddNote, readOnly ? nil : Binding(
+            get: { addNoteFieldFocused },
+            set: {
+                if $0 { showAddNoteField = true; selectedTodoIDs = []; selectedNoteID = nil }
+                addNoteFieldFocused = $0
             }
         ))
     }
@@ -578,13 +627,24 @@ struct DiaryPageDetailView: View {
                     )
                     .tag(todo.id!)
                 case .note(let note):
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(note.text!)
-                        Text(note.timestamp.formatted(date: .omitted, time: .shortened))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    NoteRow(
+                        note: note,
+                        readOnly: readOnly,
+                        isEditing: editingNoteID == note.id,
+                        isSelected: selectedNoteID == note.id,
+                        onCommitEdit: { newText in
+                            let trimmed = newText.trimmingCharacters(in: .whitespaces)
+                            editingNoteID = nil
+                            guard !trimmed.isEmpty else { return }
+                            Task { try? await journalStore.setNoteText(trimmed, for: note, undoManager: undoManager) }
+                        },
+                        onCancelEdit: { editingNoteID = nil }
+                    )
+                    .onTapGesture {
+                        guard !readOnly else { return }
+                        selectedNoteID = note.id
+                        selectedTodoIDs = []
                     }
-                    .padding(.vertical, 2)
                 }
             }
         }
@@ -602,6 +662,17 @@ struct DiaryPageDetailView: View {
             newTodoTitle = ""
             showAddField = true
             addFieldFocused = true
+        }
+    }
+
+    private func submitNewNote() {
+        let text = newNoteText.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty else { return }
+        Task {
+            try? await journalStore.addNote(text: text)
+            newNoteText = ""
+            showAddNoteField = true
+            addNoteFieldFocused = true
         }
     }
 }
@@ -893,6 +964,54 @@ struct TodoRow: View {
     }
 }
 
+// MARK: - NoteRow
+
+struct NoteRow: View {
+    @EnvironmentObject private var store: LocalJournalStore
+    @Environment(\.undoManager) private var undoManager
+
+    let note: Note
+    var readOnly: Bool = false
+    var isEditing: Bool = false
+    var isSelected: Bool = false
+    var onCommitEdit: (String) -> Void = { _ in }
+    var onCancelEdit: () -> Void = {}
+
+    @State private var editText = ""
+    @FocusState private var editFieldFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            if isEditing {
+                TextField("", text: $editText)
+                    .focused($editFieldFocused)
+                    .onSubmit { onCommitEdit(editText) }
+                    .onKeyPress(.escape) { onCancelEdit(); return .handled }
+            } else {
+                Text(note.text!)
+            }
+            Text(note.timestamp.formatted(date: .omitted, time: .shortened))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 2)
+        .listRowBackground(isSelected ? Color.accentColor.opacity(0.2) : Color.clear)
+        .onChange(of: isEditing) { _, editing in
+            if editing {
+                editText = note.text ?? ""
+                editFieldFocused = true
+            }
+        }
+        .contextMenu {
+            if !readOnly {
+                Button("Delete", role: .destructive) {
+                    Task { try? await store.deleteNote(note, undoManager: undoManager) }
+                }
+            }
+        }
+    }
+}
+
 // MARK: - FocusAddTodo
 
 struct FocusAddTodoKey: FocusedValueKey {
@@ -903,5 +1022,18 @@ extension FocusedValues {
     var focusAddTodo: Binding<Bool>? {
         get { self[FocusAddTodoKey.self] }
         set { self[FocusAddTodoKey.self] = newValue }
+    }
+}
+
+// MARK: - FocusAddNote
+
+struct FocusAddNoteKey: FocusedValueKey {
+    typealias Value = Binding<Bool>
+}
+
+extension FocusedValues {
+    var focusAddNote: Binding<Bool>? {
+        get { self[FocusAddNoteKey.self] }
+        set { self[FocusAddNoteKey.self] = newValue }
     }
 }
