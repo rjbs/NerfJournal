@@ -178,6 +178,38 @@ final class LocalJournalStore: ObservableObject {
         try await refreshContents()
     }
 
+    // Set the category for a set of todos in one transaction with a single undo step.
+    // Undo restores each todo's prior category individually; there is no redo. -- claude, 2026-03-02
+    func setBulkCategory(_ categoryID: Int64?, forTodoIDs ids: Set<Int64>, undoManager: UndoManager? = nil) async throws {
+        let oldCategories: [(Int64, Int64?)] = todos
+            .filter { ids.contains($0.id!) }
+            .map { ($0.id!, $0.categoryID) }
+        try await db.dbQueue.write { db in
+            for id in ids {
+                try Todo
+                    .filter(Column("id") == id)
+                    .updateAll(db, [Column("categoryID").set(to: categoryID)])
+            }
+            return
+        }
+        undoManager?.registerUndo(withTarget: self) { store in
+            Task { @MainActor in try? await store.restoreBulkCategories(oldCategories) }
+        }
+        try await refreshContents()
+    }
+
+    private func restoreBulkCategories(_ categories: [(Int64, Int64?)]) async throws {
+        try await db.dbQueue.write { db in
+            for (id, categoryID) in categories {
+                try Todo
+                    .filter(Column("id") == id)
+                    .updateAll(db, [Column("categoryID").set(to: categoryID)])
+            }
+            return
+        }
+        try await refreshContents()
+    }
+
     func setURL(_ url: String?, for todo: Todo) async throws {
         try await db.dbQueue.write { db in
             try Todo

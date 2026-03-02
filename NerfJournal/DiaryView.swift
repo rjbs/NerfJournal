@@ -302,7 +302,7 @@ struct DiaryPageDetailView: View {
 
     @State private var newTodoTitle = ""
     @FocusState private var addFieldFocused: Bool
-    @State private var selectedTodoID: Int64? = nil
+    @State private var selectedTodoIDs: Set<Int64> = []
     @State private var editingTodoID: Int64? = nil
 
     @Environment(\.undoManager) private var undoManager
@@ -317,7 +317,7 @@ struct DiaryPageDetailView: View {
 
             Divider()
 
-            List(selection: $selectedTodoID) {
+            List(selection: $selectedTodoIDs) {
                 if todos.isEmpty && readOnly {
                     Text("No tasks recorded for this day.")
                         .foregroundStyle(.secondary)
@@ -330,6 +330,7 @@ struct DiaryPageDetailView: View {
                                     pageDate: date,
                                     readOnly: readOnly,
                                     isEditing: editingTodoID == todo.id,
+                                    selectedIDs: selectedTodoIDs,
                                     onCommitEdit: { newTitle in
                                         let trimmed = newTitle.trimmingCharacters(in: .whitespaces)
                                         editingTodoID = nil
@@ -368,27 +369,30 @@ struct DiaryPageDetailView: View {
                 }
             }
             .onKeyPress(phases: .down) { keyPress in
-                if keyPress.key == .escape, selectedTodoID != nil {
-                    selectedTodoID = nil
+                if keyPress.key == .escape, !selectedTodoIDs.isEmpty {
+                    selectedTodoIDs = []
                     return .handled
                 }
                 guard !readOnly, editingTodoID == nil, !addFieldFocused else { return .ignored }
                 guard keyPress.key == .return else { return .ignored }
-                guard let id = selectedTodoID else { return .ignored }
+                guard !selectedTodoIDs.isEmpty else { return .ignored }
                 if keyPress.modifiers.contains(.command) {
-                    if let todo = todos.first(where: { $0.id == id }) {
+                    let selectedTodos = todos.filter { selectedTodoIDs.contains($0.id!) }
+                    for todo in selectedTodos {
                         if todo.isPending {
                             Task { try? await journalStore.completeTodo(todo, undoManager: undoManager) }
                         } else if todo.isDone {
                             Task { try? await journalStore.uncompleteTodo(todo, undoManager: undoManager) }
                         }
                     }
-                } else {
+                    if !selectedTodos.isEmpty { return .handled }
+                } else if selectedTodoIDs.count == 1, let id = selectedTodoIDs.first {
                     editingTodoID = id
+                    return .handled
                 }
-                return .handled
+                return .ignored
             }
-            .onChange(of: selectedTodoID) { _, _ in editingTodoID = nil }
+            .onChange(of: selectedTodoIDs) { _, _ in editingTodoID = nil }
         }
         .toolbar {
             ToolbarItem {
@@ -412,7 +416,7 @@ struct DiaryPageDetailView: View {
             get: { addFieldFocused },
             set: {
                 addFieldFocused = $0
-                if $0 { selectedTodoID = nil }
+                if $0 { selectedTodoIDs = [] }
             }
         ))
     }
@@ -484,6 +488,7 @@ struct TodoRow: View {
     var pageDate: Date = Calendar.current.startOfDay(for: Date())
     var readOnly: Bool = false
     var isEditing: Bool = false
+    var selectedIDs: Set<Int64> = []
     var onCommitEdit: (String) -> Void = { _ in }
     var onCancelEdit: () -> Void = {}
 
@@ -574,48 +579,90 @@ struct TodoRow: View {
         .padding(.vertical, 2)
         .contextMenu {
             if !readOnly {
-                Menu("Mark") {
-                    if !todo.isPending {
+                let affectedIDs: Set<Int64> = selectedIDs.contains(todo.id!) && selectedIDs.count > 1
+                    ? selectedIDs : [todo.id!]
+                let affectedTodos = store.todos.filter { affectedIDs.contains($0.id!) }
+
+                if affectedTodos.count > 1 {
+                    Menu("Mark") {
                         Button("Pending") {
-                            Task { try? await store.markPending(todo, undoManager: undoManager) }
+                            Task {
+                                for t in affectedTodos where !t.isPending {
+                                    try? await store.markPending(t, undoManager: undoManager)
+                                }
+                            }
                         }
-                    }
-                    if !todo.isDone {
                         Button("Complete") {
-                            Task { try? await store.completeTodo(todo, undoManager: undoManager) }
+                            Task {
+                                for t in affectedTodos where !t.isDone {
+                                    try? await store.completeTodo(t, undoManager: undoManager)
+                                }
+                            }
                         }
-                    }
-                    if !todo.isAbandoned {
                         Button("Abandoned") {
-                            Task { try? await store.abandonTodo(todo) }
+                            Task {
+                                for t in affectedTodos where !t.isAbandoned {
+                                    try? await store.abandonTodo(t)
+                                }
+                            }
                         }
                     }
-                }
 
-                Picker("Category", selection: Binding(
-                    get: { todo.categoryID },
-                    set: { newID in
-                        Task { try? await store.setCategory(newID, for: todo, undoManager: undoManager) }
+                    Menu("Set Category") {
+                        Button("None") {
+                            Task { try? await store.setBulkCategory(nil, forTodoIDs: affectedIDs, undoManager: undoManager) }
+                        }
+                        Divider()
+                        ForEach(categoryStore.categories) { category in
+                            Button(category.name) {
+                                Task { try? await store.setBulkCategory(category.id, forTodoIDs: affectedIDs, undoManager: undoManager) }
+                            }
+                        }
                     }
-                )) {
-                    Text("None").tag(nil as Int64?)
-                    ForEach(categoryStore.categories) { category in
-                        Text(category.name).tag(category.id as Int64?)
+                } else {
+                    Menu("Mark") {
+                        if !todo.isPending {
+                            Button("Pending") {
+                                Task { try? await store.markPending(todo, undoManager: undoManager) }
+                            }
+                        }
+                        if !todo.isDone {
+                            Button("Complete") {
+                                Task { try? await store.completeTodo(todo, undoManager: undoManager) }
+                            }
+                        }
+                        if !todo.isAbandoned {
+                            Button("Abandoned") {
+                                Task { try? await store.abandonTodo(todo) }
+                            }
+                        }
                     }
-                }
-                .pickerStyle(.inline)
 
-                Divider()
+                    Picker("Category", selection: Binding(
+                        get: { todo.categoryID },
+                        set: { newID in
+                            Task { try? await store.setCategory(newID, for: todo, undoManager: undoManager) }
+                        }
+                    )) {
+                        Text("None").tag(nil as Int64?)
+                        ForEach(categoryStore.categories) { category in
+                            Text(category.name).tag(category.id as Int64?)
+                        }
+                    }
+                    .pickerStyle(.inline)
 
-                Button("Set URL\u{2026}") {
-                    urlText = todo.externalURL ?? ""
-                    showingSetURLAlert = true
-                }
+                    Divider()
 
-                Divider()
+                    Button("Set URL\u{2026}") {
+                        urlText = todo.externalURL ?? ""
+                        showingSetURLAlert = true
+                    }
 
-                Button("Delete", role: .destructive) {
-                    Task { try? await store.deleteTodo(todo, undoManager: undoManager) }
+                    Divider()
+
+                    Button("Delete", role: .destructive) {
+                        Task { try? await store.deleteTodo(todo, undoManager: undoManager) }
+                    }
                 }
             }
 
