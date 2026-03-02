@@ -55,7 +55,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         p.level = .floating
         p.setContentSize(hosting.view.fittingSize)
         p.center()
-        NSApp.activate(ignoringOtherApps: true)
+        NSRunningApplication.current.activate(options: .activateIgnoringOtherApps)
+        p.orderFrontRegardless()
         p.makeKeyAndOrderFront(nil)
         panel = p
     }
