@@ -131,7 +131,6 @@ struct Note: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
     var pageID: Int64
     var timestamp: Date
     var text: String?
-    var relatedTodoID: Int64?
 
     static let databaseTableName = "note"
 

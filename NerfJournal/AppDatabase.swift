@@ -214,13 +214,19 @@ struct AppDatabase {
             }
         }
 
+        migrator.registerMigration("v4") { db in
+            // relatedTodoID was never wired up (addNote was never called with a
+            // todo argument). All existing rows have NULL; drop the column.
+            try db.execute(sql: "ALTER TABLE note DROP COLUMN relatedTodoID")
+        }
+
         try migrator.migrate(db)
     }
 
     func exportData() async throws -> Data {
         let snapshot = try await dbQueue.read { db in
             DatabaseExport(
-                version: 3,
+                version: 4,
                 exportedAt: Date(),
                 categories: try Category.order(Column("sortOrder")).fetchAll(db),
                 taskBundles: try TaskBundle.order(Column("id")).fetchAll(db),

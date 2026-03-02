@@ -17,7 +17,7 @@ final class QuickNoteStore: ObservableObject {
     func addNote(text: String) async {
         guard let pageID = todayPageID else { return }
         try? await AppDatabase.shared.dbQueue.write { db in
-            var note = Note(id: nil, pageID: pageID, timestamp: Date(), text: text, relatedTodoID: nil)
+            var note = Note(id: nil, pageID: pageID, timestamp: Date(), text: text)
             try note.insert(db)
         }
         DistributedNotificationCenter.default().postNotificationName(

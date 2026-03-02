@@ -183,16 +183,10 @@ final class PageStore: ObservableObject {
         try await refreshContents()
     }
 
-    func addNote(text: String, relatedTodo: Todo? = nil) async throws {
+    func addNote(text: String) async throws {
         guard let pageID = page?.id else { return }
         try await db.dbQueue.write { db in
-            var note = Note(
-                id: nil,
-                pageID: pageID,
-                timestamp: Date(),
-                text: text,
-                relatedTodoID: relatedTodo?.id
-            )
+            var note = Note(id: nil, pageID: pageID, timestamp: Date(), text: text)
             try note.insert(db)
         }
         try await refreshContents()
