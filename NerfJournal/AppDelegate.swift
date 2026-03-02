@@ -6,6 +6,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
     private var panel: NSPanel?
+    private var activationToken: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         registerGlobalHotKey()
@@ -66,15 +67,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // key status during the activation handoff before we can claim it.
             // Waiting for didBecomeActiveNotification ensures the app is fully
             // active before we steal the key window. -- claude, 2026-03-02
-            var token: NSObjectProtocol?
-            token = NotificationCenter.default.addObserver(
+            activationToken = NotificationCenter.default.addObserver(
                 forName: NSApplication.didBecomeActiveNotification,
                 object: nil, queue: .main
-            ) { [weak p] _ in
-                NotificationCenter.default.removeObserver(token!)
+            ) { [weak self, weak p] _ in
+                if let token = self?.activationToken {
+                    NotificationCenter.default.removeObserver(token)
+                    self?.activationToken = nil
+                }
                 p?.makeKeyAndOrderFront(nil)
             }
-            NSRunningApplication.current.activate(options: .activateIgnoringOtherApps)
+            NSApp.activate()
         }
     }
 
