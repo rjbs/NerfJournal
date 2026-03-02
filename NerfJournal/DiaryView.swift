@@ -617,6 +617,7 @@ struct DiaryPageDetailView: View {
                         isEditing: editingTodoID == todo.id,
                         selectedIDs: selectedTodoIDs,
                         showCategoryDot: true,
+                        activityTimestamp: todo.ending?.date,
                         onCommitEdit: { newTitle in
                             let trimmed = newTitle.trimmingCharacters(in: .whitespaces)
                             editingTodoID = nil
@@ -632,6 +633,7 @@ struct DiaryPageDetailView: View {
                         readOnly: readOnly,
                         isEditing: editingNoteID == note.id,
                         isSelected: selectedNoteID == note.id,
+                        activityTimestamp: note.timestamp,
                         onCommitEdit: { newText in
                             let trimmed = newText.trimmingCharacters(in: .whitespaces)
                             editingNoteID = nil
@@ -689,6 +691,7 @@ struct TodoRow: View {
     var isEditing: Bool = false
     var selectedIDs: Set<Int64> = []
     var showCategoryDot: Bool = false
+    var activityTimestamp: Date? = nil
     var onCommitEdit: (String) -> Void = { _ in }
     var onCancelEdit: () -> Void = {}
 
@@ -742,6 +745,14 @@ struct TodoRow: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(todo.isAbandoned)
+            }
+
+            if let ts = activityTimestamp {
+                Text(ts.formatted(date: .omitted, time: .shortened))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .frame(width: 60, alignment: .trailing)
             }
 
             VStack(alignment: .leading, spacing: 2) {
@@ -974,6 +985,7 @@ struct NoteRow: View {
     var readOnly: Bool = false
     var isEditing: Bool = false
     var isSelected: Bool = false
+    var activityTimestamp: Date? = nil
     var onCommitEdit: (String) -> Void = { _ in }
     var onCancelEdit: () -> Void = {}
 
@@ -981,18 +993,27 @@ struct NoteRow: View {
     @FocusState private var editFieldFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            if isEditing {
-                TextField("", text: $editText)
-                    .focused($editFieldFocused)
-                    .onSubmit { onCommitEdit(editText) }
-                    .onKeyPress(.escape) { onCancelEdit(); return .handled }
+        Group {
+            if let ts = activityTimestamp {
+                // Activity layout: [pip spacer] [fixed-width time] [text]
+                HStack(spacing: 8) {
+                    Color.clear.frame(width: 8, height: 8)
+                    Text(ts.formatted(date: .omitted, time: .shortened))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                        .frame(width: 60, alignment: .trailing)
+                    noteTextContent
+                    Spacer()
+                }
             } else {
-                Text(note.text!)
+                VStack(alignment: .leading, spacing: 2) {
+                    noteTextContent
+                    Text(note.timestamp.formatted(date: .omitted, time: .shortened))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
-            Text(note.timestamp.formatted(date: .omitted, time: .shortened))
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
         .padding(.vertical, 2)
         .listRowBackground(isSelected ? Color.accentColor.opacity(0.2) : Color.clear)
@@ -1008,6 +1029,18 @@ struct NoteRow: View {
                     Task { try? await store.deleteNote(note, undoManager: undoManager) }
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var noteTextContent: some View {
+        if isEditing {
+            TextField("", text: $editText)
+                .focused($editFieldFocused)
+                .onSubmit { onCommitEdit(editText) }
+                .onKeyPress(.escape) { onCancelEdit(); return .handled }
+        } else {
+            Text(note.text!)
         }
     }
 }
