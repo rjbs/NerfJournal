@@ -79,52 +79,65 @@ func exportPageHTML(date: Date, todos: [Todo], notes: [Note], categories: [Categ
 
     var body = ""
 
-    // Activity section — table layout keeps the dot/time columns narrow and
-    // the content column free to wrap naturally.
+    // Activity section — flex rows with fixed dot/time/indicator columns.
+    // Only abandoned items are struck through; done items use the ✔ indicator.
     if !activityItems.isEmpty {
-        body += "<section>\n<h2>Activity</h2>\n<table class=\"act\">\n"
+        body += "<section>\n<h2>Activity</h2>\n<ul class=\"rows\">\n"
         for item in activityItems {
             switch item {
             case .todo(let todo):
                 let (_, cls, cap) = todoDisplayState(todo, pageDay: pageDay, cal: cal)
                 let dotColor = todo.categoryID.flatMap { catByID[$0]?.color.cssHex } ?? "#999"
                 let ts = esc(timeFormatter.string(from: todo.ending!.date))
-                var titleHTML = cls == "done" ? "<s>\(esc(todo.title))</s>" : esc(todo.title)
+                let isAbandoned = cls == "abandoned"
+                var titleHTML = isAbandoned ? "<s>\(esc(todo.title))</s>" : esc(todo.title)
                 if let url = todo.externalURL, !url.isEmpty {
                     titleHTML += " \(linkTag(for: url))"
                 }
-                body += "<tr class=\"\(cls)\">"
-                body += "<td class=\"act-dot\">\(dotSpan(color: dotColor))</td>"
-                body += "<td class=\"act-ts\">\(ts)</td>"
-                body += "<td class=\"act-body\">\(titleHTML)"
+                let ind: String
+                switch cls {
+                case "done":      ind = "\u{2714}"
+                case "abandoned": ind = "\u{2717}"
+                default:          ind = ""
+                }
+                body += "<li class=\"row \(cls)\">"
+                body += "<span class=\"dot-slot\">\(dotSpan(color: dotColor))</span>"
+                body += "<span class=\"ts\">\(ts)</span>"
+                body += "<span class=\"ind\">\(ind)</span>"
+                body += "<span class=\"bd\">\(titleHTML)"
                 if let cap { body += "<div class=\"cap\">\(esc(cap))</div>" }
-                body += "</td></tr>\n"
+                body += "</span></li>\n"
 
             case .note(let note):
                 let ts = esc(timeFormatter.string(from: note.timestamp))
-                body += "<tr class=\"note-row\">"
-                body += "<td class=\"act-dot\"></td>"
-                body += "<td class=\"act-ts\">\(ts)</td>"
-                body += "<td class=\"act-body note-text\">\(esc(note.text!))</td>"
-                body += "</tr>\n"
+                body += "<li class=\"row note-row\">"
+                body += "<span class=\"dot-slot\"></span>"
+                body += "<span class=\"ts\">\(ts)</span>"
+                body += "<span class=\"ind\"></span>"
+                body += "<span class=\"bd note-text\">\(esc(note.text!))</span>"
+                body += "</li>\n"
             }
         }
-        body += "</table>\n</section>\n"
+        body += "</ul>\n</section>\n"
     }
 
-    // Open/leftover todos — grouped by category, same structure as before.
+    // Open/leftover todos — grouped by category.
+    // Both done and abandoned items are struck through in this view.
     func renderGroup(category: Category?, groupTodos: [Todo]) {
         let dot = dotSpan(color: category?.color.cssHex ?? "#999")
-        body += "<section>\n<h2>\(dot)\(esc(category?.name ?? "Other"))</h2>\n<ul>\n"
+        body += "<section>\n<h2>\(dot)\(esc(category?.name ?? "Other"))</h2>\n<ul class=\"rows\">\n"
         for todo in groupTodos {
             let (sym, cls, cap) = todoDisplayState(todo, pageDay: pageDay, cal: cal)
-            var titleHTML = cls == "done" ? "<s>\(esc(todo.title))</s>" : esc(todo.title)
+            let isStruck = cls == "done" || cls == "abandoned"
+            var titleHTML = isStruck ? "<s>\(esc(todo.title))</s>" : esc(todo.title)
             if let url = todo.externalURL, !url.isEmpty {
                 titleHTML += " \(linkTag(for: url))"
             }
-            body += "<li class=\"\(cls)\"><span class=\"sym\">\(sym)</span>\(titleHTML)"
+            body += "<li class=\"row \(cls)\">"
+            body += "<span class=\"sym\">\(sym)</span>"
+            body += "<span class=\"bd\">\(titleHTML)"
             if let cap { body += "<div class=\"cap\">\(esc(cap))</div>" }
-            body += "</li>\n"
+            body += "</span></li>\n"
         }
         body += "</ul>\n</section>\n"
     }
@@ -141,30 +154,35 @@ func exportPageHTML(date: Date, todos: [Todo], notes: [Note], categories: [Categ
     <meta charset="UTF-8">
     <title>NerfJournal \u{2013} \(esc(pageTitle))</title>
     <style>
-    body{font-family:-apple-system,Helvetica,sans-serif;max-width:680px;margin:2em auto;color:#1d1d1f;line-height:1.5}
-    h1{font-size:1.3em;margin:0 0 .8em}
-    h2{font-size:.8em;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#888;margin:1.3em 0 .3em;display:flex;align-items:center;gap:.4em}
-    .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;display:inline-block;vertical-align:middle}
-    table.act{border-collapse:collapse;width:100%;margin-bottom:.5em}
-    .act td{padding:.4em 0;vertical-align:middle}
-    .act-dot{width:18px;text-align:center}
-    .act td.act-ts{font-size:.8em;color:#888;white-space:nowrap;padding:0 1em 0 .2em;text-align:right;font-variant-numeric:tabular-nums}
-    .act-body{width:100%}
-    ul{list-style:none;padding:0;margin:0 0 .5em}
-    li{padding:.35em 0}
-    .sym{display:inline-block;width:1.3em}
-    .done{color:#555}
-    .abandoned{color:#bbb}
-    .migrated{color:#bbb}
-    .note-text{white-space:pre-wrap;color:#444}
-    .cap{font-size:.8em;color:#999;margin-left:1.3em}
-    a.exturl{font-size:.8em;color:#999;text-decoration:underline dashed;margin-left:.35em}
-    a.exturl:link,a.exturl:visited{color:#999}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5;color:#24292e;background:#f6f8fa;padding:24px 16px}
+    .page{max-width:680px;margin:0 auto}
+    h1{font-size:22px;margin-bottom:20px}
+    section{background:#fff;border:1px solid #e1e4e8;border-radius:6px;padding:16px;margin-bottom:16px}
+    h2{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#57606a;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #e1e4e8;display:flex;align-items:center;gap:6px}
+    .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;display:inline-block}
+    ul.rows{list-style:none}
+    li.row{display:flex;align-items:baseline;gap:8px;padding:6px 0;border-bottom:1px solid #f0f0f0}
+    li.row:last-child{border-bottom:none}
+    .dot-slot{width:9px;flex-shrink:0;align-self:center}
+    .ts{font-size:12px;color:#57606a;white-space:nowrap;font-variant-numeric:tabular-nums;flex-shrink:0;width:5.5em;text-align:right}
+    .ind{width:1em;flex-shrink:0;text-align:center;font-size:12px}
+    .bd{flex:1 1 auto;min-width:0}
+    .sym{width:1.3em;flex-shrink:0;text-align:center}
+    .done{color:#57606a}
+    .abandoned{color:#8c959f}
+    .migrated{color:#8c959f}
+    .note-text{white-space:pre-wrap;color:#57606a}
+    .cap{font-size:12px;color:#8c959f;margin-top:2px}
+    a.exturl{font-size:12px;color:#8c959f;text-decoration:underline dashed;margin-left:4px}
+    a.exturl:link,a.exturl:visited{color:#8c959f}
     </style>
     </head>
     <body>
+    <div class="page">
     <h1>\(esc(pageTitle))</h1>
-    \(body)</body>
+    \(body)</div>
+    </body>
     </html>
     """
 }
