@@ -193,6 +193,53 @@ final class LocalJournalStore: ObservableObject {
         try await refreshContents()
     }
 
+    func deleteNote(_ note: Note, undoManager: UndoManager? = nil) async throws {
+        try await db.dbQueue.write { db in
+            try Note.filter(Column("id") == note.id).deleteAll(db)
+            return
+        }
+        undoManager?.registerUndo(withTarget: self) { store in
+            Task { @MainActor in try? await store.restoreNote(note) }
+        }
+        try await refreshContents()
+    }
+
+    private func restoreNote(_ note: Note) async throws {
+        try await db.dbQueue.write { db in
+            var restored = note
+            try restored.insert(db)
+        }
+        try await refreshContents()
+    }
+
+    func setNoteTimestamp(_ date: Date, for note: Note, undoManager: UndoManager? = nil) async throws {
+        let oldTimestamp = note.timestamp
+        try await db.dbQueue.write { db in
+            try Note
+                .filter(Column("id") == note.id)
+                .updateAll(db, [Column("timestamp").set(to: date)])
+            return
+        }
+        undoManager?.registerUndo(withTarget: self) { store in
+            Task { @MainActor in try? await store.setNoteTimestamp(oldTimestamp, for: note, undoManager: undoManager) }
+        }
+        try await refreshContents()
+    }
+
+    func setNoteText(_ text: String, for note: Note, undoManager: UndoManager? = nil) async throws {
+        let oldText = note.text
+        try await db.dbQueue.write { db in
+            try Note
+                .filter(Column("id") == note.id)
+                .updateAll(db, [Column("text").set(to: text)])
+            return
+        }
+        undoManager?.registerUndo(withTarget: self) { store in
+            Task { @MainActor in try? await store.setNoteText(oldText ?? "", for: note, undoManager: undoManager) }
+        }
+        try await refreshContents()
+    }
+
     func setTitle(_ title: String, for todo: Todo, undoManager: UndoManager? = nil) async throws {
         let oldTitle = todo.title
         try await db.dbQueue.write { db in

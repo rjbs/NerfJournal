@@ -1039,6 +1039,17 @@ struct NoteRow: View {
 
     @State private var editText = ""
     @FocusState private var editFieldFocused: Bool
+    @State private var showingAdjustTime = false
+    @State private var pendingTime: Date = .now
+
+    // The closed range of times the note may be moved to: midnight…23:59:59
+    // on whichever calendar day the note currently lives on.
+    private var adjustTimeDayRange: ClosedRange<Date> {
+        let cal = Calendar.current
+        let start = cal.startOfDay(for: note.timestamp)
+        let end = cal.date(bySettingHour: 23, minute: 59, second: 59, of: note.timestamp)!
+        return start...end
+    }
 
     var body: some View {
         Group {
@@ -1073,10 +1084,40 @@ struct NoteRow: View {
         }
         .contextMenu {
             if !readOnly {
+                Button("Adjust time\u{2026}") {
+                    pendingTime = note.timestamp
+                    showingAdjustTime = true
+                }
                 Button("Delete", role: .destructive) {
                     Task { try? await store.deleteNote(note, undoManager: undoManager) }
                 }
             }
+        }
+        .sheet(isPresented: $showingAdjustTime) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Adjust Note Time")
+                    .font(.headline)
+                DatePicker(
+                    "",
+                    selection: $pendingTime,
+                    in: adjustTimeDayRange,
+                    displayedComponents: .hourAndMinute
+                )
+                .labelsHidden()
+                HStack {
+                    Spacer()
+                    Button("Cancel") { showingAdjustTime = false }
+                        .keyboardShortcut(.cancelAction)
+                    Button("Set") {
+                        Task { try? await store.setNoteTimestamp(pendingTime, for: note, undoManager: undoManager) }
+                        showingAdjustTime = false
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .buttonStyle(.borderedProminent)
+                }
+            }
+            .padding()
+            .frame(width: 220)
         }
     }
 
