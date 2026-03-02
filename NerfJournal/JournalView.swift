@@ -1080,7 +1080,7 @@ struct NoteRow: View {
     var body: some View {
         Group {
             if let ts = activityTimestamp {
-                // Activity layout: [pip spacer] [fixed-width time] [indicator] [text]
+                // Activity layout: [pip spacer] [fixed-width time] [indicator slot] [text]
                 HStack(spacing: 8) {
                     Color.clear.frame(width: 8, height: 8)
                     Text(ts.formatted(date: .omitted, time: .shortened))
@@ -1088,10 +1088,7 @@ struct NoteRow: View {
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                         .frame(width: activityTimeColumnWidth, alignment: .trailing)
-                    Text("\u{270e}")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                        .frame(width: 14, alignment: .center)
+                    Color.clear.frame(width: 14)
                     noteTextContent
                     Spacer()
                 }
