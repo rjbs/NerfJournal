@@ -144,15 +144,14 @@ func exportPageHTML(date: Date, todos: [Todo], notes: [Note], categories: [Categ
     body{font-family:-apple-system,Helvetica,sans-serif;max-width:680px;margin:2em auto;color:#1d1d1f;line-height:1.5}
     h1{font-size:1.3em;margin:0 0 .8em}
     h2{font-size:.8em;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#888;margin:1.3em 0 .3em;display:flex;align-items:center;gap:.4em}
-    .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;display:inline-block}
+    .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;display:inline-block;vertical-align:middle}
     table.act{border-collapse:collapse;width:100%;margin-bottom:.5em}
-    .act td{padding:.15em 0;vertical-align:baseline}
-    .act-dot{width:16px;padding-right:2px}
-    .act-dot .dot{position:relative;top:.1em}
-    .act-ts{font-size:.8em;color:#888;white-space:nowrap;padding-right:.7em;text-align:right;font-variant-numeric:tabular-nums}
+    .act td{padding:.4em 0;vertical-align:middle}
+    .act-dot{width:18px;text-align:center}
+    .act-ts{font-size:.8em;color:#888;white-space:nowrap;padding:0 1em 0 .2em;text-align:right;font-variant-numeric:tabular-nums}
     .act-body{width:100%}
     ul{list-style:none;padding:0;margin:0 0 .5em}
-    li{padding:.15em 0}
+    li{padding:.35em 0}
     .sym{display:inline-block;width:1.3em}
     .done{color:#555}
     .abandoned{color:#bbb}
