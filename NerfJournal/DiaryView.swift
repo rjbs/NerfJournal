@@ -1,6 +1,20 @@
 import AppKit
 import SwiftUI
 
+// The width of the timestamp column in the Activity section. Probed once at
+// launch using the reference time 10:00, which is the widest two-digit hour
+// in any locale and clock format ("10:00" in 24h, "10:00 AM" in 12h).
+// -- claude, 2026-03-02
+private let activityTimeColumnWidth: CGFloat = {
+    var comps = DateComponents()
+    comps.hour = 10
+    comps.minute = 0
+    let ref = Calendar.current.date(from: comps) ?? Date()
+    let sample = ref.formatted(date: .omitted, time: .shortened)
+    let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.preferredFont(forTextStyle: .caption1)]
+    return ceil((sample as NSString).size(withAttributes: attrs).width) + 2
+}()
+
 // MARK: - DiaryView
 
 struct DiaryView: View {
@@ -752,7 +766,7 @@ struct TodoRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
-                    .frame(width: 60, alignment: .trailing)
+                    .frame(width: activityTimeColumnWidth, alignment: .trailing)
             }
 
             VStack(alignment: .leading, spacing: 2) {
@@ -1002,7 +1016,7 @@ struct NoteRow: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
-                        .frame(width: 60, alignment: .trailing)
+                        .frame(width: activityTimeColumnWidth, alignment: .trailing)
                     noteTextContent
                     Spacer()
                 }
