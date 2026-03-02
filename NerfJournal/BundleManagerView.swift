@@ -270,7 +270,7 @@ struct BundleDetailView: View {
                             Task { try? await bundleStore.moveTodosInGroup(group.todos, from: offsets, to: destination) }
                         }
                     } header: {
-                        bundleTodoGroupHeader(group.category)
+                        CategoryLabel(category: group.category)
                     }
                 }
 
@@ -309,16 +309,6 @@ struct BundleDetailView: View {
         }
         todoToSetURL = nil
         urlText = ""
-    }
-
-    @ViewBuilder
-    private func bundleTodoGroupHeader(_ category: Category?) -> some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(category.map { $0.color.swatch } ?? Color.gray)
-                .frame(width: 8, height: 8)
-            Text(category?.name ?? "Other")
-        }
     }
 
     private var bundleTodoGroups: [(id: String, category: Category?, todos: [BundleTodo])] {

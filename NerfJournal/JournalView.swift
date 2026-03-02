@@ -371,7 +371,7 @@ struct JournalPageDetailView: View {
                                     .tag(todo.id!)
                                 }
                             } header: {
-                                categoryHeader(group.category)
+                                CategoryLabel(category: group.category)
                             }
                         }
                         if !readOnly && showAddField {
@@ -551,25 +551,6 @@ struct JournalPageDetailView: View {
                 addNoteFieldFocused = $0
             }
         ))
-    }
-
-    @ViewBuilder
-    private func categoryHeader(_ category: Category?) -> some View {
-        if let category {
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(category.color.swatch)
-                    .frame(width: 8, height: 8)
-                Text(category.name)
-            }
-        } else {
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(Color.gray)
-                    .frame(width: 8, height: 8)
-                Text("Other")
-            }
-        }
     }
 
     // Todos whose ending falls on pageDate — shown in the Activity section when
