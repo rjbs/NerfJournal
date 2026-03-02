@@ -148,7 +148,7 @@ func exportPageHTML(date: Date, todos: [Todo], notes: [Note], categories: [Categ
     table.act{border-collapse:collapse;width:100%;margin-bottom:.5em}
     .act td{padding:.4em 0;vertical-align:middle}
     .act-dot{width:18px;text-align:center}
-    .act-ts{font-size:.8em;color:#888;white-space:nowrap;padding:0 1em 0 .2em;text-align:right;font-variant-numeric:tabular-nums}
+    .act td.act-ts{font-size:.8em;color:#888;white-space:nowrap;padding:0 1em 0 .2em;text-align:right;font-variant-numeric:tabular-nums}
     .act-body{width:100%}
     ul{list-style:none;padding:0;margin:0 0 .5em}
     li{padding:.35em 0}
