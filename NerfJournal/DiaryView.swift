@@ -306,6 +306,8 @@ struct DiaryPageDetailView: View {
     @State private var selectedTodoIDs: Set<Int64> = []
     @State private var editingTodoID: Int64? = nil
 
+    @AppStorage("resolvedWithNotes") private var resolvedWithNotes = false
+
     @Environment(\.undoManager) private var undoManager
 
     var body: some View {
@@ -320,11 +322,17 @@ struct DiaryPageDetailView: View {
 
             ScrollViewReader { scrollProxy in
                 List(selection: $selectedTodoIDs) {
+                    // On past pages with resolvedWithNotes, the Activity section
+                    // leads so you see "what happened" before the leftovers.
+                    if resolvedWithNotes && readOnly && !activityTodos.isEmpty {
+                        activitySection
+                    }
+
                     if todos.isEmpty && readOnly {
                         Text("No tasks recorded for this day.")
                             .foregroundStyle(.secondary)
                     } else {
-                        ForEach(todoGroups, id: \.id) { group in
+                        ForEach(todoGroups(for: resolvedWithNotes ? openTodos : todos), id: \.id) { group in
                             Section {
                                 ForEach(group.todos) { todo in
                                     TodoRow(
@@ -356,6 +364,12 @@ struct DiaryPageDetailView: View {
                                     .id("addTodoField")
                             }
                         }
+                    }
+
+                    // On today's mutable page with resolvedWithNotes, the Activity
+                    // section trails so open work stays front and centre.
+                    if resolvedWithNotes && !readOnly && !activityTodos.isEmpty {
+                        activitySection
                     }
 
                     if !textNotes.isEmpty {
@@ -406,6 +420,14 @@ struct DiaryPageDetailView: View {
         }
         .toolbar {
             ToolbarItem {
+                Button {
+                    resolvedWithNotes.toggle()
+                } label: {
+                    Image(systemName: resolvedWithNotes ? "checkmark.circle.fill" : "checkmark.circle")
+                }
+                .help(resolvedWithNotes ? "Show resolved items in place" : "Show Activity section")
+            }
+            ToolbarItem {
                 Menu {
                     ForEach(bundleStore.bundles) { bundle in
                         Button("Apply \u{201c}\(bundle.name)\u{201d}") {
@@ -453,11 +475,33 @@ struct DiaryPageDetailView: View {
         }
     }
 
+    // Todos whose ending falls on pageDate — shown in the Activity section when
+    // resolvedWithNotes is on. Ordered by ending time, tiebroken by id.
+    private var activityTodos: [Todo] {
+        todos
+            .filter { todo in
+                guard let ending = todo.ending else { return false }
+                return Calendar.current.isDate(ending.date, inSameDayAs: date)
+            }
+            .sorted {
+                let d0 = $0.ending!.date, d1 = $1.ending!.date
+                return d0 == d1 ? $0.id! < $1.id! : d0 < d1
+            }
+    }
+
+    // Todos not in the Activity section: still open, or ended on a different day.
+    private var openTodos: [Todo] {
+        todos.filter { todo in
+            guard let ending = todo.ending else { return true }
+            return !Calendar.current.isDate(ending.date, inSameDayAs: date)
+        }
+    }
+
     // Groups todos by categoryID, sorted by category.sortOrder (uncategorized last).
     // Todos with a categoryID that no longer has a matching category are folded into
     // the "Other" bucket along with nil-categoryID todos.
-    private var todoGroups: [(id: String, category: Category?, todos: [Todo])] {
-        let grouped = Dictionary(grouping: todos, by: \.categoryID)
+    private func todoGroups(for sourceTodos: [Todo]) -> [(id: String, category: Category?, todos: [Todo])] {
+        let grouped = Dictionary(grouping: sourceTodos, by: \.categoryID)
         var named: [(id: String, category: Category?, todos: [Todo])] = []
         var other: [Todo] = grouped[nil] ?? []
 
@@ -474,6 +518,30 @@ struct DiaryPageDetailView: View {
             named.append((id: "other", category: nil, todos: other))
         }
         return named
+    }
+
+    @ViewBuilder
+    private var activitySection: some View {
+        Section("Activity") {
+            ForEach(activityTodos) { todo in
+                TodoRow(
+                    todo: todo,
+                    pageDate: date,
+                    readOnly: readOnly,
+                    isEditing: editingTodoID == todo.id,
+                    selectedIDs: selectedTodoIDs,
+                    showCategoryDot: true,
+                    onCommitEdit: { newTitle in
+                        let trimmed = newTitle.trimmingCharacters(in: .whitespaces)
+                        editingTodoID = nil
+                        guard !trimmed.isEmpty else { return }
+                        Task { try? await journalStore.setTitle(trimmed, for: todo, undoManager: undoManager) }
+                    },
+                    onCancelEdit: { editingTodoID = nil }
+                )
+                .tag(todo.id!)
+            }
+        }
     }
 
     private var textNotes: [Note] {
@@ -503,6 +571,7 @@ struct TodoRow: View {
     var readOnly: Bool = false
     var isEditing: Bool = false
     var selectedIDs: Set<Int64> = []
+    var showCategoryDot: Bool = false
     var onCommitEdit: (String) -> Void = { _ in }
     var onCancelEdit: () -> Void = {}
 
@@ -536,7 +605,11 @@ struct TodoRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            if readOnly {
+            if showCategoryDot {
+                Circle()
+                    .fill(categoryStore.categories.first(where: { $0.id == todo.categoryID })?.color.swatch ?? Color.gray)
+                    .frame(width: 8, height: 8)
+            } else if readOnly {
                 statusIcon
             } else {
                 Button {
