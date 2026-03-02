@@ -70,8 +70,8 @@ final class PageStore: ObservableObject {
                 .updateAll(db, [Column("ending").set(to: ending)])
             return
         }
-        undoManager?.registerUndo(withTarget: self) { store in
-            Task { @MainActor in try? await store.uncompleteTodo(todo, undoManager: undoManager) }
+        scheduleUndo(with: undoManager) { store in
+            try await store.uncompleteTodo(todo, undoManager: undoManager)
         }
         try await refreshContents()
     }
@@ -83,8 +83,8 @@ final class PageStore: ObservableObject {
                 .updateAll(db, [Column("ending").set(to: nil as TodoEnding?)])
             return
         }
-        undoManager?.registerUndo(withTarget: self) { store in
-            Task { @MainActor in try? await store.completeTodo(todo, undoManager: undoManager) }
+        scheduleUndo(with: undoManager) { store in
+            try await store.completeTodo(todo, undoManager: undoManager)
         }
         try await refreshContents()
     }
@@ -109,13 +109,11 @@ final class PageStore: ObservableObject {
                 .updateAll(db, [Column("ending").set(to: nil as TodoEnding?)])
             return
         }
-        undoManager?.registerUndo(withTarget: self) { store in
-            Task { @MainActor in
-                if oldEnding?.kind == .done {
-                    try? await store.completeTodo(todo, undoManager: undoManager)
-                } else if oldEnding?.kind == .abandoned {
-                    try? await store.abandonTodo(todo)
-                }
+        scheduleUndo(with: undoManager) { store in
+            if oldEnding?.kind == .done {
+                try await store.completeTodo(todo, undoManager: undoManager)
+            } else if oldEnding?.kind == .abandoned {
+                try await store.abandonTodo(todo)
             }
         }
         try await refreshContents()
@@ -132,8 +130,8 @@ final class PageStore: ObservableObject {
             }
             return
         }
-        undoManager?.registerUndo(withTarget: self) { store in
-            Task { @MainActor in try? await store.restoreBulkEndings(oldEndings) }
+        scheduleUndo(with: undoManager) { store in
+            try await store.restoreBulkEndings(oldEndings)
         }
         try await refreshContents()
     }
@@ -148,8 +146,8 @@ final class PageStore: ObservableObject {
             }
             return
         }
-        undoManager?.registerUndo(withTarget: self) { store in
-            Task { @MainActor in try? await store.restoreBulkEndings(oldEndings) }
+        scheduleUndo(with: undoManager) { store in
+            try await store.restoreBulkEndings(oldEndings)
         }
         try await refreshContents()
     }
@@ -205,8 +203,8 @@ final class PageStore: ObservableObject {
             try Note.filter(Column("id") == note.id).deleteAll(db)
             return
         }
-        undoManager?.registerUndo(withTarget: self) { store in
-            Task { @MainActor in try? await store.restoreNote(note) }
+        scheduleUndo(with: undoManager) { store in
+            try await store.restoreNote(note)
         }
         try await refreshContents()
     }
@@ -227,8 +225,8 @@ final class PageStore: ObservableObject {
                 .updateAll(db, [Column("timestamp").set(to: date)])
             return
         }
-        undoManager?.registerUndo(withTarget: self) { store in
-            Task { @MainActor in try? await store.setNoteTimestamp(oldTimestamp, for: note, undoManager: undoManager) }
+        scheduleUndo(with: undoManager) { store in
+            try await store.setNoteTimestamp(oldTimestamp, for: note, undoManager: undoManager)
         }
         try await refreshContents()
     }
@@ -241,8 +239,8 @@ final class PageStore: ObservableObject {
                 .updateAll(db, [Column("text").set(to: text)])
             return
         }
-        undoManager?.registerUndo(withTarget: self) { store in
-            Task { @MainActor in try? await store.setNoteText(oldText ?? "", for: note, undoManager: undoManager) }
+        scheduleUndo(with: undoManager) { store in
+            try await store.setNoteText(oldText ?? "", for: note, undoManager: undoManager)
         }
         try await refreshContents()
     }
@@ -255,8 +253,8 @@ final class PageStore: ObservableObject {
                 .updateAll(db, [Column("title").set(to: title)])
             return
         }
-        undoManager?.registerUndo(withTarget: self) { store in
-            Task { @MainActor in try? await store.setTitle(oldTitle, for: todo, undoManager: undoManager) }
+        scheduleUndo(with: undoManager) { store in
+            try await store.setTitle(oldTitle, for: todo, undoManager: undoManager)
         }
         try await refreshContents()
     }
@@ -266,8 +264,8 @@ final class PageStore: ObservableObject {
             try Todo.filter(Column("id") == todo.id).deleteAll(db)
             return
         }
-        undoManager?.registerUndo(withTarget: self) { store in
-            Task { @MainActor in try? await store.restoreTodo(todo) }
+        scheduleUndo(with: undoManager) { store in
+            try await store.restoreTodo(todo)
         }
         try await refreshContents()
     }
@@ -280,8 +278,8 @@ final class PageStore: ObservableObject {
                 .updateAll(db, [Column("categoryID").set(to: categoryID)])
             return
         }
-        undoManager?.registerUndo(withTarget: self) { store in
-            Task { @MainActor in try? await store.setCategory(oldCategoryID, for: todo, undoManager: undoManager) }
+        scheduleUndo(with: undoManager) { store in
+            try await store.setCategory(oldCategoryID, for: todo, undoManager: undoManager)
         }
         try await refreshContents()
     }
@@ -300,8 +298,8 @@ final class PageStore: ObservableObject {
             }
             return
         }
-        undoManager?.registerUndo(withTarget: self) { store in
-            Task { @MainActor in try? await store.restoreBulkCategories(oldCategories) }
+        scheduleUndo(with: undoManager) { store in
+            try await store.restoreBulkCategories(oldCategories)
         }
         try await refreshContents()
     }
@@ -415,6 +413,14 @@ final class PageStore: ObservableObject {
             }
             .sortedForDisplay()
         notes = fetchedNotes
+    }
+
+    // Registers an undo action, handling the Task { @MainActor } dance that
+    // every async mutation needs. -- claude, 2026-03-02
+    private func scheduleUndo(with manager: UndoManager?, _ action: @escaping (PageStore) async throws -> Void) {
+        manager?.registerUndo(withTarget: self) { store in
+            Task { @MainActor in try? await action(store) }
+        }
     }
 
     private static var startOfToday: Date {
