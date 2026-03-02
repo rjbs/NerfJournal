@@ -221,7 +221,7 @@ struct BundleDetailView: View {
             List {
                 ForEach(bundleTodoGroups, id: \.id) { group in
                     Section {
-                        ForEach(group.todos) { todo in
+                        ForEach(group.items) { todo in
                             HStack {
                                 Text(todo.title)
                                 Spacer()
@@ -267,7 +267,7 @@ struct BundleDetailView: View {
                             }
                         }
                         .onMove { offsets, destination in
-                            Task { try? await bundleStore.moveTodosInGroup(group.todos, from: offsets, to: destination) }
+                            Task { try? await bundleStore.moveTodosInGroup(group.items, from: offsets, to: destination) }
                         }
                     } header: {
                         CategoryLabel(category: group.category)
@@ -311,23 +311,8 @@ struct BundleDetailView: View {
         urlText = ""
     }
 
-    private var bundleTodoGroups: [(id: String, category: Category?, todos: [BundleTodo])] {
-        let grouped = Dictionary(grouping: bundleStore.selectedBundleTodos, by: \.categoryID)
-        var named: [(id: String, category: Category?, todos: [BundleTodo])] = []
-        var other: [BundleTodo] = grouped[nil] ?? []
-        for (categoryID, groupTodos) in grouped {
-            guard let categoryID else { continue }
-            if let cat = categoryStore.categories.first(where: { $0.id == categoryID }) {
-                named.append((id: "\(categoryID)", category: cat, todos: groupTodos))
-            } else {
-                other.append(contentsOf: groupTodos)
-            }
-        }
-        named.sort { $0.category!.sortOrder < $1.category!.sortOrder }
-        if !other.isEmpty {
-            named.append((id: "other", category: nil, todos: other))
-        }
-        return named
+    private var bundleTodoGroups: [(id: String, category: Category?, items: [BundleTodo])] {
+        groupedByCategory(bundleStore.selectedBundleTodos, categoryID: \.categoryID, categories: categoryStore.categories)
     }
 
     private func submitNewTodo() {

@@ -50,13 +50,7 @@ func exportPageHTML(date: Date, todos: [Todo], notes: [Note], categories: [Categ
 
     // ── Open todos grouped by category ────────────────────────────────────
 
-    var todosByCat: [Int64?: [Todo]] = [:]
-    for todo in openTodos {
-        let key: Int64? = todo.categoryID.flatMap { catByID[$0] != nil ? $0 : nil }
-        todosByCat[key, default: []].append(todo)
-    }
-    let knownCatIDs = todosByCat.keys.compactMap { $0 }
-        .sorted { (catByID[$0]?.sortOrder ?? 0) < (catByID[$1]?.sortOrder ?? 0) }
+    let openGroups = groupedByCategory(openTodos, categoryID: \.categoryID, categories: categories)
 
     // ── HTML helpers ───────────────────────────────────────────────────────
 
@@ -142,8 +136,7 @@ func exportPageHTML(date: Date, todos: [Todo], notes: [Note], categories: [Categ
         body += "</ul>\n</section>\n"
     }
 
-    for id in knownCatIDs { renderGroup(category: catByID[id], groupTodos: todosByCat[id]!) }
-    if let uncategorized = todosByCat[nil] { renderGroup(category: nil, groupTodos: uncategorized) }
+    for group in openGroups { renderGroup(category: group.category, groupTodos: group.items) }
 
     // ── Template ───────────────────────────────────────────────────────────
 

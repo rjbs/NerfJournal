@@ -147,3 +147,29 @@ extension [Todo] {
         sorted { ($0.id ?? 0) < ($1.id ?? 0) }
     }
 }
+
+// Groups `items` by category, sorting named groups by `category.sortOrder`.
+// Items whose categoryID is nil or no longer matches a known category collect
+// into an "Other" group appended at the end. -- claude, 2026-03-02
+func groupedByCategory<Item>(
+    _ items: [Item],
+    categoryID keyPath: KeyPath<Item, Int64?>,
+    categories: [Category]
+) -> [(id: String, category: Category?, items: [Item])] {
+    let grouped = Dictionary(grouping: items, by: { $0[keyPath: keyPath] })
+    var named: [(id: String, category: Category?, items: [Item])] = []
+    var other: [Item] = grouped[nil] ?? []
+    for (catID, group) in grouped {
+        guard let catID else { continue }
+        if let cat = categories.first(where: { $0.id == catID }) {
+            named.append((id: "\(catID)", category: cat, items: group))
+        } else {
+            other.append(contentsOf: group)
+        }
+    }
+    named.sort { $0.category!.sortOrder < $1.category!.sortOrder }
+    if !other.isEmpty {
+        named.append((id: "other", category: nil, items: other))
+    }
+    return named
+}

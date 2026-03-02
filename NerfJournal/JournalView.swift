@@ -353,7 +353,7 @@ struct JournalPageDetailView: View {
                     } else {
                         ForEach(todoGroups(for: resolvedWithNotes ? openTodos : todos), id: \.id) { group in
                             Section {
-                                ForEach(group.todos) { todo in
+                                ForEach(group.items) { todo in
                                     TodoRow(
                                         todo: todo,
                                         pageDate: date,
@@ -610,27 +610,8 @@ struct JournalPageDetailView: View {
         }
     }
 
-    // Groups todos by categoryID, sorted by category.sortOrder (uncategorized last).
-    // Todos with a categoryID that no longer has a matching category are folded into
-    // the "Other" bucket along with nil-categoryID todos.
-    private func todoGroups(for sourceTodos: [Todo]) -> [(id: String, category: Category?, todos: [Todo])] {
-        let grouped = Dictionary(grouping: sourceTodos, by: \.categoryID)
-        var named: [(id: String, category: Category?, todos: [Todo])] = []
-        var other: [Todo] = grouped[nil] ?? []
-
-        for (categoryID, groupTodos) in grouped {
-            guard let categoryID else { continue }
-            if let cat = categoryStore.categories.first(where: { $0.id == categoryID }) {
-                named.append((id: "\(categoryID)", category: cat, todos: groupTodos))
-            } else {
-                other.append(contentsOf: groupTodos)
-            }
-        }
-        named.sort { $0.category!.sortOrder < $1.category!.sortOrder }
-        if !other.isEmpty {
-            named.append((id: "other", category: nil, todos: other))
-        }
-        return named
+    private func todoGroups(for sourceTodos: [Todo]) -> [(id: String, category: Category?, items: [Todo])] {
+        groupedByCategory(sourceTodos, categoryID: \.categoryID, categories: categoryStore.categories)
     }
 
     @ViewBuilder
