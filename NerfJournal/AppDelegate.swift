@@ -55,10 +55,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         p.level = .floating
         p.setContentSize(hosting.view.fittingSize)
         p.center()
-        NSRunningApplication.current.activate(options: .activateIgnoringOtherApps)
         p.orderFrontRegardless()
-        p.makeKeyAndOrderFront(nil)
         panel = p
+
+        if NSApp.isActive {
+            p.makeKeyAndOrderFront(nil)
+        } else {
+            // On multi-display systems, calling makeKeyAndOrderFront immediately
+            // after activate() loses a race: the diary window on display 1 grabs
+            // key status during the activation handoff before we can claim it.
+            // Waiting for didBecomeActiveNotification ensures the app is fully
+            // active before we steal the key window. -- claude, 2026-03-02
+            var token: NSObjectProtocol?
+            token = NotificationCenter.default.addObserver(
+                forName: NSApplication.didBecomeActiveNotification,
+                object: nil, queue: .main
+            ) { [weak p] _ in
+                NotificationCenter.default.removeObserver(token!)
+                p?.makeKeyAndOrderFront(nil)
+            }
+            NSRunningApplication.current.activate(options: .activateIgnoringOtherApps)
+        }
     }
 
     private func fourCharCode(_ str: String) -> FourCharCode {
