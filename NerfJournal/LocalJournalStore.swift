@@ -27,13 +27,21 @@ final class LocalJournalStore: ObservableObject {
     // abandoned; migratable ones carry forward naturally (no action needed).
     func startToday() async throws {
         let today = Self.startOfToday
-        let now = Date()
 
         let newPage: JournalPage = try await db.dbQueue.write { db in
             var p = JournalPage(id: nil, date: today)
             try p.insert(db)
 
-            let abandonment = TodoEnding(date: now, kind: .abandoned)
+            // Set the ending to 23:59:59 on the last journal page before today —
+            // the last day we considered doing these tasks. -- claude, 2026-03-02
+            let lastPageDate = try JournalPage
+                .filter(Column("date") < today)
+                .order(Column("date").desc)
+                .fetchOne(db)?
+                .date ?? Calendar.current.date(byAdding: .day, value: -1, to: today)!
+            let abandonmentDate = Calendar.current.date(
+                bySettingHour: 23, minute: 59, second: 59, of: lastPageDate)!
+            let abandonment = TodoEnding(date: abandonmentDate, kind: .abandoned)
             try Todo
                 .filter(Column("added") < today)
                 .filter(Column("shouldMigrate") == false)
