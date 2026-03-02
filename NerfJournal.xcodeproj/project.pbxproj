@@ -12,9 +12,9 @@
 		83CBBA141A601CBA00E9B192 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 83CBBA0C1A601CBA00E9B192 /* Assets.xcassets */; };
 		83CBBA161A601CBA00E9B192 /* AppDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA1E1A601CBA00E9B192 /* AppDatabase.swift */; };
 		83CBBA171A601CBA00E9B192 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA1F1A601CBA00E9B192 /* Models.swift */; };
-		83CBBA181A601CBA00E9B192 /* LocalJournalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA201A601CBA00E9B192 /* LocalJournalStore.swift */; };
-		83CBBA191A601CBA00E9B192 /* DiaryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA211A601CBA00E9B192 /* DiaryStore.swift */; };
-		83CBBA1A1A601CBA00E9B192 /* DiaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA221A601CBA00E9B192 /* DiaryView.swift */; };
+		83CBBA181A601CBA00E9B192 /* PageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA201A601CBA00E9B192 /* PageStore.swift */; };
+		83CBBA191A601CBA00E9B192 /* JournalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA211A601CBA00E9B192 /* JournalStore.swift */; };
+		83CBBA1A1A601CBA00E9B192 /* JournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA221A601CBA00E9B192 /* JournalView.swift */; };
 		83CBBA1B1A601CBA00E9B192 /* DebugCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA231A601CBA00E9B192 /* DebugCommands.swift */; };
 		83CBBA1C1A601CBA00E9B192 /* BundleStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA241A601CBA00E9B192 /* BundleStore.swift */; };
 		83CBBA1D1A601CBA00E9B192 /* BundleManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA251A601CBA00E9B192 /* BundleManagerView.swift */; };
@@ -31,9 +31,9 @@
 		83CBBA0D1A601CBA00E9B192 /* NerfJournal.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NerfJournal.entitlements; sourceTree = "<group>"; };
 		83CBBA1E1A601CBA00E9B192 /* AppDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDatabase.swift; sourceTree = "<group>"; };
 		83CBBA1F1A601CBA00E9B192 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
-		83CBBA201A601CBA00E9B192 /* LocalJournalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalJournalStore.swift; sourceTree = "<group>"; };
-		83CBBA211A601CBA00E9B192 /* DiaryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiaryStore.swift; sourceTree = "<group>"; };
-		83CBBA221A601CBA00E9B192 /* DiaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiaryView.swift; sourceTree = "<group>"; };
+		83CBBA201A601CBA00E9B192 /* PageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageStore.swift; sourceTree = "<group>"; };
+		83CBBA211A601CBA00E9B192 /* JournalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalStore.swift; sourceTree = "<group>"; };
+		83CBBA221A601CBA00E9B192 /* JournalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalView.swift; sourceTree = "<group>"; };
 		83CBBA231A601CBA00E9B192 /* DebugCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugCommands.swift; sourceTree = "<group>"; };
 		83CBBA241A601CBA00E9B192 /* BundleStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleStore.swift; sourceTree = "<group>"; };
 		83CBBA251A601CBA00E9B192 /* BundleManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleManagerView.swift; sourceTree = "<group>"; };
@@ -69,9 +69,9 @@
 				83CBBA071A601CBA00E9B192 /* NerfJournalApp.swift */,
 				83CBBA1E1A601CBA00E9B192 /* AppDatabase.swift */,
 				83CBBA1F1A601CBA00E9B192 /* Models.swift */,
-				83CBBA201A601CBA00E9B192 /* LocalJournalStore.swift */,
-				83CBBA211A601CBA00E9B192 /* DiaryStore.swift */,
-				83CBBA221A601CBA00E9B192 /* DiaryView.swift */,
+				83CBBA201A601CBA00E9B192 /* PageStore.swift */,
+				83CBBA211A601CBA00E9B192 /* JournalStore.swift */,
+				83CBBA221A601CBA00E9B192 /* JournalView.swift */,
 				83CBBA231A601CBA00E9B192 /* DebugCommands.swift */,
 				83CBBA241A601CBA00E9B192 /* BundleStore.swift */,
 				83CBBA251A601CBA00E9B192 /* BundleManagerView.swift */,
@@ -168,9 +168,9 @@
 				83CBBA111A601CBA00E9B192 /* NerfJournalApp.swift in Sources */,
 				83CBBA161A601CBA00E9B192 /* AppDatabase.swift in Sources */,
 				83CBBA171A601CBA00E9B192 /* Models.swift in Sources */,
-				83CBBA181A601CBA00E9B192 /* LocalJournalStore.swift in Sources */,
-				83CBBA191A601CBA00E9B192 /* DiaryStore.swift in Sources */,
-				83CBBA1A1A601CBA00E9B192 /* DiaryView.swift in Sources */,
+				83CBBA181A601CBA00E9B192 /* PageStore.swift in Sources */,
+				83CBBA191A601CBA00E9B192 /* JournalStore.swift in Sources */,
+				83CBBA1A1A601CBA00E9B192 /* JournalView.swift in Sources */,
 				83CBBA1B1A601CBA00E9B192 /* DebugCommands.swift in Sources */,
 				83CBBA1C1A601CBA00E9B192 /* BundleStore.swift in Sources */,
 				83CBBA1D1A601CBA00E9B192 /* BundleManagerView.swift in Sources */,

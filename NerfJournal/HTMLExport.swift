@@ -17,7 +17,7 @@ func exportPageHTML(date: Date, todos: [Todo], notes: [Note], categories: [Categ
 
     // ── Activity items ─────────────────────────────────────────────────────
     // Todos resolved on this day, plus notes, merged chronologically.
-    // Mirrors DiaryPageDetailView.activityItems sort (timestamp, then todo
+    // Mirrors JournalPageDetailView.activityItems sort (timestamp, then todo
     // before note on ties, then by id within kind).
 
     enum ActivityItem {

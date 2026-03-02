@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 
 @MainActor
-final class LocalJournalStore: ObservableObject {
+final class PageStore: ObservableObject {
     private let db: AppDatabase
 
     @Published var page: JournalPage?

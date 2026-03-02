@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 
 @MainActor
-final class DiaryStore: ObservableObject {
+final class JournalStore: ObservableObject {
     private let db: AppDatabase
 
     @Published var pageDates: Set<Date> = []

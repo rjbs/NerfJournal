@@ -15,11 +15,11 @@ private let activityTimeColumnWidth: CGFloat = {
     return ceil((sample as NSString).size(withAttributes: attrs).width) + 2
 }()
 
-// MARK: - DiaryView
+// MARK: - JournalView
 
-struct DiaryView: View {
-    @EnvironmentObject private var diaryStore: DiaryStore
-    @EnvironmentObject private var journalStore: LocalJournalStore
+struct JournalView: View {
+    @EnvironmentObject private var journalStore: JournalStore
+    @EnvironmentObject private var pageStore: PageStore
     @EnvironmentObject private var bundleStore: BundleStore
     @EnvironmentObject private var categoryStore: CategoryStore
 
@@ -51,11 +51,11 @@ struct DiaryView: View {
             }
         }
         .task {
-            try? await diaryStore.loadIndex()
-            if let latest = diaryStore.pageDates.max() {
-                try? await diaryStore.selectDate(latest)
+            try? await journalStore.loadIndex()
+            if let latest = journalStore.pageDates.max() {
+                try? await journalStore.selectDate(latest)
             }
-            try? await journalStore.load()
+            try? await pageStore.load()
             try? await bundleStore.load()
             try? await categoryStore.load()
         }
@@ -83,9 +83,9 @@ struct DiaryView: View {
     private var calendarSidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
             MonthCalendarView(
-                selectedDate: diaryStore.selectedDate,
-                highlightedDates: diaryStore.pageDates,
-                onSelect: { date in Task { try? await diaryStore.selectDate(date) } }
+                selectedDate: journalStore.selectedDate,
+                highlightedDates: journalStore.pageDates,
+                onSelect: { date in Task { try? await journalStore.selectDate(date) } }
             )
             .padding()
             Spacer()
@@ -95,35 +95,35 @@ struct DiaryView: View {
 
     private var pageDetail: some View {
         Group {
-            if diaryStore.selectedDate == nil {
+            if journalStore.selectedDate == nil {
                 Text("Select a date to view its journal page.")
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if diaryStore.isSelectedPageLast {
+            } else if journalStore.isSelectedPageLast {
                 lastPageDetail
-            } else if diaryStore.selectedPage == nil {
+            } else if journalStore.selectedPage == nil {
                 noPageDetail
             } else {
-                DiaryPageDetailView(
-                    date: diaryStore.selectedDate!,
-                    todos: diaryStore.selectedTodos,
-                    notes: diaryStore.selectedNotes,
+                JournalPageDetailView(
+                    date: journalStore.selectedDate!,
+                    todos: journalStore.selectedTodos,
+                    notes: journalStore.selectedNotes,
                     readOnly: true
                 )
             }
         }
     }
 
-    // The most recent diary page may be mutable if journalStore has it loaded.
+    // The most recent journal page may be mutable if pageStore has it loaded.
     private var lastPageDetail: some View {
         Group {
-            if journalStore.page == nil {
+            if pageStore.page == nil {
                 startTodayPrompt
             } else {
-                DiaryPageDetailView(
-                    date: journalStore.page!.date,
-                    todos: journalStore.todos,
-                    notes: journalStore.notes,
+                JournalPageDetailView(
+                    date: pageStore.page!.date,
+                    todos: pageStore.todos,
+                    notes: pageStore.notes,
                     readOnly: false
                 )
             }
@@ -132,11 +132,11 @@ struct DiaryView: View {
 
     private var noPageDetail: some View {
         VStack(spacing: 8) {
-            Text(diaryStore.selectedDate!.formatted(date: .long, time: .omitted))
+            Text(journalStore.selectedDate!.formatted(date: .long, time: .omitted))
                 .font(.title2).bold()
             Text("No journal page for this date.")
                 .foregroundStyle(.secondary)
-            if Calendar.current.isDateInToday(diaryStore.selectedDate!) {
+            if Calendar.current.isDateInToday(journalStore.selectedDate!) {
                 Button("Start Today") { startToday() }
                     .buttonStyle(.borderedProminent)
             }
@@ -156,11 +156,11 @@ struct DiaryView: View {
 
     private func startToday() {
         Task {
-            try? await journalStore.startToday()
+            try? await pageStore.startToday()
             try? await categoryStore.load()
-            try? await diaryStore.loadIndex()
+            try? await journalStore.loadIndex()
             let today = Calendar.current.startOfDay(for: Date())
-            try? await diaryStore.selectDate(today)
+            try? await journalStore.selectDate(today)
         }
     }
 }
@@ -301,10 +301,10 @@ struct DayCell: View {
     }
 }
 
-// MARK: - DiaryPageDetailView
+// MARK: - JournalPageDetailView
 
-struct DiaryPageDetailView: View {
-    @EnvironmentObject private var journalStore: LocalJournalStore
+struct JournalPageDetailView: View {
+    @EnvironmentObject private var pageStore: PageStore
     @EnvironmentObject private var bundleStore: BundleStore
     @EnvironmentObject private var categoryStore: CategoryStore
     @Environment(\.openWindow) private var openWindow
@@ -364,7 +364,7 @@ struct DiaryPageDetailView: View {
                                             let trimmed = newTitle.trimmingCharacters(in: .whitespaces)
                                             editingTodoID = nil
                                             guard !trimmed.isEmpty else { return }
-                                            Task { try? await journalStore.setTitle(trimmed, for: todo, undoManager: undoManager) }
+                                            Task { try? await pageStore.setTitle(trimmed, for: todo, undoManager: undoManager) }
                                         },
                                         onCancelEdit: { editingTodoID = nil }
                                     )
@@ -403,7 +403,7 @@ struct DiaryPageDetailView: View {
                                         let trimmed = newText.trimmingCharacters(in: .whitespaces)
                                         editingNoteID = nil
                                         guard !trimmed.isEmpty else { return }
-                                        Task { try? await journalStore.setNoteText(trimmed, for: note, undoManager: undoManager) }
+                                        Task { try? await pageStore.setNoteText(trimmed, for: note, undoManager: undoManager) }
                                     },
                                     onCancelEdit: { editingNoteID = nil }
                                 )
@@ -476,9 +476,9 @@ struct DiaryPageDetailView: View {
                         let selectedTodos = todos.filter { selectedTodoIDs.contains($0.id!) }
                         for todo in selectedTodos {
                             if todo.isPending {
-                                Task { try? await journalStore.completeTodo(todo, undoManager: undoManager) }
+                                Task { try? await pageStore.completeTodo(todo, undoManager: undoManager) }
                             } else if todo.isDone {
-                                Task { try? await journalStore.uncompleteTodo(todo, undoManager: undoManager) }
+                                Task { try? await pageStore.uncompleteTodo(todo, undoManager: undoManager) }
                             }
                         }
                         if !selectedTodos.isEmpty { return .handled }
@@ -517,7 +517,7 @@ struct DiaryPageDetailView: View {
                 Menu {
                     ForEach(bundleStore.bundles) { bundle in
                         Button("Apply \u{201c}\(bundle.name)\u{201d}") {
-                            Task { try? await journalStore.applyBundle(bundle) }
+                            Task { try? await pageStore.applyBundle(bundle) }
                         }
                         .disabled(readOnly)
                     }
@@ -670,7 +670,7 @@ struct DiaryPageDetailView: View {
                             let trimmed = newTitle.trimmingCharacters(in: .whitespaces)
                             editingTodoID = nil
                             guard !trimmed.isEmpty else { return }
-                            Task { try? await journalStore.setTitle(trimmed, for: todo, undoManager: undoManager) }
+                            Task { try? await pageStore.setTitle(trimmed, for: todo, undoManager: undoManager) }
                         },
                         onCancelEdit: { editingTodoID = nil }
                     )
@@ -686,7 +686,7 @@ struct DiaryPageDetailView: View {
                             let trimmed = newText.trimmingCharacters(in: .whitespaces)
                             editingNoteID = nil
                             guard !trimmed.isEmpty else { return }
-                            Task { try? await journalStore.setNoteText(trimmed, for: note, undoManager: undoManager) }
+                            Task { try? await pageStore.setNoteText(trimmed, for: note, undoManager: undoManager) }
                         },
                         onCancelEdit: { editingNoteID = nil }
                     )
@@ -708,7 +708,7 @@ struct DiaryPageDetailView: View {
         let title = newTodoTitle.trimmingCharacters(in: .whitespaces)
         guard !title.isEmpty else { return }
         Task {
-            try? await journalStore.addTodo(title: title, shouldMigrate: true)
+            try? await pageStore.addTodo(title: title, shouldMigrate: true)
             newTodoTitle = ""
             showAddField = true
             addFieldFocused = true
@@ -719,7 +719,7 @@ struct DiaryPageDetailView: View {
         let text = newNoteText.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty else { return }
         Task {
-            try? await journalStore.addNote(text: text)
+            try? await pageStore.addNote(text: text)
             newNoteText = ""
             showAddNoteField = true
             addNoteFieldFocused = true
@@ -730,7 +730,7 @@ struct DiaryPageDetailView: View {
 // MARK: - TodoRow
 
 struct TodoRow: View {
-    @EnvironmentObject private var store: LocalJournalStore
+    @EnvironmentObject private var store: PageStore
     @EnvironmentObject private var categoryStore: CategoryStore
     @Environment(\.undoManager) private var undoManager
     let todo: Todo
@@ -1026,7 +1026,7 @@ struct TodoRow: View {
 // MARK: - NoteRow
 
 struct NoteRow: View {
-    @EnvironmentObject private var store: LocalJournalStore
+    @EnvironmentObject private var store: PageStore
     @Environment(\.undoManager) private var undoManager
 
     let note: Note

@@ -62,7 +62,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             p.makeKeyAndOrderFront(nil)
         } else {
             // On multi-display systems, calling makeKeyAndOrderFront immediately
-            // after activate() loses a race: the diary window on display 1 grabs
+            // after activate() loses a race: the journal window on display 1 grabs
             // key status during the activation handoff before we can claim it.
             // Waiting for didBecomeActiveNotification ensures the app is fully
             // active before we steal the key window. -- claude, 2026-03-02

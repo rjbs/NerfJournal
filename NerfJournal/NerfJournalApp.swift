@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 struct TodoCommands: Commands {
     @FocusedValue(\.focusAddTodo) var focusAddTodo: Binding<Bool>?
     @FocusedValue(\.focusAddNote) var focusAddNote: Binding<Bool>?
-    @FocusedObject var diaryStore: DiaryStore?
+    @FocusedObject var journalStore: JournalStore?
     @FocusedObject var categoryStore: CategoryStore?
     @Environment(\.openWindow) private var openWindow
 
@@ -21,18 +21,18 @@ struct TodoCommands: Commands {
         CommandGroup(after: .newItem) {
             Button("Go to Today") {
                 let today = Calendar.current.startOfDay(for: Date())
-                Task { try? await diaryStore?.selectDate(today) }
+                Task { try? await journalStore?.selectDate(today) }
             }
             .keyboardShortcut("t", modifiers: .command)
-            .disabled(diaryStore == nil)
+            .disabled(journalStore == nil)
         }
         CommandGroup(replacing: .saveItem) {
             Button("Export Page…") {
-                guard let diaryStore, let page = diaryStore.selectedPage else { return }
+                guard let journalStore, let page = journalStore.selectedPage else { return }
                 let html = exportPageHTML(
                     date: page.date,
-                    todos: diaryStore.selectedTodos,
-                    notes: diaryStore.selectedNotes,
+                    todos: journalStore.selectedTodos,
+                    notes: journalStore.selectedNotes,
                     categories: categoryStore?.categories ?? []
                 )
                 let df = DateFormatter()
@@ -43,10 +43,10 @@ struct TodoCommands: Commands {
                 guard panel.runModal() == .OK, let url = panel.url else { return }
                 try? html.write(to: url, atomically: true, encoding: .utf8)
             }
-            .disabled(diaryStore?.selectedPage == nil)
+            .disabled(journalStore?.selectedPage == nil)
         }
         CommandGroup(after: .windowArrangement) {
-            Button("Open Work Diary") { openWindow(id: "diary") }
+            Button("Open Work Journal") { openWindow(id: "journal") }
                 .keyboardShortcut("1", modifiers: .command)
         }
     }
@@ -55,20 +55,20 @@ struct TodoCommands: Commands {
 @main
 struct NerfJournalApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject private var journalStore = LocalJournalStore()
-    @StateObject private var diaryStore = DiaryStore()
+    @StateObject private var pageStore = PageStore()
+    @StateObject private var journalStore = JournalStore()
     @StateObject private var bundleStore = BundleStore()
     @StateObject private var categoryStore = CategoryStore()
 
     var body: some Scene {
-        WindowGroup(id: "diary") {
-            DiaryView()
-                .environmentObject(diaryStore)
+        WindowGroup(id: "journal") {
+            JournalView()
                 .environmentObject(journalStore)
+                .environmentObject(pageStore)
                 .environmentObject(bundleStore)
                 .environmentObject(categoryStore)
+                .focusedSceneObject(pageStore)
                 .focusedSceneObject(journalStore)
-                .focusedSceneObject(diaryStore)
                 .focusedSceneObject(categoryStore)
         }
         .defaultSize(width: 700, height: 520)
@@ -81,7 +81,7 @@ struct NerfJournalApp: App {
             BundleManagerView()
                 .environmentObject(bundleStore)
                 .environmentObject(categoryStore)
-                .focusedSceneObject(journalStore)
+                .focusedSceneObject(pageStore)
         }
         .defaultSize(width: 600, height: 480)
     }

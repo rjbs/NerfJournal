@@ -3,7 +3,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct DebugCommands: Commands {
-    @FocusedObject var store: LocalJournalStore?
+    @FocusedObject var store: PageStore?
 
     var body: some Commands {
         CommandMenu("Debug") {
