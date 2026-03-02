@@ -586,25 +586,13 @@ struct TodoRow: View {
                 if affectedTodos.count > 1 {
                     Menu("Mark") {
                         Button("Pending") {
-                            Task {
-                                for t in affectedTodos where !t.isPending {
-                                    try? await store.markPending(t, undoManager: undoManager)
-                                }
-                            }
+                            Task { try? await store.bulkMarkPending(affectedTodos, undoManager: undoManager) }
                         }
                         Button("Complete") {
-                            Task {
-                                for t in affectedTodos where !t.isDone {
-                                    try? await store.completeTodo(t, undoManager: undoManager)
-                                }
-                            }
+                            Task { try? await store.bulkComplete(affectedTodos, undoManager: undoManager) }
                         }
                         Button("Abandoned") {
-                            Task {
-                                for t in affectedTodos where !t.isAbandoned {
-                                    try? await store.abandonTodo(t)
-                                }
-                            }
+                            Task { try? await store.bulkAbandon(affectedTodos) }
                         }
                     }
 

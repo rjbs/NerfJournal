@@ -106,6 +106,52 @@ final class LocalJournalStore: ObservableObject {
         try await refreshContents()
     }
 
+    func bulkComplete(_ todos: [Todo], undoManager: UndoManager? = nil) async throws {
+        let oldEndings: [(Int64, TodoEnding?)] = todos.map { ($0.id!, $0.ending) }
+        let ending = TodoEnding(date: Date(), kind: .done)
+        try await db.dbQueue.write { db in
+            for todo in todos {
+                try Todo
+                    .filter(Column("id") == todo.id)
+                    .updateAll(db, [Column("ending").set(to: ending)])
+            }
+            return
+        }
+        undoManager?.registerUndo(withTarget: self) { store in
+            Task { @MainActor in try? await store.restoreBulkEndings(oldEndings) }
+        }
+        try await refreshContents()
+    }
+
+    func bulkMarkPending(_ todos: [Todo], undoManager: UndoManager? = nil) async throws {
+        let oldEndings: [(Int64, TodoEnding?)] = todos.map { ($0.id!, $0.ending) }
+        try await db.dbQueue.write { db in
+            for todo in todos {
+                try Todo
+                    .filter(Column("id") == todo.id)
+                    .updateAll(db, [Column("ending").set(to: nil as TodoEnding?)])
+            }
+            return
+        }
+        undoManager?.registerUndo(withTarget: self) { store in
+            Task { @MainActor in try? await store.restoreBulkEndings(oldEndings) }
+        }
+        try await refreshContents()
+    }
+
+    func bulkAbandon(_ todos: [Todo]) async throws {
+        let ending = TodoEnding(date: Date(), kind: .abandoned)
+        try await db.dbQueue.write { db in
+            for todo in todos {
+                try Todo
+                    .filter(Column("id") == todo.id)
+                    .updateAll(db, [Column("ending").set(to: ending)])
+            }
+            return
+        }
+        try await refreshContents()
+    }
+
     func addTodo(title: String, shouldMigrate: Bool, categoryID: Int64? = nil) async throws {
         guard page != nil else { return }
         let today = Self.startOfToday
@@ -194,6 +240,18 @@ final class LocalJournalStore: ObservableObject {
         }
         undoManager?.registerUndo(withTarget: self) { store in
             Task { @MainActor in try? await store.restoreBulkCategories(oldCategories) }
+        }
+        try await refreshContents()
+    }
+
+    private func restoreBulkEndings(_ endings: [(Int64, TodoEnding?)]) async throws {
+        try await db.dbQueue.write { db in
+            for (id, ending) in endings {
+                try Todo
+                    .filter(Column("id") == id)
+                    .updateAll(db, [Column("ending").set(to: ending)])
+            }
+            return
         }
         try await refreshContents()
     }
