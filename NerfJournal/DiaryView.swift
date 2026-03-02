@@ -301,6 +301,7 @@ struct DiaryPageDetailView: View {
     var readOnly: Bool = true
 
     @State private var newTodoTitle = ""
+    @State private var showAddField = false
     @FocusState private var addFieldFocused: Bool
     @State private var selectedTodoIDs: Set<Int64> = []
     @State private var editingTodoID: Int64? = nil
@@ -345,11 +346,12 @@ struct DiaryPageDetailView: View {
                             categoryHeader(group.category)
                         }
                     }
-                    if !readOnly {
+                    if !readOnly && showAddField {
                         Section {
                             TextField("Add todo\u{2026}", text: $newTodoTitle)
                                 .focused($addFieldFocused)
                                 .onSubmit { submitNewTodo() }
+                                .onKeyPress(.escape) { addFieldFocused = false; return .handled }
                         }
                     }
                 }
@@ -412,11 +414,14 @@ struct DiaryPageDetailView: View {
                 }
             }
         }
+        .onChange(of: addFieldFocused) { _, focused in
+            if !focused { showAddField = false; newTodoTitle = "" }
+        }
         .focusedValue(\.focusAddTodo, Binding(
             get: { addFieldFocused },
             set: {
+                if $0 { showAddField = true; selectedTodoIDs = [] }
                 addFieldFocused = $0
-                if $0 { selectedTodoIDs = [] }
             }
         ))
     }
@@ -473,6 +478,7 @@ struct DiaryPageDetailView: View {
         Task {
             try? await journalStore.addTodo(title: title, shouldMigrate: true)
             newTodoTitle = ""
+            showAddField = true
             addFieldFocused = true
         }
     }
