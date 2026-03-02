@@ -61,29 +61,28 @@ applied.
   file, and runs schema migrations. The file lives under the app's
   sandbox container:
   `~/Library/Containers/org.rjbs.nerfjournal/Data/Library/Application Support/NerfJournal/journal.sqlite`
-- **`LocalJournalStore`** — `@MainActor ObservableObject` that
-  publishes the current page's todos and notes, and exposes mutating
-  actions: start today, complete/uncomplete/abandon/mark-pending todo,
-  add todo, delete todo, rename todo, set category, set URL, apply
-  bundle. "Start Today" creates a new page and abandons any pending
-  non-migratable todos from before today in one atomic transaction.
-  Also observes `DistributedNotificationCenter` for
-  `org.rjbs.nerfjournal.externalChange` and refreshes when it fires,
-  so external writers (such as the CLI tool below) update the UI live.
-- **`DiaryStore`** — `@MainActor ObservableObject` that indexes all
+- **`PageStore`** — `@MainActor ObservableObject` that publishes the
+  current page's todos and notes, and exposes mutating actions: start
+  today, complete/uncomplete/abandon/mark-pending todo, add todo, delete
+  todo, rename todo, set category, set URL, apply bundle. "Start Today"
+  creates a new page and abandons any pending non-migratable todos from
+  before today in one atomic transaction. Also observes
+  `DistributedNotificationCenter` for `org.rjbs.nerfjournal.externalChange`
+  and refreshes when it fires, so external writers (such as the CLI tool
+  below) update the UI live.
+- **`JournalStore`** — `@MainActor ObservableObject` that indexes all
   pages and provides read-only access to any past page's todos and
   notes. Drives the calendar sidebar's highlighted dates.
 - **`BundleStore`** — `@MainActor ObservableObject` that manages
   TaskBundles and their BundleTodos.
 - **`CategoryStore`** — `@MainActor ObservableObject` that manages
   Categories: add, delete, rename, recolor, reorder.
-- **`DiaryView`** — the main window. A calendar sidebar (toggleable)
-  sits beside a detail pane. Today's page is editable via
-  `LocalJournalStore`; older pages are shown read-only from
-  `DiaryStore`. Todos are grouped by category. Keyboard navigation:
-  arrow keys select rows, Return edits a title, Cmd-Return toggles
-  done/pending, Escape deselects, Cmd-N focuses the add-todo field,
-  Cmd-T jumps to today.
+- **`JournalView`** — the main window. A calendar sidebar (toggleable)
+  sits beside a detail pane. Today's page is editable via `PageStore`;
+  older pages are shown read-only from `JournalStore`. Todos are grouped
+  by category. Keyboard navigation: arrow keys select rows, Return edits
+  a title, Cmd-Return toggles done/pending, Escape deselects, Cmd-N
+  focuses the add-todo field, Cmd-T jumps to today.
 - **`BundleManagerView`** — a separate window for managing bundles and
   categories. The left panel is split: bundles on top, categories below
   (drag to reorder, color and name editable via context menu). The right
@@ -141,14 +140,33 @@ Roughly in priority order:
 - Slack integration: post today's one-off todos to a configured channel
   at the start of the day; individual items can be marked private to
   exclude them
-- Global keyboard shortcut to log a freeform note from anywhere, without
-  switching to the app
 
 **Longer term**
 - Linear sprint integration: show your current sprint, pick tasks to add
   as todos
 - Notion publishing: generate a "work diary" page summarizing a day's
   page and post it to a configured Notion database
+
+## Refactoring Queue
+
+Known structural improvements that aren't urgent but are worth doing:
+
+- **`CategoryHeaderView` component** — `JournalView` and
+  `BundleManagerView` each contain a private function that renders the
+  same `HStack { colored dot + category name/"Other" }` header. Extract
+  to a shared view.
+
+- **Category-grouping helper** — the logic that groups items by
+  `categoryID`, sorts named groups by `sortOrder`, and collects orphaned
+  IDs into "Other" appears independently in `JournalView`,
+  `BundleManagerView`, and `HTMLExport`. A generic free function
+  (constrained to types with `categoryID: Int64?`) would centralize it.
+
+- **Undo boilerplate in `PageStore`** — the half-dozen mutating methods
+  all follow the same pattern: capture old value → write DB → register
+  undo closure → refresh. A helper that takes forward and reverse
+  operations and handles the `Task { @MainActor in … }` dance would
+  reduce the repetition.
 
 ## Building
 
