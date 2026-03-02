@@ -19,6 +19,8 @@
 		83CBBA1C1A601CBA00E9B192 /* BundleStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA241A601CBA00E9B192 /* BundleStore.swift */; };
 		83CBBA1D1A601CBA00E9B192 /* BundleManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA251A601CBA00E9B192 /* BundleManagerView.swift */; };
 		83CBBA261A601CBA00E9B192 /* CategoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA271A601CBA00E9B192 /* CategoryStore.swift */; };
+		83CBBA281A601CBA00E9B192 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA291A601CBA00E9B192 /* AppDelegate.swift */; };
+		83CBBA2A1A601CBA00E9B192 /* QuickNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA2B1A601CBA00E9B192 /* QuickNoteView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,6 +37,8 @@
 		83CBBA241A601CBA00E9B192 /* BundleStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleStore.swift; sourceTree = "<group>"; };
 		83CBBA251A601CBA00E9B192 /* BundleManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleManagerView.swift; sourceTree = "<group>"; };
 		83CBBA271A601CBA00E9B192 /* CategoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryStore.swift; sourceTree = "<group>"; };
+		83CBBA291A601CBA00E9B192 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		83CBBA2B1A601CBA00E9B192 /* QuickNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNoteView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -70,6 +74,8 @@
 				83CBBA241A601CBA00E9B192 /* BundleStore.swift */,
 				83CBBA251A601CBA00E9B192 /* BundleManagerView.swift */,
 				83CBBA271A601CBA00E9B192 /* CategoryStore.swift */,
+				83CBBA291A601CBA00E9B192 /* AppDelegate.swift */,
+				83CBBA2B1A601CBA00E9B192 /* QuickNoteView.swift */,
 				83CBBA0C1A601CBA00E9B192 /* Assets.xcassets */,
 				83CBBA0D1A601CBA00E9B192 /* NerfJournal.entitlements */,
 			);
@@ -166,6 +172,8 @@
 				83CBBA1C1A601CBA00E9B192 /* BundleStore.swift in Sources */,
 				83CBBA1D1A601CBA00E9B192 /* BundleManagerView.swift in Sources */,
 				83CBBA261A601CBA00E9B192 /* CategoryStore.swift in Sources */,
+				83CBBA281A601CBA00E9B192 /* AppDelegate.swift in Sources */,
+				83CBBA2A1A601CBA00E9B192 /* QuickNoteView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

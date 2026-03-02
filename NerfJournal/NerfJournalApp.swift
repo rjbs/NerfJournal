@@ -32,6 +32,7 @@ struct TodoCommands: Commands {
 
 @main
 struct NerfJournalApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var journalStore = LocalJournalStore()
     @StateObject private var diaryStore = DiaryStore()
     @StateObject private var bundleStore = BundleStore()
