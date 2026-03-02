@@ -1,9 +1,12 @@
+import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct TodoCommands: Commands {
     @FocusedValue(\.focusAddTodo) var focusAddTodo: Binding<Bool>?
     @FocusedValue(\.focusAddNote) var focusAddNote: Binding<Bool>?
     @FocusedObject var diaryStore: DiaryStore?
+    @FocusedObject var categoryStore: CategoryStore?
     @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
@@ -22,6 +25,25 @@ struct TodoCommands: Commands {
             }
             .keyboardShortcut("t", modifiers: .command)
             .disabled(diaryStore == nil)
+        }
+        CommandGroup(replacing: .saveItem) {
+            Button("Export Page…") {
+                guard let diaryStore, let page = diaryStore.selectedPage else { return }
+                let html = exportPageHTML(
+                    date: page.date,
+                    todos: diaryStore.selectedTodos,
+                    notes: diaryStore.selectedNotes,
+                    categories: categoryStore?.categories ?? []
+                )
+                let df = DateFormatter()
+                df.dateFormat = "yyyy-MM-dd"
+                let panel = NSSavePanel()
+                panel.nameFieldStringValue = df.string(from: page.date) + ".html"
+                panel.allowedContentTypes = [.html]
+                guard panel.runModal() == .OK, let url = panel.url else { return }
+                try? html.write(to: url, atomically: true, encoding: .utf8)
+            }
+            .disabled(diaryStore?.selectedPage == nil)
         }
         CommandGroup(after: .windowArrangement) {
             Button("Open Work Diary") { openWindow(id: "diary") }
@@ -47,6 +69,7 @@ struct NerfJournalApp: App {
                 .environmentObject(categoryStore)
                 .focusedSceneObject(journalStore)
                 .focusedSceneObject(diaryStore)
+                .focusedSceneObject(categoryStore)
         }
         .defaultSize(width: 700, height: 520)
         .commands {
