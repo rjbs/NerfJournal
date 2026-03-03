@@ -389,10 +389,13 @@ final class PageStore: ObservableObject {
             notes = []
             return
         }
-        let today = Self.startOfToday
+        // Use the last page's date, not today, so that todos completed on the
+        // last page day remain visible when you haven't started today yet.
+        // -- claude, 2026-03-03
+        let pageDate = Calendar.current.startOfDay(for: page!.date)
         let (allTodos, fetchedNotes) = try await db.dbQueue.read { db in
             let t = try Todo
-                .filter(Column("added") <= today)
+                .filter(Column("added") <= pageDate)
                 .fetchAll(db)
             let n = try Note
                 .filter(Column("pageID") == pageID)
@@ -403,7 +406,7 @@ final class PageStore: ObservableObject {
         todos = allTodos
             .filter { todo in
                 guard let ending = todo.ending else { return true }
-                return ending.date >= today
+                return ending.date >= pageDate
             }
             .sortedForDisplay()
         notes = fetchedNotes
