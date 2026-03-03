@@ -25,6 +25,12 @@ struct TodoCommands: Commands {
             }
             .keyboardShortcut("t", modifiers: .command)
             .disabled(journalStore == nil)
+            Button("Go to Most Recent") {
+                guard let latest = journalStore?.pageDates.max() else { return }
+                Task { try? await journalStore?.selectDate(latest) }
+            }
+            .keyboardShortcut("l", modifiers: .command)
+            .disabled(journalStore?.pageDates.isEmpty != false)
         }
         CommandGroup(replacing: .saveItem) {
             Button("Export Page…") {
