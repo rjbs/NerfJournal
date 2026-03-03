@@ -44,7 +44,7 @@ struct Todo: MutablePersistableRecord {
     var id: Int64?
     var title: String
     var shouldMigrate: Bool
-    var added: Date
+    var start: Date
     var ending: TodoEnding?
     var categoryID: Int64?
     var externalURL: String?
@@ -59,7 +59,7 @@ struct Todo: MutablePersistableRecord {
         container["id"]            = id
         container["title"]         = title
         container["shouldMigrate"] = shouldMigrate
-        container["added"]         = added
+        container["start"]         = start
         container["ending"]        = ending
         container["categoryID"]    = categoryID
         container["externalURL"]   = externalURL
@@ -217,7 +217,7 @@ do {
             id: nil,
             title: args.title,
             shouldMigrate: args.shouldMigrate,
-            added: today,
+            start: today,
             ending: nil,
             categoryID: categoryID,
             externalURL: args.externalURL

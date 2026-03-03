@@ -1132,7 +1132,7 @@ struct TodoRow: View {
     private var captionText: String? {
         let cal = Calendar.current
         func daysCarried() -> Int {
-            let addedDay = cal.startOfDay(for: todo.added)
+            let addedDay = cal.startOfDay(for: todo.start)
             let pageDay  = cal.startOfDay(for: pageDate)
             return cal.dateComponents([.day], from: addedDay, to: pageDay).day ?? 0
         }

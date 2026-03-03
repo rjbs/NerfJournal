@@ -5,7 +5,7 @@
 #   perl make-test-data.pl > test-data.json
 #
 # Produces 14 journal pages spread across the last 30 days, ending today.
-# Each task is a single todo record with an "added" date and an optional
+# Each task is a single todo record with a "start" date and an optional
 # "ending" (done or abandoned with a timestamp). Each page gets 0–2 freeform
 # notes drawn from a pool, timestamped at random times during the workday.
 # Todos with no ending are still-pending at the close of the generated data.
@@ -158,7 +158,7 @@ for my $pi (0 .. $#DAYS) {
             id            => $cur_tid,
             title         => $title,
             shouldMigrate => $migrate ? JSON::PP::true : JSON::PP::false,
-            added         => iso8601($page_ts),
+            start         => iso8601($page_ts),
             ending        => $ending,
             categoryID    => (defined $cat_name ? $CAT_ID{$cat_name} : undef),
             externalURL   => undef,

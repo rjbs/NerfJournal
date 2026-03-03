@@ -50,7 +50,7 @@ final class PageStore: ObservableObject {
                 bySettingHour: 23, minute: 59, second: 59, of: lastPageDate)!
             let abandonment = TodoEnding(date: abandonmentDate, kind: .abandoned)
             try Todo
-                .filter(Column("added") < today)
+                .filter(Column("start") < today)
                 .filter(Column("shouldMigrate") == false)
                 .filter(Column("ending") == nil)
                 .updateAll(db, [Column("ending").set(to: abandonment)])
@@ -173,7 +173,7 @@ final class PageStore: ObservableObject {
                 id: nil,
                 title: title,
                 shouldMigrate: shouldMigrate,
-                added: today,
+                start: today,
                 ending: nil,
                 categoryID: categoryID,
                 externalURL: nil
@@ -371,7 +371,7 @@ final class PageStore: ObservableObject {
                     id: nil,
                     title: bundleTodo.title,
                     shouldMigrate: bundle.todosShouldMigrate,
-                    added: today,
+                    start: today,
                     ending: nil,
                     categoryID: bundleTodo.categoryID,
                     externalURL: bundleTodo.externalURL
@@ -410,7 +410,7 @@ final class PageStore: ObservableObject {
         let pageDate = Calendar.current.startOfDay(for: page!.date)
         let (allTodos, fetchedNotes) = try await db.dbQueue.read { db in
             let t = try Todo
-                .filter(Column("added") <= pageDate)
+                .filter(Column("start") <= pageDate)
                 .fetchAll(db)
             let n = try Note
                 .filter(Column("pageID") == pageID)

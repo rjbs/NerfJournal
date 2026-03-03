@@ -183,7 +183,7 @@ func exportPageHTML(date: Date, todos: [Todo], notes: [Note], categories: [Categ
 private func todoDisplayState(
     _ todo: Todo, pageDay: Date, cal: Calendar
 ) -> (symbol: String, cssClass: String, caption: String?) {
-    let addedDay = cal.startOfDay(for: todo.added)
+    let addedDay = cal.startOfDay(for: todo.start)
     let carried: String? = addedDay < pageDay ? {
         let n = cal.dateComponents([.day], from: addedDay, to: pageDay).day ?? 0
         return "Carried over \u{b7} \(n) day\(n == 1 ? "" : "s") ago"

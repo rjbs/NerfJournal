@@ -104,13 +104,13 @@ struct TodoEnding: Codable, DatabaseValueConvertible {
 }
 
 // A todo spans journal pages naturally: it is visible on any day from its
-// `added` date until the day it ends. No per-page duplication; "migration"
+// `start` date until the day it ends. No per-page duplication; "migration"
 // is an emergent display property, not a status value.
 struct Todo: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
     var id: Int64?
     var title: String
     var shouldMigrate: Bool
-    var added: Date     // start-of-day timestamp when first created
+    var start: Date     // start-of-day timestamp for the first day the todo appears
     var ending: TodoEnding?
     var categoryID: Int64?
     var externalURL: String?
@@ -124,6 +124,28 @@ struct Todo: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
     var isPending:   Bool { ending == nil }
     var isDone:      Bool { ending?.kind == .done }
     var isAbandoned: Bool { ending?.kind == .abandoned }
+
+    // Custom decoder: reads `start` if present, falls back to `added` so that
+    // JSON exported before the column rename still imports correctly.
+    // -- claude, 2026-03-03
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id            = try c.decodeIfPresent(Int64.self,       forKey: .id)
+        title         = try c.decode(String.self,               forKey: .title)
+        shouldMigrate = try c.decode(Bool.self,                 forKey: .shouldMigrate)
+        if let s = try c.decodeIfPresent(Date.self, forKey: .start) {
+            start = s
+        } else {
+            start     = try c.decode(Date.self,                 forKey: .added)
+        }
+        ending        = try c.decodeIfPresent(TodoEnding.self,  forKey: .ending)
+        categoryID    = try c.decodeIfPresent(Int64.self,       forKey: .categoryID)
+        externalURL   = try c.decodeIfPresent(String.self,      forKey: .externalURL)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, title, shouldMigrate, start, added, ending, categoryID, externalURL
+    }
 }
 
 struct Note: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {

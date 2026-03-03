@@ -220,13 +220,17 @@ struct AppDatabase {
             try db.execute(sql: "ALTER TABLE note DROP COLUMN relatedTodoID")
         }
 
+        migrator.registerMigration("v5") { db in
+            try db.execute(sql: "ALTER TABLE todo RENAME COLUMN added TO start")
+        }
+
         try migrator.migrate(db)
     }
 
     func exportData() async throws -> Data {
         let snapshot = try await dbQueue.read { db in
             DatabaseExport(
-                version: 4,
+                version: 5,
                 exportedAt: Date(),
                 categories: try Category.order(Column("sortOrder")).fetchAll(db),
                 taskBundles: try TaskBundle.order(Column("id")).fetchAll(db),
