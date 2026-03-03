@@ -124,27 +124,41 @@ struct Todo: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
     var isPending:   Bool { ending == nil }
     var isDone:      Bool { ending?.kind == .done }
     var isAbandoned: Bool { ending?.kind == .abandoned }
+}
 
-    // Custom decoder: reads `start` if present, falls back to `added` so that
-    // JSON exported before the column rename still imports correctly.
+extension Todo {
+    // Custom coding in an extension so the memberwise init is still synthesized.
+    // Decodes `start` first; falls back to `added` so JSON exported before the
+    // column rename still imports correctly. Encodes only `start`.
     // -- claude, 2026-03-03
+    private enum CodingKeys: String, CodingKey {
+        case id, title, shouldMigrate, start, added, ending, categoryID, externalURL
+    }
+
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        id            = try c.decodeIfPresent(Int64.self,       forKey: .id)
-        title         = try c.decode(String.self,               forKey: .title)
-        shouldMigrate = try c.decode(Bool.self,                 forKey: .shouldMigrate)
+        id            = try c.decodeIfPresent(Int64.self,      forKey: .id)
+        title         = try c.decode(String.self,              forKey: .title)
+        shouldMigrate = try c.decode(Bool.self,                forKey: .shouldMigrate)
         if let s = try c.decodeIfPresent(Date.self, forKey: .start) {
             start = s
         } else {
-            start     = try c.decode(Date.self,                 forKey: .added)
+            start = try c.decode(Date.self,                    forKey: .added)
         }
-        ending        = try c.decodeIfPresent(TodoEnding.self,  forKey: .ending)
-        categoryID    = try c.decodeIfPresent(Int64.self,       forKey: .categoryID)
-        externalURL   = try c.decodeIfPresent(String.self,      forKey: .externalURL)
+        ending        = try c.decodeIfPresent(TodoEnding.self, forKey: .ending)
+        categoryID    = try c.decodeIfPresent(Int64.self,      forKey: .categoryID)
+        externalURL   = try c.decodeIfPresent(String.self,     forKey: .externalURL)
     }
 
-    private enum CodingKeys: String, CodingKey {
-        case id, title, shouldMigrate, start, added, ending, categoryID, externalURL
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(id,           forKey: .id)
+        try c.encode(title,                 forKey: .title)
+        try c.encode(shouldMigrate,         forKey: .shouldMigrate)
+        try c.encode(start,                 forKey: .start)
+        try c.encodeIfPresent(ending,       forKey: .ending)
+        try c.encodeIfPresent(categoryID,   forKey: .categoryID)
+        try c.encodeIfPresent(externalURL,  forKey: .externalURL)
     }
 }
 
