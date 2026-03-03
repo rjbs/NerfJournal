@@ -392,12 +392,20 @@ struct JournalPageDetailView: View {
 
                                     TextField(entryIsNote ? "Add note\u{2026}" : "Add todo\u{2026}", text: $newEntryText)
                                         .focused($addFieldFocused)
-                                        .onSubmit { submitEntry() }
+                                        .onKeyPress(.return) {
+                                            if categoryPickerActive && !filteredCategories.isEmpty {
+                                                selectCategory(filteredCategories[0])
+                                                return .handled
+                                            }
+                                            submitEntry()
+                                            return .handled
+                                        }
                                         .onKeyPress(.escape) {
                                             if categoryPickerActive { cancelCategoryPicker(); return .handled }
                                             addFieldFocused = false
                                             return .handled
                                         }
+                                        .onKeyPress("\t") { .handled }
                                         .onChange(of: newEntryText) { _, text in updateCategoryPicker(for: text) }
                                         .id("addEntryField")
 
