@@ -17,8 +17,10 @@ private let futureLogDateColumnWidth: CGFloat = {
 struct FutureLogView: View {
     @EnvironmentObject private var pageStore: PageStore
     @EnvironmentObject private var categoryStore: CategoryStore
+    @Environment(\.undoManager) private var undoManager
 
     @State private var selectedIDs: Set<Int64> = []
+    @State private var editingTodoID: Int64? = nil
 
     var body: some View {
         Group {
@@ -29,9 +31,36 @@ struct FutureLogView: View {
             } else {
                 List(selection: $selectedIDs) {
                     ForEach(pageStore.futureTodos) { todo in
-                        FutureLogRow(todo: todo, selectedIDs: selectedIDs)
-                            .tag(todo.id!)
+                        FutureLogRow(
+                            todo: todo,
+                            selectedIDs: selectedIDs,
+                            isEditing: editingTodoID == todo.id,
+                            onCommitEdit: { newTitle in
+                                let trimmed = newTitle.trimmingCharacters(in: .whitespaces)
+                                editingTodoID = nil
+                                guard !trimmed.isEmpty else { return }
+                                Task { try? await pageStore.setTitle(trimmed, for: todo, undoManager: undoManager) }
+                            },
+                            onCancelEdit: { editingTodoID = nil }
+                        )
+                        .tag(todo.id!)
                     }
+                }
+                .onKeyPress(phases: .down) { keyPress in
+                    if keyPress.key == .escape {
+                        if !selectedIDs.isEmpty { selectedIDs = []; return .handled }
+                        return .ignored
+                    }
+                    guard editingTodoID == nil else { return .ignored }
+                    guard keyPress.key == .return else { return .ignored }
+                    if selectedIDs.count == 1, let id = selectedIDs.first {
+                        editingTodoID = id
+                        return .handled
+                    }
+                    return .ignored
+                }
+                .onChange(of: selectedIDs) { _, _ in
+                    editingTodoID = nil
                 }
             }
         }
@@ -48,6 +77,12 @@ struct FutureLogRow: View {
 
     let todo: Todo
     var selectedIDs: Set<Int64> = []
+    var isEditing: Bool = false
+    var onCommitEdit: (String) -> Void = { _ in }
+    var onCancelEdit: () -> Void = {}
+
+    @State private var editTitle = ""
+    @FocusState private var titleFieldFocused: Bool
 
     @State private var showingSendToDateSheet = false
     @State private var pendingSendToDate: Date = Calendar.current.startOfDay(
@@ -72,7 +107,14 @@ struct FutureLogRow: View {
                 .monospacedDigit()
                 .frame(width: futureLogDateColumnWidth, alignment: .trailing)
 
-            Text(todo.title)
+            if isEditing {
+                TextField("", text: $editTitle)
+                    .focused($titleFieldFocused)
+                    .onSubmit { onCommitEdit(editTitle) }
+                    .onKeyPress(.escape) { onCancelEdit(); return .handled }
+            } else {
+                Text(todo.title)
+            }
 
             Spacer()
 
@@ -87,6 +129,12 @@ struct FutureLogRow: View {
             }
         }
         .padding(.vertical, 2)
+        .onChange(of: isEditing) { _, editing in
+            if editing {
+                editTitle = todo.title
+                titleFieldFocused = true
+            }
+        }
         .contextMenu {
             let affectedIDs: Set<Int64> = selectedIDs.contains(todo.id!) && selectedIDs.count > 1
                 ? selectedIDs : [todo.id!]
@@ -115,6 +163,12 @@ struct FutureLogRow: View {
                             Task { try? await pageStore.setBulkCategory(category.id, forTodoIDs: affectedIDs, undoManager: undoManager) }
                         }
                     }
+                }
+
+                Divider()
+
+                Button("Delete", role: .destructive) {
+                    Task { try? await pageStore.bulkDelete(affectedTodos, undoManager: undoManager) }
                 }
             } else {
                 Button("Send to today") {
@@ -147,6 +201,12 @@ struct FutureLogRow: View {
                     todoToSetURL = todo
                     urlText = todo.externalURL ?? ""
                     showingSetURLAlert = true
+                }
+
+                Divider()
+
+                Button("Delete", role: .destructive) {
+                    Task { try? await pageStore.deleteTodo(todo, undoManager: undoManager) }
                 }
             }
         }

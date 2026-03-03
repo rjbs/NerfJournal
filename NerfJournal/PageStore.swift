@@ -153,6 +153,29 @@ final class PageStore: ObservableObject {
         try await refreshContents()
     }
 
+    func bulkDelete(_ todos: [Todo], undoManager: UndoManager? = nil) async throws {
+        let snapshot = todos
+        try await db.dbQueue.write { db in
+            for todo in todos {
+                try Todo.filter(Column("id") == todo.id).deleteAll(db)
+            }
+        }
+        scheduleUndo(with: undoManager) { store in
+            try await store.restoreBulkTodos(snapshot)
+        }
+        try await refreshContents()
+    }
+
+    private func restoreBulkTodos(_ todos: [Todo]) async throws {
+        try await db.dbQueue.write { db in
+            for todo in todos {
+                var restored = todo
+                try restored.insert(db)
+            }
+        }
+        try await refreshContents()
+    }
+
     func bulkAbandon(_ todos: [Todo]) async throws {
         let ending = TodoEnding(date: Date(), kind: .abandoned)
         try await db.dbQueue.write { db in
