@@ -73,7 +73,7 @@ struct NerfJournalApp: App {
                 .focusedSceneObject(journalStore)
                 .focusedSceneObject(categoryStore)
         }
-        .defaultSize(width: 700, height: 520)
+        .defaultSize(width: 540, height: 520)
         .commands {
             DebugCommands()
             TodoCommands()

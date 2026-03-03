@@ -23,77 +23,39 @@ struct JournalView: View {
     @EnvironmentObject private var bundleStore: BundleStore
     @EnvironmentObject private var categoryStore: CategoryStore
 
-    @AppStorage("sidebarVisible") private var sidebarVisible = true
-
-    // Nominal sidebar width used when expanding the window on show.
-    private let sidebarIdealWidth: CGFloat = 230
-    // Minimum usable width for the diary content pane.
-    private let contentMinWidth: CGFloat = 300
+    @State private var calendarPopoverVisible = false
 
     var body: some View {
-        Group {
-            if sidebarVisible {
-                HSplitView {
-                    calendarSidebar
-                    pageDetail
+        pageDetail
+            .toolbar {
+                ToolbarItem(placement: .navigation) {
+                    Button {
+                        calendarPopoverVisible.toggle()
+                    } label: {
+                        Image(systemName: "calendar")
+                    }
+                    .popover(isPresented: $calendarPopoverVisible) {
+                        MonthCalendarView(
+                            selectedDate: journalStore.selectedDate,
+                            highlightedDates: journalStore.pageDates,
+                            futureDates: Set(pageStore.futureTodos.map {
+                                Calendar.current.startOfDay(for: $0.start)
+                            }),
+                            onSelect: { date in Task { try? await journalStore.selectDate(date) } }
+                        )
+                        .padding()
+                    }
                 }
-            } else {
-                pageDetail
             }
-        }
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                Button {
-                    toggleSidebar()
-                } label: {
-                    Image(systemName: "sidebar.left")
+            .task {
+                try? await journalStore.loadIndex()
+                if let latest = journalStore.pageDates.max() {
+                    try? await journalStore.selectDate(latest)
                 }
+                try? await pageStore.load()
+                try? await bundleStore.load()
+                try? await categoryStore.load()
             }
-        }
-        .task {
-            try? await journalStore.loadIndex()
-            if let latest = journalStore.pageDates.max() {
-                try? await journalStore.selectDate(latest)
-            }
-            try? await pageStore.load()
-            try? await bundleStore.load()
-            try? await categoryStore.load()
-        }
-    }
-
-    private func toggleSidebar() {
-        if sidebarVisible {
-            sidebarVisible = false
-        } else {
-            // The clicked button's window is always the key window.
-            if let window = NSApplication.shared.keyWindow,
-               window.frame.width < sidebarIdealWidth + contentMinWidth {
-                var frame = window.frame
-                // Expand left, anchoring the right edge, clamped to the screen.
-                let expansion = min(sidebarIdealWidth,
-                                    frame.minX - (window.screen?.visibleFrame.minX ?? 0))
-                frame.origin.x -= expansion
-                frame.size.width += expansion
-                window.setFrame(frame, display: true, animate: true)
-            }
-            sidebarVisible = true
-        }
-    }
-
-    private var calendarSidebar: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            MonthCalendarView(
-                selectedDate: journalStore.selectedDate,
-                highlightedDates: journalStore.pageDates,
-                futureDates: Set(pageStore.futureTodos.map {
-                    Calendar.current.startOfDay(for: $0.start)
-                }),
-                onSelect: { date in Task { try? await journalStore.selectDate(date) } }
-            )
-            .padding()
-            Spacer()
-        }
-        .frame(minWidth: 210, idealWidth: 230, maxWidth: 260)
     }
 
     private var pageDetail: some View {
