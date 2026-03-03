@@ -314,14 +314,15 @@ struct JournalPageDetailView: View {
     let notes: [Note]
     var readOnly: Bool = true
 
-    @State private var newTodoTitle = ""
+    @State private var newEntryText = ""
     @State private var showAddField = false
     @FocusState private var addFieldFocused: Bool
     @State private var selectedTodoIDs: Set<Int64> = []
     @State private var editingTodoID: Int64? = nil
-    @State private var newNoteText = ""
-    @State private var showAddNoteField = false
-    @FocusState private var addNoteFieldFocused: Bool
+    @State private var entryIsNote = false
+    @State private var selectedCategoryID: Int64? = nil
+    @State private var categoryPickerActive = false
+    @State private var categoryPickerQuery = ""
     @State private var editingNoteID: Int64? = nil
     @State private var selectedNoteID: Int64? = nil
 
@@ -376,11 +377,74 @@ struct JournalPageDetailView: View {
                         }
                         if !readOnly && showAddField {
                             Section {
-                                TextField("Add todo\u{2026}", text: $newTodoTitle)
-                                    .focused($addFieldFocused)
-                                    .onSubmit { submitNewTodo() }
-                                    .onKeyPress(.escape) { addFieldFocused = false; return .handled }
-                                    .id("addTodoField")
+                                HStack(spacing: 8) {
+                                    Button {
+                                        entryIsNote.toggle()
+                                        if entryIsNote { selectedCategoryID = nil; categoryPickerActive = false }
+                                        addFieldFocused = true
+                                    } label: {
+                                        Image(systemName: entryIsNote ? "bubble.left" : "circle")
+                                            .foregroundStyle(.secondary)
+                                            .frame(width: 16)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help(entryIsNote ? "Switch to todo" : "Switch to note")
+
+                                    TextField(entryIsNote ? "Add note\u{2026}" : "Add todo\u{2026}", text: $newEntryText)
+                                        .focused($addFieldFocused)
+                                        .onSubmit { submitEntry() }
+                                        .onKeyPress(.escape) {
+                                            if categoryPickerActive { cancelCategoryPicker(); return .handled }
+                                            addFieldFocused = false
+                                            return .handled
+                                        }
+                                        .onChange(of: newEntryText) { _, text in updateCategoryPicker(for: text) }
+                                        .id("addEntryField")
+
+                                    if !entryIsNote, let catID = selectedCategoryID,
+                                       let cat = categoryStore.categories.first(where: { $0.id == catID }) {
+                                        HStack(spacing: 4) {
+                                            Circle()
+                                                .fill(cat.color.swatch)
+                                                .frame(width: 8, height: 8)
+                                            Text(cat.name)
+                                                .font(.caption)
+                                            Button { selectedCategoryID = nil } label: {
+                                                Image(systemName: "xmark").font(.caption2)
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 3)
+                                        .background(
+                                            Capsule()
+                                                .fill(cat.color.swatch.opacity(0.15))
+                                                .overlay(Capsule().stroke(cat.color.swatch.opacity(0.4), lineWidth: 1))
+                                        )
+                                        .foregroundStyle(cat.color.swatch)
+                                    }
+                                }
+
+                                if !entryIsNote && categoryPickerActive && !filteredCategories.isEmpty {
+                                    HStack(spacing: 6) {
+                                        ForEach(filteredCategories) { cat in
+                                            Button { selectCategory(cat) } label: {
+                                                HStack(spacing: 4) {
+                                                    Circle()
+                                                        .fill(cat.color.swatch)
+                                                        .frame(width: 8, height: 8)
+                                                    Text(cat.name).font(.caption)
+                                                }
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .background(Capsule().fill(cat.color.swatch.opacity(0.15)))
+                                                .foregroundStyle(cat.color.swatch)
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                    }
+                                    .padding(.leading, 24)
+                                }
                             }
                         }
                     }
@@ -413,15 +477,6 @@ struct JournalPageDetailView: View {
                                     selectedTodoIDs = []
                                 }
                             }
-                        }
-                    }
-                    if !readOnly && showAddNoteField {
-                        Section {
-                            TextField("Add note\u{2026}", text: $newNoteText)
-                                .focused($addNoteFieldFocused)
-                                .onSubmit { submitNewNote() }
-                                .onKeyPress(.escape) { addNoteFieldFocused = false; return .handled }
-                                .id("addNoteField")
                         }
                     }
                 }
@@ -465,7 +520,7 @@ struct JournalPageDetailView: View {
                             return .handled
                         }
                     }
-                    guard !readOnly, editingTodoID == nil, editingNoteID == nil, !addFieldFocused, !addNoteFieldFocused else { return .ignored }
+                    guard !readOnly, editingTodoID == nil, editingNoteID == nil, !addFieldFocused else { return .ignored }
                     guard keyPress.key == .return else { return .ignored }
                     if let noteID = selectedNoteID {
                         editingNoteID = noteID
@@ -494,12 +549,7 @@ struct JournalPageDetailView: View {
                 }
                 .onChange(of: showAddField) { _, show in
                     if show {
-                        Task { @MainActor in scrollProxy.scrollTo("addTodoField", anchor: .bottom) }
-                    }
-                }
-                .onChange(of: showAddNoteField) { _, show in
-                    if show {
-                        Task { @MainActor in scrollProxy.scrollTo("addNoteField", anchor: .bottom) }
+                        Task { @MainActor in scrollProxy.scrollTo("addEntryField", anchor: .bottom) }
                     }
                 }
             }
@@ -531,24 +581,27 @@ struct JournalPageDetailView: View {
             }
         }
         .onChange(of: addFieldFocused) { _, focused in
-            if !focused { showAddField = false; newTodoTitle = "" }
-        }
-        .onChange(of: addNoteFieldFocused) { _, focused in
-            if !focused { showAddNoteField = false; newNoteText = "" }
+            if !focused {
+                showAddField = false
+                newEntryText = ""
+                selectedCategoryID = nil
+                categoryPickerActive = false
+                categoryPickerQuery = ""
+            }
         }
         .onChange(of: selectedNoteID) { _, _ in editingNoteID = nil }
-        .focusedValue(\.focusAddTodo, Binding(
-            get: { addFieldFocused },
+        .focusedValue(\.focusAddTodo, readOnly ? nil : Binding(
+            get: { addFieldFocused && !entryIsNote },
             set: {
-                if $0 { showAddField = true; selectedTodoIDs = [] }
+                if $0 { entryIsNote = false; showAddField = true; selectedTodoIDs = [] }
                 addFieldFocused = $0
             }
         ))
         .focusedValue(\.focusAddNote, readOnly ? nil : Binding(
-            get: { addNoteFieldFocused },
+            get: { addFieldFocused && entryIsNote },
             set: {
-                if $0 { showAddNoteField = true; selectedTodoIDs = []; selectedNoteID = nil }
-                addNoteFieldFocused = $0
+                if $0 { entryIsNote = true; showAddField = true; selectedTodoIDs = []; selectedNoteID = nil }
+                addFieldFocused = $0
             }
         ))
     }
@@ -666,26 +719,65 @@ struct JournalPageDetailView: View {
         notes.filter { $0.text != nil }
     }
 
-    private func submitNewTodo() {
-        let title = newTodoTitle.trimmingCharacters(in: .whitespaces)
-        guard !title.isEmpty else { return }
-        Task {
-            try? await pageStore.addTodo(title: title, shouldMigrate: true)
-            newTodoTitle = ""
-            showAddField = true
-            addFieldFocused = true
+    private func submitEntry() {
+        let text = newEntryText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { addFieldFocused = false; return }
+        if entryIsNote {
+            Task {
+                try? await pageStore.addNote(text: text)
+                newEntryText = ""
+                showAddField = true
+                addFieldFocused = true
+            }
+        } else {
+            let catID = selectedCategoryID
+            Task {
+                try? await pageStore.addTodo(title: text, shouldMigrate: true, categoryID: catID)
+                newEntryText = ""
+                selectedCategoryID = nil
+                showAddField = true
+                addFieldFocused = true
+            }
         }
     }
 
-    private func submitNewNote() {
-        let text = newNoteText.trimmingCharacters(in: .whitespaces)
-        guard !text.isEmpty else { return }
-        Task {
-            try? await pageStore.addNote(text: text)
-            newNoteText = ""
-            showAddNoteField = true
-            addNoteFieldFocused = true
+    private func updateCategoryPicker(for text: String) {
+        guard !entryIsNote else { categoryPickerActive = false; return }
+        let words = text.components(separatedBy: " ")
+        if let last = words.last, last.hasPrefix("#") {
+            categoryPickerActive = true
+            categoryPickerQuery = String(last.dropFirst())
+        } else {
+            categoryPickerActive = false
+            categoryPickerQuery = ""
         }
+    }
+
+    private func selectCategory(_ category: Category) {
+        var words = newEntryText.components(separatedBy: " ")
+        if words.last?.hasPrefix("#") == true { words.removeLast() }
+        newEntryText = words.joined(separator: " ")
+        if !newEntryText.isEmpty { newEntryText += " " }
+        selectedCategoryID = category.id
+        categoryPickerActive = false
+        categoryPickerQuery = ""
+        addFieldFocused = true
+    }
+
+    private func cancelCategoryPicker() {
+        var words = newEntryText.components(separatedBy: " ")
+        if words.last?.hasPrefix("#") == true { words.removeLast() }
+        newEntryText = words.joined(separator: " ")
+        categoryPickerActive = false
+        categoryPickerQuery = ""
+    }
+
+    private var filteredCategories: [Category] {
+        guard categoryPickerActive else { return [] }
+        let all = categoryStore.categories
+        return categoryPickerQuery.isEmpty
+            ? all
+            : all.filter { $0.name.localizedCaseInsensitiveContains(categoryPickerQuery) }
     }
 }
 
