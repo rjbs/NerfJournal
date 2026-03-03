@@ -282,7 +282,7 @@ final class PageStore: ObservableObject {
     // Set the category for a set of todos in one transaction with a single undo step.
     // Undo restores each todo's prior category individually; there is no redo. -- claude, 2026-03-02
     func setBulkCategory(_ categoryID: Int64?, forTodoIDs ids: Set<Int64>, undoManager: UndoManager? = nil) async throws {
-        let oldCategories: [(Int64, Int64?)] = todos
+        let oldCategories: [(Int64, Int64?)] = (todos + futureTodos)
             .filter { ids.contains($0.id!) }
             .map { ($0.id!, $0.categoryID) }
         try await db.dbQueue.write { db in

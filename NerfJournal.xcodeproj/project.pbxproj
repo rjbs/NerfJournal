@@ -15,6 +15,7 @@
 		83CBBA181A601CBA00E9B192 /* PageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA201A601CBA00E9B192 /* PageStore.swift */; };
 		83CBBA191A601CBA00E9B192 /* JournalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA211A601CBA00E9B192 /* JournalStore.swift */; };
 		83CBBA1A1A601CBA00E9B192 /* JournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA221A601CBA00E9B192 /* JournalView.swift */; };
+		83CBBA2E1A601CBA00E9B192 /* FutureLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA2F1A601CBA00E9B192 /* FutureLogView.swift */; };
 		83CBBA1B1A601CBA00E9B192 /* DebugCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA231A601CBA00E9B192 /* DebugCommands.swift */; };
 		83CBBA1C1A601CBA00E9B192 /* BundleStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA241A601CBA00E9B192 /* BundleStore.swift */; };
 		83CBBA1D1A601CBA00E9B192 /* BundleManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA251A601CBA00E9B192 /* BundleManagerView.swift */; };
@@ -35,6 +36,7 @@
 		83CBBA201A601CBA00E9B192 /* PageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageStore.swift; sourceTree = "<group>"; };
 		83CBBA211A601CBA00E9B192 /* JournalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalStore.swift; sourceTree = "<group>"; };
 		83CBBA221A601CBA00E9B192 /* JournalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalView.swift; sourceTree = "<group>"; };
+		83CBBA2F1A601CBA00E9B192 /* FutureLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FutureLogView.swift; sourceTree = "<group>"; };
 		83CBBA231A601CBA00E9B192 /* DebugCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugCommands.swift; sourceTree = "<group>"; };
 		83CBBA241A601CBA00E9B192 /* BundleStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleStore.swift; sourceTree = "<group>"; };
 		83CBBA251A601CBA00E9B192 /* BundleManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleManagerView.swift; sourceTree = "<group>"; };
@@ -74,6 +76,7 @@
 				83CBBA201A601CBA00E9B192 /* PageStore.swift */,
 				83CBBA211A601CBA00E9B192 /* JournalStore.swift */,
 				83CBBA221A601CBA00E9B192 /* JournalView.swift */,
+				83CBBA2F1A601CBA00E9B192 /* FutureLogView.swift */,
 				83CBBA231A601CBA00E9B192 /* DebugCommands.swift */,
 				83CBBA241A601CBA00E9B192 /* BundleStore.swift */,
 				83CBBA251A601CBA00E9B192 /* BundleManagerView.swift */,
@@ -174,6 +177,7 @@
 				83CBBA181A601CBA00E9B192 /* PageStore.swift in Sources */,
 				83CBBA191A601CBA00E9B192 /* JournalStore.swift in Sources */,
 				83CBBA1A1A601CBA00E9B192 /* JournalView.swift in Sources */,
+				83CBBA2E1A601CBA00E9B192 /* FutureLogView.swift in Sources */,
 				83CBBA1B1A601CBA00E9B192 /* DebugCommands.swift in Sources */,
 				83CBBA1C1A601CBA00E9B192 /* BundleStore.swift in Sources */,
 				83CBBA1D1A601CBA00E9B192 /* BundleManagerView.swift in Sources */,

@@ -48,6 +48,8 @@ struct TodoCommands: Commands {
         CommandGroup(after: .windowArrangement) {
             Button("Open Work Journal") { openWindow(id: "journal") }
                 .keyboardShortcut("1", modifiers: .command)
+            Button("Open Future Log") { openWindow(id: "future-log") }
+                .keyboardShortcut("2", modifiers: .command)
         }
     }
 }
@@ -84,5 +86,12 @@ struct NerfJournalApp: App {
                 .focusedSceneObject(pageStore)
         }
         .defaultSize(width: 600, height: 480)
+
+        Window("Future Log", id: "future-log") {
+            FutureLogView()
+                .environmentObject(pageStore)
+                .environmentObject(categoryStore)
+        }
+        .defaultSize(width: 480, height: 400)
     }
 }
