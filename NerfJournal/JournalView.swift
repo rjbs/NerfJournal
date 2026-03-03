@@ -135,22 +135,26 @@ struct JournalView: View {
             Calendar.current.isDate($0.start, inSameDayAs: selectedDate)
         }
 
-        if futureForDate.isEmpty {
-            VStack(spacing: 16) {
-                if !isToday {
-                    Text(selectedDate.formatted(date: .long, time: .omitted))
-                        .font(.title2).bold()
+        VStack(alignment: .leading, spacing: 0) {
+            Text(selectedDate.formatted(date: .long, time: .omitted))
+                .font(.title2).bold()
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 12)
+
+            Divider()
+
+            if futureForDate.isEmpty {
+                VStack(spacing: 16) {
+                    Text(isToday ? "No journal page for today." : "No journal page for this date.")
+                        .foregroundStyle(.secondary)
+                    if isToday {
+                        Button("Start Today") { startToday() }
+                            .buttonStyle(.borderedProminent)
+                    }
                 }
-                Text(isToday ? "No journal page for today." : "No journal page for this date.")
-                    .foregroundStyle(.secondary)
-                if isToday {
-                    Button("Start Today") { startToday() }
-                        .buttonStyle(.borderedProminent)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else {
-            VStack(spacing: 0) {
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
                 if isToday {
                     HStack(spacing: 12) {
                         Text("No journal page for today.")
