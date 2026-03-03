@@ -85,6 +85,9 @@ struct JournalView: View {
             MonthCalendarView(
                 selectedDate: journalStore.selectedDate,
                 highlightedDates: journalStore.pageDates,
+                futureDates: Set(pageStore.futureTodos.map {
+                    Calendar.current.startOfDay(for: $0.start)
+                }),
                 onSelect: { date in Task { try? await journalStore.selectDate(date) } }
             )
             .padding()
@@ -170,6 +173,7 @@ struct JournalView: View {
 struct MonthCalendarView: View {
     let selectedDate: Date?
     let highlightedDates: Set<Date>
+    var futureDates: Set<Date> = []
     let onSelect: (Date) -> Void
 
     @State private var displayMonth: Date = {
@@ -234,6 +238,7 @@ struct MonthCalendarView: View {
                     date: date,
                     isSelected: isSameDay(date, selectedDate),
                     hasEntry: hasEntry(date),
+                    hasFutureItems: futureDates.contains(calendar.startOfDay(for: date)),
                     isToday: calendar.isDateInToday(date),
                     onTap: { onSelect(date) }
                 )
@@ -277,6 +282,7 @@ struct DayCell: View {
     let date: Date
     let isSelected: Bool
     let hasEntry: Bool
+    var hasFutureItems: Bool = false
     let isToday: Bool
     let onTap: () -> Void
 
@@ -288,6 +294,14 @@ struct DayCell: View {
                 .frame(width: 26, height: 26)
                 .background(Circle().fill(circleColor))
                 .foregroundStyle(isSelected ? Color.white : .primary)
+                .overlay(alignment: .bottom) {
+                    if hasFutureItems {
+                        Circle()
+                            .fill(isSelected ? Color.white.opacity(0.8) : Color.orange.opacity(0.8))
+                            .frame(width: 4, height: 4)
+                            .offset(y: 3)
+                    }
+                }
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)

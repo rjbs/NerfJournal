@@ -8,6 +8,7 @@ final class PageStore: ObservableObject {
     @Published var page: JournalPage?
     @Published var todos: [Todo] = []
     @Published var notes: [Note] = []
+    @Published var futureTodos: [Todo] = []
 
     init(database: AppDatabase = .shared) {
         self.db = database
@@ -432,13 +433,14 @@ final class PageStore: ObservableObject {
         guard page != nil, let pageID = page?.id else {
             todos = []
             notes = []
+            futureTodos = []
             return
         }
         // Use the last page's date, not today, so that todos completed on the
         // last page day remain visible when you haven't started today yet.
         // -- claude, 2026-03-03
         let pageDate = Calendar.current.startOfDay(for: page!.date)
-        let (allTodos, fetchedNotes) = try await db.dbQueue.read { db in
+        let (allTodos, fetchedNotes, ft) = try await db.dbQueue.read { db in
             let t = try Todo
                 .filter(Column("start") <= pageDate)
                 .fetchAll(db)
@@ -446,7 +448,12 @@ final class PageStore: ObservableObject {
                 .filter(Column("pageID") == pageID)
                 .order(Column("timestamp"))
                 .fetchAll(db)
-            return (t, n)
+            let f = try Todo
+                .filter(Column("start") > pageDate)
+                .filter(Column("ending") == nil)
+                .order(Column("start"), Column("id"))
+                .fetchAll(db)
+            return (t, n, f)
         }
         todos = allTodos
             .filter { todo in
@@ -455,6 +462,7 @@ final class PageStore: ObservableObject {
             }
             .sortedForDisplay()
         notes = fetchedNotes
+        futureTodos = ft
     }
 
     // Registers an undo action, handling the Task { @MainActor } dance that
