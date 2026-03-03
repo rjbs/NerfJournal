@@ -332,6 +332,21 @@ final class PageStore: ObservableObject {
         try await refreshContents()
     }
 
+    func setEndingTime(_ date: Date, for todo: Todo, undoManager: UndoManager? = nil) async throws {
+        guard let oldEnding = todo.ending else { return }
+        let newEnding = TodoEnding(date: date, kind: oldEnding.kind)
+        try await db.dbQueue.write { db in
+            try Todo
+                .filter(Column("id") == todo.id)
+                .updateAll(db, [Column("ending").set(to: newEnding)])
+            return
+        }
+        scheduleUndo(with: undoManager) { store in
+            try await store.setEndingTime(oldEnding.date, for: todo, undoManager: undoManager)
+        }
+        try await refreshContents()
+    }
+
     private func restoreTodo(_ todo: Todo) async throws {
         guard page != nil else { return }
         try await db.dbQueue.write { db in

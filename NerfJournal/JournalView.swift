@@ -711,6 +711,8 @@ struct TodoRow: View {
     @State private var showingSetURLAlert = false
     @State private var urlText = ""
     @State private var showingInvalidURLAlert = false
+    @State private var showingAdjustEndingTime = false
+    @State private var pendingEndingTime: Date = .now
 
     // The display state of this todo relative to the page it is shown on.
     private enum RowState {
@@ -875,6 +877,13 @@ struct TodoRow: View {
                         showingSetURLAlert = true
                     }
 
+                    if let endingDate = todo.ending?.date {
+                        Button("Adjust time\u{2026}") {
+                            pendingEndingTime = endingDate
+                            showingAdjustEndingTime = true
+                        }
+                    }
+
                     Divider()
 
                     Button("Delete", role: .destructive) {
@@ -899,6 +908,40 @@ struct TodoRow: View {
         } message: {
             Text("Please enter a valid URL (e.g. https://example.com) or clear the field to remove the URL.")
         }
+        .sheet(isPresented: $showingAdjustEndingTime) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Adjust Ending Time")
+                    .font(.headline)
+                DatePicker(
+                    "",
+                    selection: $pendingEndingTime,
+                    in: adjustEndingTimeDayRange,
+                    displayedComponents: .hourAndMinute
+                )
+                .labelsHidden()
+                HStack {
+                    Spacer()
+                    Button("Cancel") { showingAdjustEndingTime = false }
+                        .keyboardShortcut(.cancelAction)
+                    Button("Set") {
+                        Task { try? await store.setEndingTime(pendingEndingTime, for: todo, undoManager: undoManager) }
+                        showingAdjustEndingTime = false
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .buttonStyle(.borderedProminent)
+                }
+            }
+            .padding()
+            .frame(width: 220)
+        }
+    }
+
+    private var adjustEndingTimeDayRange: ClosedRange<Date> {
+        guard let endingDate = todo.ending?.date else { return Date()...Date() }
+        let cal = Calendar.current
+        let start = cal.startOfDay(for: endingDate)
+        let end = cal.date(bySettingHour: 23, minute: 59, second: 59, of: endingDate)!
+        return start...end
     }
 
     private func commitURL() {
