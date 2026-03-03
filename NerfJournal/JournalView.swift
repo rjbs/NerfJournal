@@ -316,6 +316,7 @@ struct JournalPageDetailView: View {
 
     @State private var newEntryText = ""
     @State private var showAddField = false
+    @State private var scrollToFieldRequest = 0
     @FocusState private var addFieldFocused: Bool
     @State private var selectedTodoIDs: Set<Int64> = []
     @State private var editingTodoID: Int64? = nil
@@ -392,14 +393,7 @@ struct JournalPageDetailView: View {
 
                                     TextField(entryIsNote ? "Add note\u{2026}" : "Add todo\u{2026}", text: $newEntryText)
                                         .focused($addFieldFocused)
-                                        .onKeyPress(.return) {
-                                            if categoryPickerActive && !filteredCategories.isEmpty {
-                                                selectCategory(filteredCategories[0])
-                                                return .handled
-                                            }
-                                            submitEntry()
-                                            return .handled
-                                        }
+                                        .onSubmit { submitEntry() }
                                         .onKeyPress(.escape) {
                                             if categoryPickerActive { cancelCategoryPicker(); return .handled }
                                             addFieldFocused = false
@@ -407,7 +401,6 @@ struct JournalPageDetailView: View {
                                         }
                                         .onKeyPress("\t") { .handled }
                                         .onChange(of: newEntryText) { _, text in updateCategoryPicker(for: text) }
-                                        .id("addEntryField")
 
                                     if !entryIsNote, let catID = selectedCategoryID,
                                        let cat = categoryStore.categories.first(where: { $0.id == catID }) {
@@ -432,6 +425,7 @@ struct JournalPageDetailView: View {
                                         .foregroundStyle(cat.color.swatch)
                                     }
                                 }
+                                .id("addEntryField")
 
                                 if !entryIsNote && categoryPickerActive && !filteredCategories.isEmpty {
                                     HStack(spacing: 6) {
@@ -555,9 +549,17 @@ struct JournalPageDetailView: View {
                     editingTodoID = nil
                     if !newIDs.isEmpty { selectedNoteID = nil }
                 }
-                .onChange(of: showAddField) { _, show in
-                    if show {
-                        Task { @MainActor in scrollProxy.scrollTo("addEntryField", anchor: .bottom) }
+                .onChange(of: scrollToFieldRequest) { _, _ in
+                    // Double-defer: first Task lets SwiftUI finish inserting the row
+                    // (if showAddField just became true); second lets NSTableView
+                    // complete its layout pass before scrollTo searches for the target.
+                    // Triggered by a counter so it fires even when addFieldFocused or
+                    // showAddField don't change (e.g. field already focused but scrolled
+                    // out of view). -- claude, 2026-03-03
+                    Task { @MainActor in
+                        Task { @MainActor in
+                            scrollProxy.scrollTo("addEntryField", anchor: .bottom)
+                        }
                     }
                 }
             }
@@ -598,18 +600,24 @@ struct JournalPageDetailView: View {
             }
         }
         .onChange(of: selectedNoteID) { _, _ in editingNoteID = nil }
-        .focusedValue(\.focusAddTodo, readOnly ? nil : Binding(
+        .focusedValue(\.focusAddTodo, readOnly ? nil : Binding<Bool>(
             get: { addFieldFocused && !entryIsNote },
-            set: {
-                if $0 { entryIsNote = false; showAddField = true; selectedTodoIDs = [] }
-                addFieldFocused = $0
+            set: { newValue in
+                if newValue {
+                    entryIsNote = false; showAddField = true; selectedTodoIDs = []
+                    scrollToFieldRequest += 1
+                }
+                addFieldFocused = newValue
             }
         ))
-        .focusedValue(\.focusAddNote, readOnly ? nil : Binding(
+        .focusedValue(\.focusAddNote, readOnly ? nil : Binding<Bool>(
             get: { addFieldFocused && entryIsNote },
-            set: {
-                if $0 { entryIsNote = true; showAddField = true; selectedTodoIDs = []; selectedNoteID = nil }
-                addFieldFocused = $0
+            set: { newValue in
+                if newValue {
+                    entryIsNote = true; showAddField = true; selectedTodoIDs = []; selectedNoteID = nil
+                    scrollToFieldRequest += 1
+                }
+                addFieldFocused = newValue
             }
         ))
     }
@@ -728,6 +736,10 @@ struct JournalPageDetailView: View {
     }
 
     private func submitEntry() {
+        if categoryPickerActive && !filteredCategories.isEmpty {
+            selectCategory(filteredCategories[0])
+            return
+        }
         let text = newEntryText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { addFieldFocused = false; return }
         if entryIsNote {
