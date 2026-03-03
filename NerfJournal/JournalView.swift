@@ -825,6 +825,10 @@ struct TodoRow: View {
     @State private var showingInvalidURLAlert = false
     @State private var showingAdjustEndingTime = false
     @State private var pendingEndingTime: Date = .now
+    @State private var todoToSendToFuture: Todo? = nil
+    @State private var sendToFutureDate: Date = Calendar.current.startOfDay(
+        for: Calendar.current.date(byAdding: .day, value: 1, to: Date())!
+    )
 
     // The display state of this todo relative to the page it is shown on.
     private enum RowState {
@@ -996,6 +1000,22 @@ struct TodoRow: View {
                         }
                     }
 
+                    if todo.isPending {
+                        Divider()
+                        Button("Send to tomorrow") {
+                            let tomorrow = Calendar.current.startOfDay(
+                                for: Calendar.current.date(byAdding: .day, value: 1, to: Date())!
+                            )
+                            Task { try? await store.sendToDate(affectedTodos, date: tomorrow, undoManager: undoManager) }
+                        }
+                        Button("Send to future\u{2026}") {
+                            todoToSendToFuture = todo
+                            sendToFutureDate = Calendar.current.startOfDay(
+                                for: Calendar.current.date(byAdding: .day, value: 1, to: Date())!
+                            )
+                        }
+                    }
+
                     Divider()
 
                     Button("Delete", role: .destructive) {
@@ -1045,6 +1065,32 @@ struct TodoRow: View {
             }
             .padding()
             .frame(width: 220)
+        }
+        .sheet(item: $todoToSendToFuture) { futureTodo in
+            VStack(spacing: 16) {
+                Text("Send \u{201c}\(futureTodo.title)\u{201d} to\u{2026}")
+                    .font(.headline)
+                DatePicker(
+                    "Date",
+                    selection: $sendToFutureDate,
+                    in: Calendar.current.startOfDay(
+                        for: Calendar.current.date(byAdding: .day, value: 1, to: Date())!
+                    )...,
+                    displayedComponents: .date
+                )
+                .datePickerStyle(.graphical)
+                .labelsHidden()
+                HStack {
+                    Button("Cancel") { todoToSendToFuture = nil }
+                    Button("Send") {
+                        Task { try? await store.sendToDate([futureTodo], date: sendToFutureDate, undoManager: undoManager) }
+                        todoToSendToFuture = nil
+                    }
+                    .keyboardShortcut(.defaultAction)
+                }
+            }
+            .padding()
+            .frame(minWidth: 300)
         }
     }
 
