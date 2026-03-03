@@ -310,6 +310,36 @@ final class PageStore: ObservableObject {
         try await refreshContents()
     }
 
+    // Update the start date for a set of todos in one transaction with a single
+    // undo step. Restores each todo's prior start individually; no redo.
+    // -- claude, 2026-03-03
+    func sendToDate(_ todos: [Todo], date: Date, undoManager: UndoManager? = nil) async throws {
+        let oldStarts: [(Int64, Date)] = todos.map { ($0.id!, $0.start) }
+        let targetDate = Calendar.current.startOfDay(for: date)
+        try await db.dbQueue.write { db in
+            for todo in todos {
+                try Todo
+                    .filter(Column("id") == todo.id)
+                    .updateAll(db, [Column("start").set(to: targetDate)])
+            }
+        }
+        scheduleUndo(with: undoManager) { store in
+            try await store.restoreBulkStartDates(oldStarts)
+        }
+        try await refreshContents()
+    }
+
+    private func restoreBulkStartDates(_ dates: [(Int64, Date)]) async throws {
+        try await db.dbQueue.write { db in
+            for (id, date) in dates {
+                try Todo
+                    .filter(Column("id") == id)
+                    .updateAll(db, [Column("start").set(to: date)])
+            }
+        }
+        try await refreshContents()
+    }
+
     private func restoreBulkCategories(_ categories: [(Int64, Int64?)]) async throws {
         try await db.dbQueue.write { db in
             for (id, categoryID) in categories {
