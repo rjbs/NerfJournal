@@ -78,6 +78,7 @@ struct FutureLogRow: View {
     let todo: Todo
     var selectedIDs: Set<Int64> = []
     var isEditing: Bool = false
+    var showDate: Bool = true
     var onCommitEdit: (String) -> Void = { _ in }
     var onCancelEdit: () -> Void = {}
 
@@ -101,11 +102,13 @@ struct FutureLogRow: View {
                 .fill(categoryStore.categories.first(where: { $0.id == todo.categoryID })?.color.swatch ?? Color.gray)
                 .frame(width: 8, height: 8)
 
-            Text(todo.start.formatted(.dateTime.month(.abbreviated).day()))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-                .frame(width: futureLogDateColumnWidth, alignment: .trailing)
+            if showDate {
+                Text(todo.start.formatted(.dateTime.month(.abbreviated).day()))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .frame(width: futureLogDateColumnWidth, alignment: .trailing)
+            }
 
             if isEditing {
                 TextField("", text: $editTitle)
@@ -268,5 +271,62 @@ struct FutureLogRow: View {
         }
         todoToSetURL = nil
         urlText = ""
+    }
+}
+
+// MARK: - FutureLogForDateView
+
+// Shows all pending future-log todos for a single date, without a date
+// column (redundant when all rows share the same day). Intended for
+// embedding in the calendar detail pane for pages that don't exist yet.
+struct FutureLogForDateView: View {
+    @EnvironmentObject private var pageStore: PageStore
+    @EnvironmentObject private var categoryStore: CategoryStore
+    @Environment(\.undoManager) private var undoManager
+
+    let date: Date
+
+    @State private var selectedIDs: Set<Int64> = []
+    @State private var editingTodoID: Int64? = nil
+
+    private var filteredTodos: [Todo] {
+        pageStore.futureTodos.filter { Calendar.current.isDate($0.start, inSameDayAs: date) }
+    }
+
+    var body: some View {
+        List(selection: $selectedIDs) {
+            ForEach(filteredTodos) { todo in
+                FutureLogRow(
+                    todo: todo,
+                    selectedIDs: selectedIDs,
+                    isEditing: editingTodoID == todo.id,
+                    showDate: false,
+                    onCommitEdit: { newTitle in
+                        let trimmed = newTitle.trimmingCharacters(in: .whitespaces)
+                        editingTodoID = nil
+                        guard !trimmed.isEmpty else { return }
+                        Task { try? await pageStore.setTitle(trimmed, for: todo, undoManager: undoManager) }
+                    },
+                    onCancelEdit: { editingTodoID = nil }
+                )
+                .tag(todo.id!)
+            }
+        }
+        .onKeyPress(phases: .down) { keyPress in
+            if keyPress.key == .escape {
+                if !selectedIDs.isEmpty { selectedIDs = []; return .handled }
+                return .ignored
+            }
+            guard editingTodoID == nil else { return .ignored }
+            guard keyPress.key == .return else { return .ignored }
+            if selectedIDs.count == 1, let id = selectedIDs.first {
+                editingTodoID = id
+                return .handled
+            }
+            return .ignored
+        }
+        .onChange(of: selectedIDs) { _, _ in
+            editingTodoID = nil
+        }
     }
 }

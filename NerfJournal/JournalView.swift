@@ -103,58 +103,67 @@ struct JournalView: View {
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if journalStore.isSelectedPageLast {
-                lastPageDetail
-            } else if journalStore.selectedPage == nil {
-                noPageDetail
-            } else {
+                // Most recent page: mutable if pageStore has loaded it; noPageDetail fallback otherwise.
+                if let page = pageStore.page {
+                    JournalPageDetailView(
+                        date: page.date,
+                        todos: pageStore.todos,
+                        notes: pageStore.notes,
+                        readOnly: false
+                    )
+                } else {
+                    noPageDetail
+                }
+            } else if journalStore.selectedPage != nil {
                 JournalPageDetailView(
                     date: journalStore.selectedDate!,
                     todos: journalStore.selectedTodos,
                     notes: journalStore.selectedNotes,
                     readOnly: true
                 )
-            }
-        }
-    }
-
-    // The most recent journal page may be mutable if pageStore has it loaded.
-    private var lastPageDetail: some View {
-        Group {
-            if pageStore.page == nil {
-                startTodayPrompt
             } else {
-                JournalPageDetailView(
-                    date: pageStore.page!.date,
-                    todos: pageStore.todos,
-                    notes: pageStore.notes,
-                    readOnly: false
-                )
+                noPageDetail
             }
         }
     }
 
+    @ViewBuilder
     private var noPageDetail: some View {
-        VStack(spacing: 8) {
-            Text(journalStore.selectedDate!.formatted(date: .long, time: .omitted))
-                .font(.title2).bold()
-            Text("No journal page for this date.")
-                .foregroundStyle(.secondary)
-            if Calendar.current.isDateInToday(journalStore.selectedDate!) {
-                Button("Start Today") { startToday() }
-                    .buttonStyle(.borderedProminent)
+        let selectedDate = journalStore.selectedDate!
+        let isToday = Calendar.current.isDateInToday(selectedDate)
+        let futureForDate = pageStore.futureTodos.filter {
+            Calendar.current.isDate($0.start, inSameDayAs: selectedDate)
+        }
+
+        if futureForDate.isEmpty {
+            VStack(spacing: 16) {
+                if !isToday {
+                    Text(selectedDate.formatted(date: .long, time: .omitted))
+                        .font(.title2).bold()
+                }
+                Text(isToday ? "No journal page for today." : "No journal page for this date.")
+                    .foregroundStyle(.secondary)
+                if isToday {
+                    Button("Start Today") { startToday() }
+                        .buttonStyle(.borderedProminent)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            VStack(spacing: 0) {
+                if isToday {
+                    HStack(spacing: 12) {
+                        Text("No journal page for today.")
+                            .foregroundStyle(.secondary)
+                        Button("Start Today") { startToday() }
+                            .buttonStyle(.borderedProminent)
+                    }
+                    .padding()
+                    Divider()
+                }
+                FutureLogForDateView(date: selectedDate)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private var startTodayPrompt: some View {
-        VStack(spacing: 16) {
-            Text("No journal page for today.")
-                .foregroundStyle(.secondary)
-            Button("Start Today") { startToday() }
-                .buttonStyle(.borderedProminent)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func startToday() {
