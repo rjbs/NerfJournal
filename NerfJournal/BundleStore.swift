@@ -117,6 +117,16 @@ final class BundleStore: ObservableObject {
         try await refreshTodos()
     }
 
+    func renameTodo(_ todo: BundleTodo, to title: String) async throws {
+        try await db.dbQueue.write { db in
+            try BundleTodo
+                .filter(Column("id") == todo.id)
+                .updateAll(db, [Column("title").set(to: title)])
+            return
+        }
+        try await refreshTodos()
+    }
+
     func setCategoryForTodo(_ todo: BundleTodo, categoryID: Int64?) async throws {
         try await db.dbQueue.write { db in
             try BundleTodo

@@ -200,6 +200,11 @@ struct BundleDetailView: View {
     @State private var showingSetURLAlert = false
     @State private var showingInvalidURLAlert = false
 
+    @State private var selectedBundleTodoID: Int64? = nil
+    @State private var editingBundleTodoID: Int64? = nil
+    @State private var editTitle = ""
+    @FocusState private var editFieldFocused: Bool
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline) {
@@ -218,15 +223,23 @@ struct BundleDetailView: View {
 
             Divider()
 
-            List {
+            List(selection: $selectedBundleTodoID) {
                 ForEach(bundleTodoGroups, id: \.id) { group in
                     Section {
                         ForEach(group.items) { todo in
                             HStack {
-                                Text(todo.title)
+                                if editingBundleTodoID == todo.id {
+                                    TextField("", text: $editTitle)
+                                        .focused($editFieldFocused)
+                                        .onSubmit { commitEdit(todo) }
+                                        .onKeyPress(.escape) { cancelEdit(); return .handled }
+                                } else {
+                                    Text(todo.title)
+                                }
                                 Spacer()
                                 if let urlString = todo.externalURL,
-                                   let url = URL(string: urlString) {
+                                   let url = URL(string: urlString),
+                                   editingBundleTodoID != todo.id {
                                     Link(destination: url) {
                                         Image(systemName: "link")
                                             .foregroundStyle(.secondary)
@@ -236,6 +249,7 @@ struct BundleDetailView: View {
                                 }
                             }
                             .padding(.vertical, 2)
+                            .tag(todo.id!)
                             .contextMenu {
                                 Picker("Category", selection: Binding(
                                     get: { todo.categoryID },
@@ -293,7 +307,40 @@ struct BundleDetailView: View {
             } message: {
                 Text("Please enter a valid URL (e.g. https://example.com) or clear the field to remove the URL.")
             }
+            .onKeyPress(phases: .down) { keyPress in
+                if keyPress.key == .escape {
+                    if editingBundleTodoID != nil { cancelEdit(); return .handled }
+                    if selectedBundleTodoID != nil { selectedBundleTodoID = nil; return .handled }
+                    return .ignored
+                }
+                guard keyPress.key == .return,
+                      editingBundleTodoID == nil,
+                      !addFieldFocused,
+                      let id = selectedBundleTodoID else { return .ignored }
+                beginEdit(id)
+                return .handled
+            }
+            .onChange(of: selectedBundleTodoID) { _, _ in editingBundleTodoID = nil }
+            .onChange(of: editingBundleTodoID) { _, id in if id != nil { editFieldFocused = true } }
         }
+    }
+
+    private func beginEdit(_ id: Int64) {
+        guard let todo = bundleStore.selectedBundleTodos.first(where: { $0.id == id }) else { return }
+        editTitle = todo.title
+        editingBundleTodoID = id
+    }
+
+    private func cancelEdit() {
+        editingBundleTodoID = nil
+        editTitle = ""
+    }
+
+    private func commitEdit(_ todo: BundleTodo) {
+        let trimmed = editTitle.trimmingCharacters(in: .whitespaces)
+        editingBundleTodoID = nil
+        guard !trimmed.isEmpty else { return }
+        Task { try? await bundleStore.renameTodo(todo, to: trimmed) }
     }
 
     private func commitURL() {
