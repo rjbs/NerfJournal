@@ -2,14 +2,14 @@
 import PackageDescription
 
 let package = Package(
-    name: "add-nerf-todo",
+    name: "nerf-add-todo",
     platforms: [.macOS(.v14)],
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift", branch: "master"),
     ],
     targets: [
         .executableTarget(
-            name: "add-nerf-todo",
+            name: "nerf-add-todo",
             dependencies: [.product(name: "GRDB", package: "GRDB.swift")]
         )
     ]
