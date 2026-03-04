@@ -52,6 +52,9 @@ struct TodoCommands: Commands {
             .disabled(journalStore?.selectedPage == nil)
         }
         CommandGroup(after: .windowArrangement) {
+            Button("Close Window") { NSApp.keyWindow?.performClose(nil) }
+                .keyboardShortcut("w", modifiers: .command)
+            Divider()
             Button("Open Work Journal") { openWindow(id: "journal") }
                 .keyboardShortcut("1", modifiers: .command)
             Button("Open Future Log") { openWindow(id: "future-log") }
