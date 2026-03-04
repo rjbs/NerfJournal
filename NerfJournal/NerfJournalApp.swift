@@ -7,7 +7,6 @@ struct TodoCommands: Commands {
     @FocusedValue(\.focusAddNote) var focusAddNote: Binding<Bool>?
     @FocusedObject var journalStore: JournalStore?
     @FocusedObject var categoryStore: CategoryStore?
-    @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
@@ -51,17 +50,6 @@ struct TodoCommands: Commands {
             }
             .disabled(journalStore?.selectedPage == nil)
         }
-        CommandGroup(after: .windowArrangement) {
-            Button("Close Window") { NSApp.keyWindow?.performClose(nil) }
-                .keyboardShortcut("w", modifiers: .command)
-            Divider()
-            Button("Open Journal") { openWindow(id: "journal") }
-                .keyboardShortcut("1", modifiers: .command)
-            Button("Open Future Log") { openWindow(id: "future-log") }
-                .keyboardShortcut("2", modifiers: .command)
-            Button("Open Bundle Manager") { openWindow(id: "bundle-manager") }
-                .keyboardShortcut("3", modifiers: .command)
-        }
     }
 }
 
@@ -85,7 +73,6 @@ struct NerfJournalApp: App {
                 .focusedSceneObject(categoryStore)
         }
         .defaultSize(width: 540, height: 520)
-        .commandsRemoved()
         .commands {
             DebugCommands()
             TodoCommands()
@@ -98,7 +85,6 @@ struct NerfJournalApp: App {
                 .focusedSceneObject(pageStore)
         }
         .defaultSize(width: 600, height: 480)
-        .commandsRemoved()
 
         Window("Future Log", id: "future-log") {
             FutureLogView()
@@ -106,6 +92,5 @@ struct NerfJournalApp: App {
                 .environmentObject(categoryStore)
         }
         .defaultSize(width: 480, height: 400)
-        .commandsRemoved()
     }
 }
