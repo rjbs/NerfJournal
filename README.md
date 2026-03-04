@@ -28,11 +28,12 @@ abandoned (struck through).
 Today".
 
 **Todo** — a task. A todo is not duplicated across pages; it is visible
-on any day from its `added` date until it ends. Key fields:
+on any day from its `start` date until it ends. Key fields:
 - `shouldMigrate`: if true, the todo carries forward indefinitely until
   completed or explicitly abandoned. If false, pressing "Start Today"
   automatically abandons it.
-- `added`: the date the task was first created.
+- `start`: the date the task first becomes active. Todos with a `start`
+  date beyond the current page appear only in the Future Log.
 - `ending`: nil if still pending; otherwise a `TodoEnding` with a `date`
   and `kind` (`.done` or `.abandoned`).
 - `categoryID`: optional FK to a `Category` for display grouping.
@@ -62,33 +63,42 @@ applied.
   sandbox container:
   `~/Library/Containers/org.rjbs.nerfjournal/Data/Library/Application Support/NerfJournal/journal.sqlite`
 - **`PageStore`** — `@MainActor ObservableObject` that publishes the
-  current page's todos and notes, and exposes mutating actions: start
-  today, complete/uncomplete/abandon/mark-pending todo, add todo, delete
-  todo, rename todo, set category, set URL, apply bundle. "Start Today"
-  creates a new page and abandons any pending non-migratable todos from
-  before today in one atomic transaction. Also observes
-  `DistributedNotificationCenter` for `org.rjbs.nerfjournal.externalChange`
-  and refreshes when it fires, so external writers (such as the CLI tool
-  below) update the UI live.
+  current page's todos, notes, and future-scheduled todos (`futureTodos`),
+  and exposes mutating actions: start today, complete/uncomplete/abandon/
+  mark-pending todo, add todo, delete todo, rename todo, set category,
+  set URL, send to date, apply bundle. "Start Today" creates a new page
+  and abandons any pending non-migratable todos from before today in one
+  atomic transaction. Also observes `DistributedNotificationCenter` for
+  `org.rjbs.nerfjournal.externalChange` and refreshes when it fires, so
+  external writers (such as the CLI tool below) update the UI live.
 - **`JournalStore`** — `@MainActor ObservableObject` that indexes all
   pages and provides read-only access to any past page's todos and
-  notes. Drives the calendar sidebar's highlighted dates.
+  notes. Drives the calendar popover's highlighted dates.
 - **`BundleStore`** — `@MainActor ObservableObject` that manages
   TaskBundles and their BundleTodos.
 - **`CategoryStore`** — `@MainActor ObservableObject` that manages
   Categories: add, delete, rename, recolor, reorder.
-- **`JournalView`** — the main window. A calendar sidebar (toggleable)
-  sits beside a detail pane. Today's page is editable via `PageStore`;
-  older pages are shown read-only from `JournalStore`. Todos are grouped
-  by category. Keyboard navigation: arrow keys select rows, Return edits
-  a title, Cmd-Return toggles done/pending, Escape deselects, Cmd-N
-  focuses the add-todo field, Cmd-T jumps to today.
-- **`BundleManagerView`** — a separate window for managing bundles and
-  categories. The left panel is split: bundles on top, categories below
-  (drag to reorder, color and name editable via context menu). The right
-  panel shows the selected bundle's todos, grouped by category, with
-  drag-to-reorder within each group. Bundles are applied to today's page
-  from a toolbar menu in the main window.
+- **`JournalView`** — the main window (Cmd-1). A calendar popover
+  (toolbar button) shows the month with highlighted dots for days that
+  have pages (blue) or future-scheduled work (orange). The detail pane
+  shows today's page as editable via `PageStore`; older pages are shown
+  read-only from `JournalStore`. When a date has no page, the pane shows
+  any future-log todos for that day (with full context-menu controls) and
+  a "Start Today" prompt when applicable. Todos are grouped by category.
+  Keyboard navigation: arrow keys select rows, Return edits a title,
+  Cmd-Return toggles done/pending, Escape deselects, Cmd-N focuses the
+  add-todo field, Cmd-T jumps to today, Cmd-L jumps to the most recent page.
+- **`FutureLogView`** — a separate window (Cmd-2) listing all pending
+  todos whose `start` date is beyond the current page. Rows show a
+  category pip, abbreviated date, and title. Context menu: send to
+  today, send to a chosen date, set category, set URL, delete. Title
+  editing and multi-select work the same as the main journal view.
+- **`BundleManagerView`** — a separate window (Cmd-3) for managing
+  bundles and categories. The left panel is split: bundles on top,
+  categories below (drag to reorder, color and name editable via context
+  menu). The right panel shows the selected bundle's todos, grouped by
+  category, with drag-to-reorder within each group. Bundles are applied
+  to today's page from a toolbar menu in the main window.
 
 Storage is local SQLite only. No iCloud sync or server component.
 
