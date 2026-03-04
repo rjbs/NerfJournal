@@ -56,6 +56,8 @@ struct TodoCommands: Commands {
                 .keyboardShortcut("1", modifiers: .command)
             Button("Open Future Log") { openWindow(id: "future-log") }
                 .keyboardShortcut("2", modifiers: .command)
+            Button("Open Bundle Manager") { openWindow(id: "bundle-manager") }
+                .keyboardShortcut("3", modifiers: .command)
         }
     }
 }
@@ -69,7 +71,7 @@ struct NerfJournalApp: App {
     @StateObject private var categoryStore = CategoryStore()
 
     var body: some Scene {
-        WindowGroup(id: "journal") {
+        Window("Work Diary", id: "journal") {
             JournalView()
                 .environmentObject(journalStore)
                 .environmentObject(pageStore)
@@ -80,6 +82,7 @@ struct NerfJournalApp: App {
                 .focusedSceneObject(categoryStore)
         }
         .defaultSize(width: 540, height: 520)
+        .commandsRemoved()
         .commands {
             DebugCommands()
             TodoCommands()
@@ -92,6 +95,7 @@ struct NerfJournalApp: App {
                 .focusedSceneObject(pageStore)
         }
         .defaultSize(width: 600, height: 480)
+        .commandsRemoved()
 
         Window("Future Log", id: "future-log") {
             FutureLogView()
