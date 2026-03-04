@@ -29,6 +29,8 @@ jobs:
           working-directory: learning
 
       - uses: actions/configure-pages@v5
+        with:
+          generator_config_file: learning/_config.yml
 
       - name: Build site
         run: bundle exec jekyll build --destination ../_site
