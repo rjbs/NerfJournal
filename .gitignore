@@ -3,3 +3,8 @@
 xcuserdata/
 DerivedData/
 *.xcworkspace/xcuserdata/
+
+# Jekyll build output
+_site/
+.jekyll-cache/
+learning/.bundle/

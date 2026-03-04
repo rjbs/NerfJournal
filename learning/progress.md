@@ -1,3 +1,8 @@
+---
+title: Progress
+nav_order: 3
+---
+
 # Learning Progress
 
 | Unit | Title | Status |
