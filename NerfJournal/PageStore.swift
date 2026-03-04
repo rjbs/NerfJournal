@@ -410,7 +410,7 @@ final class PageStore: ObservableObject {
         try await refreshContents()
     }
 
-    func applyBundle(_ bundle: TaskBundle) async throws {
+    func applyBundle(_ bundle: TaskBundle, undoManager: UndoManager? = nil) async throws {
         guard page != nil, let bundleID = bundle.id else { return }
         let bundleTodos = try await db.dbQueue.read { db in
             try BundleTodo
@@ -419,7 +419,8 @@ final class PageStore: ObservableObject {
                 .fetchAll(db)
         }
         let today = Self.startOfToday
-        try await db.dbQueue.write { [bundleTodos] db in
+        let insertedIDs: [Int64] = try await db.dbQueue.write { [bundleTodos] db in
+            var ids: [Int64] = []
             for bundleTodo in bundleTodos {
                 var todo = Todo(
                     id: nil,
@@ -431,7 +432,17 @@ final class PageStore: ObservableObject {
                     externalURL: bundleTodo.externalURL
                 )
                 try todo.insert(db)
+                if let id = todo.id { ids.append(id) }
             }
+            return ids
+        }
+        scheduleUndo(with: undoManager) { store in
+            try await store.db.dbQueue.write { db in
+                for id in insertedIDs {
+                    try Todo.filter(Column("id") == id).deleteAll(db)
+                }
+            }
+            try await store.refreshContents()
         }
         try await refreshContents()
     }
