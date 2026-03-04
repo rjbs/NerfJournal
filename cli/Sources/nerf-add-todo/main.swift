@@ -85,7 +85,7 @@ struct Args {
 
 func printUsage() {
     fputs("""
-    Usage: add-nerf-todo [--no-migrate] [--category NAME] [--url URL] [--database PATH] TITLE...
+    Usage: nerf-add-todo [--no-migrate] [--category NAME] [--url URL] [--database PATH] TITLE...
 
     Adds a todo to today's NerfJournal page.
 

@@ -104,7 +104,7 @@ Storage is local SQLite only. No iCloud sync or server component.
 
 ## CLI Tool
 
-`cli/` contains a standalone Swift Package, `add-nerf-todo`, that
+`cli/` contains a standalone Swift Package, `nerf-add-todo`, that
 inserts a todo into today's journal page directly via SQLite, then
 notifies the running app to refresh immediately. Useful for scripts that
 gather work items (GitHub PRs, Linear tickets, etc.) and add them
@@ -112,11 +112,11 @@ programmatically with proper exit-code feedback.
 
 ```
 cd cli && swift build -c release
-cp .build/release/add-nerf-todo /usr/local/bin/
+cp .build/release/nerf-add-todo /usr/local/bin/
 ```
 
 ```
-add-nerf-todo [--no-migrate] [--category NAME] [--url URL] TITLE...
+nerf-add-todo [--no-migrate] [--category NAME] [--url URL] TITLE...
 ```
 
 - `--no-migrate`: mark the todo as non-migratable (default: migratable)
@@ -130,8 +130,8 @@ tool requires today's journal page to already exist.
 
 From Perl:
 ```perl
-system('add-nerf-todo', '--category', 'GitHub', "Review PR #$pr_number")
-    == 0 or die "add-nerf-todo failed: $?";
+system('nerf-add-todo', '--category', 'GitHub', "Review PR #$pr_number")
+    == 0 or die "nerf-add-todo failed: $?";
 ```
 
 ## Future Plans

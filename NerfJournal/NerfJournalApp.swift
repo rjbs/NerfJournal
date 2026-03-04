@@ -55,7 +55,7 @@ struct TodoCommands: Commands {
             Button("Close Window") { NSApp.keyWindow?.performClose(nil) }
                 .keyboardShortcut("w", modifiers: .command)
             Divider()
-            Button("Open Work Journal") { openWindow(id: "journal") }
+            Button("Open Journal") { openWindow(id: "journal") }
                 .keyboardShortcut("1", modifiers: .command)
             Button("Open Future Log") { openWindow(id: "future-log") }
                 .keyboardShortcut("2", modifiers: .command)
@@ -74,7 +74,7 @@ struct NerfJournalApp: App {
     @StateObject private var categoryStore = CategoryStore()
 
     var body: some Scene {
-        Window("Work Diary", id: "journal") {
+        Window("Journal", id: "journal") {
             JournalView()
                 .environmentObject(journalStore)
                 .environmentObject(pageStore)
