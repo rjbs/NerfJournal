@@ -9,6 +9,12 @@ plugins:
   - jekyll-remote-theme
   - jekyll-include-cache
 
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: "default"
+
 color_scheme: light
 
 # Footer
