@@ -7,7 +7,7 @@ nav_order: 3
 
 | Unit | Title | Status |
 |------|-------|--------|
-| 1 | Swift as a Language | not started |
+| 1 | Swift as a Language | written |
 | 2 | Views as Values | not started |
 | 3 | Local State and Binding | not started |
 | 4 | Observable Objects and Stores | not started |
