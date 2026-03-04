@@ -1,4 +1,4 @@
-title: NerfJournal Swift/SwiftUI Learning Path
+title: NerfJournal
 description: >-
   A self-guided Swift and SwiftUI curriculum for an experienced programmer,
   using NerfJournal as the working example throughout.
@@ -18,4 +18,4 @@ defaults:
 color_scheme: light
 
 # Footer
-footer_content: "NerfJournal learning branch."
+footer_content: "this content generated for rjbs and of questionable value to anybody else"
