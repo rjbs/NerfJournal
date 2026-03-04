@@ -99,5 +99,6 @@ struct NerfJournalApp: App {
                 .environmentObject(categoryStore)
         }
         .defaultSize(width: 480, height: 400)
+        .commandsRemoved()
     }
 }
