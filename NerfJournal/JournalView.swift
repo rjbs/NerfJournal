@@ -566,7 +566,7 @@ struct JournalPageDetailView: View {
                 Menu {
                     ForEach(bundleStore.bundles) { bundle in
                         Button("Apply \u{201c}\(bundle.name)\u{201d}") {
-                            Task { try? await pageStore.applyBundle(bundle) }
+                            Task { try? await pageStore.applyBundle(bundle, undoManager: undoManager) }
                         }
                         .disabled(readOnly)
                     }
@@ -942,6 +942,12 @@ struct TodoRow: View {
                                 Task { try? await store.setBulkCategory(category.id, forTodoIDs: affectedIDs, undoManager: undoManager) }
                             }
                         }
+                    }
+
+                    Divider()
+
+                    Button("Delete", role: .destructive) {
+                        Task { try? await store.bulkDelete(affectedTodos, undoManager: undoManager) }
                     }
                 } else {
                     Menu("Mark") {
