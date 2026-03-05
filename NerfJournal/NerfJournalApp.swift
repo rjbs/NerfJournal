@@ -6,6 +6,7 @@ struct TodoCommands: Commands {
     @FocusedValue(\.focusAddTodo) var focusAddTodo: Binding<Bool>?
     @FocusedValue(\.focusAddNote) var focusAddNote: Binding<Bool>?
     @FocusedObject var journalStore: JournalStore?
+    @FocusedObject var pageStore: PageStore?
     @FocusedObject var categoryStore: CategoryStore?
     @FocusedObject var exportGroupStore: ExportGroupStore?
     @Environment(\.openWindow) private var openWindow
@@ -66,7 +67,7 @@ struct TodoCommands: Commands {
     private func saveAsHTML(memberIDs: Set<Int64?>?) {
         guard let page = journalStore?.selectedPage else { return }
         let todos = filteredTodos(memberIDs: memberIDs)
-        let notes = journalStore?.selectedNotes ?? []
+        let notes = pageStore?.notes ?? []
         let categories = categoryStore?.categories ?? []
         let html = exportPageHTML(date: page.date, todos: todos, notes: notes, categories: categories)
         let df = DateFormatter()
@@ -87,7 +88,7 @@ struct TodoCommands: Commands {
     }
 
     private func filteredTodos(memberIDs: Set<Int64?>?) -> [Todo] {
-        let todos = journalStore?.selectedTodos ?? []
+        let todos = pageStore?.todos ?? []
         guard let memberIDs else { return todos }
         return todos.filter { memberIDs.contains($0.categoryID) }
     }
