@@ -1,4 +1,4 @@
-title: NerfJournal
+title: NerfLearning
 description: >-
   A self-guided Swift and SwiftUI curriculum for an experienced programmer,
   using NerfJournal as the working example throughout.
@@ -18,4 +18,4 @@ defaults:
 color_scheme: light
 
 # Footer
-footer_content: "this content generated for rjbs and of questionable value to anybody else"
+footer_content: "this content generated for <a href='https://rjbs.cloud/'>rjbs</a> and of questionable value to anybody else"
