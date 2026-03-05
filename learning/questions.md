@@ -42,3 +42,26 @@ branching on the optional, or are you asserting a precondition and continuing?
 `guard` is the "bail out early, proceed with confidence" pattern — the happy
 path stays at the outer indentation level rather than being nested inside a
 branch.
+
+### Enum raw value types — what is `String` doing in `enum Foo: String, SomeProtocol`?
+
+`String` there is the enum's **raw value type**. It looks like a protocol
+conformance but isn't — it means every case is backed by a `String` value.
+
+```swift
+enum CategoryColor: String, ... {
+    case blue    // rawValue == "blue"
+    case red     // rawValue == "red"
+}
+
+CategoryColor.blue.rawValue          // "blue"
+CategoryColor(rawValue: "purple")    // CategoryColor? — .purple or nil
+```
+
+When the raw type is `String`, Swift auto-derives each case's raw value from
+its name unless you override it explicitly (`case custom = "my-custom-string"`).
+The same works with `Int`, where Swift auto-increments from 0.
+
+The compiler synthesizes `RawRepresentable` conformance for you — that's what
+provides `.rawValue` and the failable initializer. Everything else in the list
+(`CaseIterable`, `Codable`, `DatabaseValueConvertible`) really are protocols.
