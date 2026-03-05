@@ -5,7 +5,9 @@ description: >-
 
 remote_theme: just-the-docs/just-the-docs@v0.10.0
 
+url: https://nerfjournal.rjbs.cloud
 logo: /assets/images/icon.png
+image: /assets/images/icon.png
 
 plugins:
   - jekyll-remote-theme
