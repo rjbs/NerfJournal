@@ -104,3 +104,30 @@ The qualifier is necessary because `var x: Int` alone in a protocol would be
 ambiguous — stored? computed? settable? The `{ get }` / `{ get set }` block
 makes the access requirement explicit without implying anything about
 implementation.
+
+### Extensions — what is the scope of an extension on a built-in type?
+
+Extensions are **module-scoped**. An extension defined anywhere in your module
+is available everywhere in that module — not limited to the file it's in, and
+certainly not to any block or function.
+
+```swift
+// StringExtensions.swift
+extension String {
+    var isBlank: Bool { allSatisfy(\.isWhitespace) }
+}
+
+// AnyOtherFile.swift — same module, no import needed
+let s = "   "
+s.isBlank   // works fine
+```
+
+It does not leak to other modules. Access control applies normally: `internal`
+(the default) means visible within your module only; `public` exposes it to
+importers of your module.
+
+The Rust analogy is close but not identical. Rust's orphan rule prevents
+implementing an external trait on an external type — you must own at least one.
+Swift has no such restriction: you can freely add methods to `String`, `Int`,
+or any type you didn't define. The one limit is that you cannot add *stored
+properties* to types you don't own — only computed properties.
