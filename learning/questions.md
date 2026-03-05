@@ -133,6 +133,32 @@ The `NerfJournal` CLI tool in `cli/` is a *separate* module — it can't reach
 into the app's Swift code at all, which is why it writes directly to SQLite
 rather than calling into `PageStore`.
 
+### Closures — what does `in` do, and why `in`?
+
+```swift
+let greet = { (name: String) -> String in
+    return "Hello, \(name)"
+}
+```
+
+`in` is purely a separator token — it marks the boundary between the closure's
+signature and its body for the parser. There's no deeper semantic meaning.
+
+The clearest evidence: when you use shorthand argument names and let Swift infer
+the types, the signature (and with it, `in`) disappears entirely:
+
+```swift
+let greet: (String) -> String = { "Hello, \($0)" }
+```
+
+`in` only appears when an explicit inline signature is written.
+
+As for *why* `in`: Swift already uses it in `for...in` loops, where it reads as
+"within / drawn from." The closure usage extends that same sense — "given these
+parameters, *in* this body." It's short, already a reserved word, and reads more
+naturally than a symbol like `=>` would. The Swift designers tend toward prose
+keywords over punctuation when they have a choice.
+
 ### Extensions — what is the scope of an extension on a built-in type?
 
 Extensions are **module-scoped**. An extension defined anywhere in your module
