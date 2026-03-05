@@ -3,7 +3,7 @@ title: Home
 nav_order: 1
 ---
 
-# NerfJournal Swift/SwiftUI Learning Path
+# NerfLearning
 
 A self-guided curriculum using NerfJournal — a macOS bullet-journal app — as
 the working example throughout. Written for an experienced programmer who knows
