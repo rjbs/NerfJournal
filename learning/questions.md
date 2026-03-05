@@ -105,6 +105,34 @@ ambiguous — stored? computed? settable? The `{ get }` / `{ get set }` block
 makes the access requirement explicit without implying anything about
 implementation.
 
+### What is a module?
+
+A **module** is the unit of code distribution and namespace isolation in Swift.
+Every compiled target is a module: the NerfJournal app itself is a module,
+GRDB is a module, SwiftUI is a module. When you write `import GRDB`, you're
+making that module's public declarations available in your file.
+
+NerfJournal's own source files — `PageStore.swift`, `Todo.swift`,
+`JournalView.swift`, and everything else in the Xcode target — all belong to
+the same module, `NerfJournal`. That's why `PageStore` can use `AppDatabase`
+without any import statement: they're already in the same module.
+
+Access control is defined relative to module boundaries:
+
+| keyword | visible to |
+|---|---|
+| `private` | the current declaration only (or same file for extensions) |
+| `internal` | anywhere in the same module (the default) |
+| `public` | any module that imports this one |
+
+Most NerfJournal types are `internal` without saying so explicitly — they're
+not useful to external importers, so the default is exactly right. GRDB's types
+are `public` because GRDB ships as a library that other modules consume.
+
+The `NerfJournal` CLI tool in `cli/` is a *separate* module — it can't reach
+into the app's Swift code at all, which is why it writes directly to SQLite
+rather than calling into `PageStore`.
+
 ### Extensions — what is the scope of an extension on a built-in type?
 
 Extensions are **module-scoped**. An extension defined anywhere in your module

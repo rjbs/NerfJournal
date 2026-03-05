@@ -34,7 +34,9 @@ classes) is the single most important concept in the whole curriculum — SwiftU
 is built on it. Optionals replace null and force you to be explicit about
 absence. Closures, trailing closure syntax, and captures show up everywhere.
 Protocols are how Swift does polymorphism. Property wrappers (`@Something`) are
-syntax sugar for a real language feature, not magic.
+syntax sugar for a real language feature, not magic. Modules are how Swift
+organizes and isolates code — the basis for access control (`public`,
+`internal`, `private`) and for understanding what `import` actually does.
 
 **Files to look at:** `Todo.swift`, `TodoEnding.swift`, `Category.swift`
 
