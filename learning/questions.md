@@ -65,3 +65,42 @@ The same works with `Int`, where Swift auto-increments from 0.
 The compiler synthesizes `RawRepresentable` conformance for you — that's what
 provides `.rawValue` and the failable initializer. Everything else in the list
 (`CaseIterable`, `Codable`, `DatabaseValueConvertible`) really are protocols.
+
+### Protocols — can a computed `var` satisfy a zero-argument `func` requirement?
+
+No. Even though `func summarize() -> String` takes no arguments, it is a
+method, not a property. In Swift's type system, `var summarize: String`
+(a `String`-typed property) and `func summarize() -> String`
+(a `() -> String`-typed method) are distinct. Different call syntax, different
+types — no substitution is allowed.
+
+### Protocols — what does `{ get }` mean in a property requirement?
+
+Protocol property requirements always carry a `{ get }` or `{ get set }` block.
+This declares the minimum access requirement for the property — not an
+implementation, but what the conforming type must provide:
+
+```swift
+protocol P {
+    var x: Int { get }       // conformer must be readable
+    var y: Int { get set }   // conformer must be readable AND writable
+}
+```
+
+`{ get }` is a floor, not a ceiling. A conforming type can provide more than
+required:
+
+```swift
+struct S: P {
+    let x: Int    // satisfies { get } — constants are readable
+    var y: Int    // satisfies { get set } — vars are read/write
+}
+```
+
+A `let` constant satisfies `{ get }` but would *not* satisfy `{ get set }` —
+the protocol would be demanding write access that a constant can't provide.
+
+The qualifier is necessary because `var x: Int` alone in a protocol would be
+ambiguous — stored? computed? settable? The `{ get }` / `{ get set }` block
+makes the access requirement explicit without implying anything about
+implementation.
