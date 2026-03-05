@@ -5,9 +5,12 @@ description: >-
 
 remote_theme: just-the-docs/just-the-docs@v0.10.0
 
+logo: /assets/images/icon.png
+
 plugins:
   - jekyll-remote-theme
   - jekyll-include-cache
+  - jekyll-seo-tag
 
 defaults:
   - scope:
