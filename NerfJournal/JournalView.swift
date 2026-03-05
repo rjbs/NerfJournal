@@ -22,6 +22,7 @@ struct JournalView: View {
     @EnvironmentObject private var pageStore: PageStore
     @EnvironmentObject private var bundleStore: BundleStore
     @EnvironmentObject private var categoryStore: CategoryStore
+    @EnvironmentObject private var exportGroupStore: ExportGroupStore
 
     @State private var calendarPopoverVisible = false
 
@@ -55,6 +56,7 @@ struct JournalView: View {
                 try? await pageStore.load()
                 try? await bundleStore.load()
                 try? await categoryStore.load()
+                try? await exportGroupStore.load()
             }
     }
 
