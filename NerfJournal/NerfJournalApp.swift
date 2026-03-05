@@ -7,6 +7,8 @@ struct TodoCommands: Commands {
     @FocusedValue(\.focusAddNote) var focusAddNote: Binding<Bool>?
     @FocusedObject var journalStore: JournalStore?
     @FocusedObject var categoryStore: CategoryStore?
+    @FocusedObject var exportGroupStore: ExportGroupStore?
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
@@ -32,24 +34,62 @@ struct TodoCommands: Commands {
             .disabled(journalStore?.pageDates.isEmpty != false)
         }
         CommandGroup(replacing: .saveItem) {
-            Button("Export Page…") {
-                guard let journalStore, let page = journalStore.selectedPage else { return }
-                let html = exportPageHTML(
-                    date: page.date,
-                    todos: journalStore.selectedTodos,
-                    notes: journalStore.selectedNotes,
-                    categories: categoryStore?.categories ?? []
-                )
-                let df = DateFormatter()
-                df.dateFormat = "yyyy-MM-dd"
-                let panel = NSSavePanel()
-                panel.nameFieldStringValue = df.string(from: page.date) + ".html"
-                panel.allowedContentTypes = [.html]
-                guard panel.runModal() == .OK, let url = panel.url else { return }
-                try? html.write(to: url, atomically: true, encoding: .utf8)
+            Menu("Export Page") {
+                exportSubMenu(groupName: "Everything", memberIDs: nil)
+                if let store = exportGroupStore, !store.groups.isEmpty {
+                    Divider()
+                    ForEach(store.groups) { group in
+                        exportSubMenu(groupName: group.name, memberIDs: store.groupMembers[group.id!])
+                    }
+                }
             }
             .disabled(journalStore?.selectedPage == nil)
+
+            Button("Export Groups\u{2026}") {
+                openWindow(id: "export-groups")
+            }
         }
+    }
+
+    @ViewBuilder
+    private func exportSubMenu(groupName: String, memberIDs: Set<Int64?>?) -> some View {
+        Menu(groupName) {
+            Button("Save as HTML\u{2026}") {
+                saveAsHTML(memberIDs: memberIDs)
+            }
+            Button("Copy as mrkdwn") {
+                copyAsMrkdwn(memberIDs: memberIDs)
+            }
+        }
+    }
+
+    private func saveAsHTML(memberIDs: Set<Int64?>?) {
+        guard let page = journalStore?.selectedPage else { return }
+        let todos = filteredTodos(memberIDs: memberIDs)
+        let notes = journalStore?.selectedNotes ?? []
+        let categories = categoryStore?.categories ?? []
+        let html = exportPageHTML(date: page.date, todos: todos, notes: notes, categories: categories)
+        let df = DateFormatter()
+        df.dateFormat = "yyyy-MM-dd"
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = df.string(from: page.date) + ".html"
+        panel.allowedContentTypes = [.html]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        try? html.write(to: url, atomically: true, encoding: .utf8)
+    }
+
+    private func copyAsMrkdwn(memberIDs: Set<Int64?>?) {
+        let todos = filteredTodos(memberIDs: memberIDs)
+        let categories = categoryStore?.categories ?? []
+        let mrkdwn = exportPageMrkdwn(todos: todos, categories: categories)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(mrkdwn, forType: .string)
+    }
+
+    private func filteredTodos(memberIDs: Set<Int64?>?) -> [Todo] {
+        let todos = journalStore?.selectedTodos ?? []
+        guard let memberIDs else { return todos }
+        return todos.filter { memberIDs.contains($0.categoryID) }
     }
 }
 
@@ -60,6 +100,7 @@ struct NerfJournalApp: App {
     @StateObject private var journalStore = JournalStore()
     @StateObject private var bundleStore = BundleStore()
     @StateObject private var categoryStore = CategoryStore()
+    @StateObject private var exportGroupStore = ExportGroupStore()
 
     var body: some Scene {
         Window("Journal", id: "journal") {
@@ -68,9 +109,11 @@ struct NerfJournalApp: App {
                 .environmentObject(pageStore)
                 .environmentObject(bundleStore)
                 .environmentObject(categoryStore)
+                .environmentObject(exportGroupStore)
                 .focusedSceneObject(pageStore)
                 .focusedSceneObject(journalStore)
                 .focusedSceneObject(categoryStore)
+                .focusedSceneObject(exportGroupStore)
         }
         .defaultSize(width: 540, height: 520)
         .commands {
@@ -92,5 +135,12 @@ struct NerfJournalApp: App {
                 .environmentObject(categoryStore)
         }
         .defaultSize(width: 480, height: 400)
+
+        Window("Export Groups", id: "export-groups") {
+            ExportGroupManagerView()
+                .environmentObject(exportGroupStore)
+                .environmentObject(categoryStore)
+        }
+        .defaultSize(width: 480, height: 360)
     }
 }

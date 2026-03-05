@@ -1018,12 +1018,6 @@ struct TodoRow: View {
                     }
                 }
             }
-
-            Divider()
-
-            Button("Copy section as mrkdwn") {
-                copyGroupAsMrkdwn()
-            }
         }
         .alert("Set URL", isPresented: $showingSetURLAlert) {
             TextField("URL", text: $urlText)
@@ -1194,17 +1188,6 @@ struct TodoRow: View {
         }
     }
 
-    private func copyGroupAsMrkdwn() {
-        let lines = store.todos
-            .filter { $0.categoryID == todo.categoryID }
-            .compactMap { t -> String? in
-                if t.isPending { return "* \(t.title)" }
-                if t.isDone    { return "* :white_check_mark: \(t.title)" }
-                return nil
-            }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(lines.joined(separator: "\n") + "\n", forType: .string)
-    }
 }
 
 // MARK: - NoteRow

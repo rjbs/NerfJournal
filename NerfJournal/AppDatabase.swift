@@ -224,6 +224,21 @@ struct AppDatabase {
             try db.execute(sql: "ALTER TABLE todo RENAME COLUMN added TO start")
         }
 
+        migrator.registerMigration("v6") { db in
+            try db.create(table: "exportGroup") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("name", .text).notNull()
+                t.column("sortOrder", .integer).notNull().defaults(to: 0)
+            }
+            try db.create(table: "exportGroupMember") { t in
+                t.column("groupID", .integer).notNull()
+                    .references("exportGroup", onDelete: .cascade)
+                // NULL categoryID represents uncategorized ("Other") todos.
+                t.column("categoryID", .integer)
+                    .references("category", onDelete: .cascade)
+            }
+        }
+
         try migrator.migrate(db)
     }
 
