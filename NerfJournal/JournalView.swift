@@ -1086,10 +1086,10 @@ struct TodoRow: View {
     }
 
     private var adjustEndingTimeDayRange: ClosedRange<Date> {
-        guard let endingDate = todo.ending?.date else { return Date()...Date() }
+        guard todo.ending != nil else { return Date()...Date() }
         let cal = Calendar.current
-        let start = cal.startOfDay(for: endingDate)
-        let end = cal.date(bySettingHour: 23, minute: 59, second: 59, of: endingDate)!
+        let start = cal.startOfDay(for: pageDate)
+        let end = cal.date(bySettingHour: 23, minute: 59, second: 59, of: pageDate)!
         return start...end
     }
 

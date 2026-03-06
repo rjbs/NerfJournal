@@ -63,8 +63,17 @@ final class PageStore: ObservableObject {
         try await refreshContents()
     }
 
+    // When acting on a past page, stamp noon of that day rather than now so
+    // the ending falls on the right calendar day. The user can then refine
+    // the exact time via "Adjust time". -- claude, 2026-03-06
+    private var defaultEndingDate: Date {
+        let cal = Calendar.current
+        guard let pageDate = page?.date, !cal.isDateInToday(pageDate) else { return Date() }
+        return cal.date(bySettingHour: 12, minute: 0, second: 0, of: pageDate)!
+    }
+
     func completeTodo(_ todo: Todo, undoManager: UndoManager? = nil) async throws {
-        let ending = TodoEnding(date: Date(), kind: .done)
+        let ending = TodoEnding(date: defaultEndingDate, kind: .done)
         try await db.dbQueue.write { db in
             try Todo
                 .filter(Column("id") == todo.id)
@@ -91,7 +100,7 @@ final class PageStore: ObservableObject {
     }
 
     func abandonTodo(_ todo: Todo) async throws {
-        let ending = TodoEnding(date: Date(), kind: .abandoned)
+        let ending = TodoEnding(date: defaultEndingDate, kind: .abandoned)
         try await db.dbQueue.write { db in
             try Todo
                 .filter(Column("id") == todo.id)
@@ -122,7 +131,7 @@ final class PageStore: ObservableObject {
 
     func bulkComplete(_ todos: [Todo], undoManager: UndoManager? = nil) async throws {
         let oldEndings: [(Int64, TodoEnding?)] = todos.map { ($0.id!, $0.ending) }
-        let ending = TodoEnding(date: Date(), kind: .done)
+        let ending = TodoEnding(date: defaultEndingDate, kind: .done)
         try await db.dbQueue.write { db in
             for todo in todos {
                 try Todo
@@ -177,7 +186,7 @@ final class PageStore: ObservableObject {
     }
 
     func bulkAbandon(_ todos: [Todo]) async throws {
-        let ending = TodoEnding(date: Date(), kind: .abandoned)
+        let ending = TodoEnding(date: defaultEndingDate, kind: .abandoned)
         try await db.dbQueue.write { db in
             for todo in todos {
                 try Todo
