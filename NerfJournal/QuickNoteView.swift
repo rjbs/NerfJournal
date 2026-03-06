@@ -145,7 +145,7 @@ struct QuickNoteView: View {
             }
         }
         .padding()
-        .frame(width: 500, height: 130)
+        .frame(width: 500, height: 130, alignment: .top)
         .task { await store.load() }
         .onChange(of: store.loaded) {
             if store.todayPageID != nil { focused = true }
