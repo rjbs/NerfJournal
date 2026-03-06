@@ -3,6 +3,9 @@ import GRDB
 
 extension Notification.Name {
     static let nerfJournalDatabaseDidChange = Notification.Name("org.rjbs.nerfjournal.databaseDidChange")
+    // Posted by PageStore.refreshContents() so other stores can stay in sync
+    // with live todo mutations without a full database reload. -- claude, 2026-03-06
+    static let nerfJournalTodosDidChange = Notification.Name("org.rjbs.nerfjournal.todosDidChange")
 }
 
 // Snapshot of the entire database, used for export and import.

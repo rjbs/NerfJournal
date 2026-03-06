@@ -506,6 +506,7 @@ final class PageStore: ObservableObject {
             .sortedForDisplay()
         notes = fetchedNotes
         futureTodos = ft
+        NotificationCenter.default.post(name: .nerfJournalTodosDidChange, object: nil)
     }
 
     // Registers an undo action, handling the Task { @MainActor } dance that

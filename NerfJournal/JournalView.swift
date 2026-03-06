@@ -991,7 +991,10 @@ struct TodoRow: View {
 
                 if let endingDate = todo.ending?.date {
                     Button("Adjust time\u{2026}") {
-                        pendingEndingTime = endingDate
+                        let cal = Calendar.current
+                        pendingEndingTime = cal.isDate(endingDate, inSameDayAs: pageDate)
+                            ? endingDate
+                            : cal.date(bySettingHour: 12, minute: 0, second: 0, of: pageDate)!
                         showingAdjustEndingTime = true
                     }
                 }
