@@ -915,109 +915,107 @@ struct TodoRow: View {
             }
         }
         .padding(.vertical, 2)
-        .contextMenu {
-            if !readOnly {
-                let affectedIDs: Set<Int64> = selectedIDs.contains(todo.id!) && selectedIDs.count > 1
-                    ? selectedIDs : [todo.id!]
-                let affectedTodos = store.todos.filter { affectedIDs.contains($0.id!) }
+        .contextMenuWhenEditable(readOnly: readOnly) {
+            let affectedIDs: Set<Int64> = selectedIDs.contains(todo.id!) && selectedIDs.count > 1
+                ? selectedIDs : [todo.id!]
+            let affectedTodos = store.todos.filter { affectedIDs.contains($0.id!) }
 
-                if affectedTodos.count > 1 {
-                    Menu("Mark") {
+            if affectedTodos.count > 1 {
+                Menu("Mark") {
+                    Button("Pending") {
+                        Task { try? await store.bulkMarkPending(affectedTodos, undoManager: undoManager) }
+                    }
+                    Button("Complete") {
+                        Task { try? await store.bulkComplete(affectedTodos, undoManager: undoManager) }
+                    }
+                    Button("Abandoned") {
+                        Task { try? await store.bulkAbandon(affectedTodos) }
+                    }
+                }
+
+                Menu("Set Category") {
+                    Button("None") {
+                        Task { try? await store.setBulkCategory(nil, forTodoIDs: affectedIDs, undoManager: undoManager) }
+                    }
+                    Divider()
+                    ForEach(categoryStore.categories) { category in
+                        Button(category.name) {
+                            Task { try? await store.setBulkCategory(category.id, forTodoIDs: affectedIDs, undoManager: undoManager) }
+                        }
+                    }
+                }
+
+                Divider()
+
+                Button("Delete", role: .destructive) {
+                    Task { try? await store.bulkDelete(affectedTodos, undoManager: undoManager) }
+                }
+            } else {
+                Menu("Mark") {
+                    if !todo.isPending {
                         Button("Pending") {
-                            Task { try? await store.bulkMarkPending(affectedTodos, undoManager: undoManager) }
+                            Task { try? await store.markPending(todo, undoManager: undoManager) }
                         }
+                    }
+                    if !todo.isDone {
                         Button("Complete") {
-                            Task { try? await store.bulkComplete(affectedTodos, undoManager: undoManager) }
+                            Task { try? await store.completeTodo(todo, undoManager: undoManager) }
                         }
+                    }
+                    if !todo.isAbandoned {
                         Button("Abandoned") {
-                            Task { try? await store.bulkAbandon(affectedTodos) }
+                            Task { try? await store.abandonTodo(todo) }
                         }
                     }
+                }
 
-                    Menu("Set Category") {
-                        Button("None") {
-                            Task { try? await store.setBulkCategory(nil, forTodoIDs: affectedIDs, undoManager: undoManager) }
-                        }
-                        Divider()
-                        ForEach(categoryStore.categories) { category in
-                            Button(category.name) {
-                                Task { try? await store.setBulkCategory(category.id, forTodoIDs: affectedIDs, undoManager: undoManager) }
-                            }
-                        }
+                Picker("Category", selection: Binding(
+                    get: { todo.categoryID },
+                    set: { newID in
+                        Task { try? await store.setCategory(newID, for: todo, undoManager: undoManager) }
                     }
+                )) {
+                    Text("None").tag(nil as Int64?)
+                    ForEach(categoryStore.categories) { category in
+                        Text(category.name).tag(category.id as Int64?)
+                    }
+                }
+                .pickerStyle(.inline)
 
+                Divider()
+
+                Button("Set URL\u{2026}") {
+                    urlText = todo.externalURL ?? ""
+                    showingSetURLAlert = true
+                }
+
+                if let endingDate = todo.ending?.date {
+                    Button("Adjust time\u{2026}") {
+                        pendingEndingTime = endingDate
+                        showingAdjustEndingTime = true
+                    }
+                }
+
+                if todo.isPending {
                     Divider()
-
-                    Button("Delete", role: .destructive) {
-                        Task { try? await store.bulkDelete(affectedTodos, undoManager: undoManager) }
+                    Button("Send to tomorrow") {
+                        let tomorrow = Calendar.current.startOfDay(
+                            for: Calendar.current.date(byAdding: .day, value: 1, to: Date())!
+                        )
+                        Task { try? await store.sendToDate(affectedTodos, date: tomorrow, undoManager: undoManager) }
                     }
-                } else {
-                    Menu("Mark") {
-                        if !todo.isPending {
-                            Button("Pending") {
-                                Task { try? await store.markPending(todo, undoManager: undoManager) }
-                            }
-                        }
-                        if !todo.isDone {
-                            Button("Complete") {
-                                Task { try? await store.completeTodo(todo, undoManager: undoManager) }
-                            }
-                        }
-                        if !todo.isAbandoned {
-                            Button("Abandoned") {
-                                Task { try? await store.abandonTodo(todo) }
-                            }
-                        }
+                    Button("Send to future\u{2026}") {
+                        todoToSendToFuture = todo
+                        sendToFutureDate = Calendar.current.startOfDay(
+                            for: Calendar.current.date(byAdding: .day, value: 1, to: Date())!
+                        )
                     }
+                }
 
-                    Picker("Category", selection: Binding(
-                        get: { todo.categoryID },
-                        set: { newID in
-                            Task { try? await store.setCategory(newID, for: todo, undoManager: undoManager) }
-                        }
-                    )) {
-                        Text("None").tag(nil as Int64?)
-                        ForEach(categoryStore.categories) { category in
-                            Text(category.name).tag(category.id as Int64?)
-                        }
-                    }
-                    .pickerStyle(.inline)
+                Divider()
 
-                    Divider()
-
-                    Button("Set URL\u{2026}") {
-                        urlText = todo.externalURL ?? ""
-                        showingSetURLAlert = true
-                    }
-
-                    if let endingDate = todo.ending?.date {
-                        Button("Adjust time\u{2026}") {
-                            pendingEndingTime = endingDate
-                            showingAdjustEndingTime = true
-                        }
-                    }
-
-                    if todo.isPending {
-                        Divider()
-                        Button("Send to tomorrow") {
-                            let tomorrow = Calendar.current.startOfDay(
-                                for: Calendar.current.date(byAdding: .day, value: 1, to: Date())!
-                            )
-                            Task { try? await store.sendToDate(affectedTodos, date: tomorrow, undoManager: undoManager) }
-                        }
-                        Button("Send to future\u{2026}") {
-                            todoToSendToFuture = todo
-                            sendToFutureDate = Calendar.current.startOfDay(
-                                for: Calendar.current.date(byAdding: .day, value: 1, to: Date())!
-                            )
-                        }
-                    }
-
-                    Divider()
-
-                    Button("Delete", role: .destructive) {
-                        Task { try? await store.deleteTodo(todo, undoManager: undoManager) }
-                    }
+                Button("Delete", role: .destructive) {
+                    Task { try? await store.deleteTodo(todo, undoManager: undoManager) }
                 }
             }
         }
@@ -1252,15 +1250,13 @@ struct NoteRow: View {
                 editFieldFocused = true
             }
         }
-        .contextMenu {
-            if !readOnly {
-                Button("Adjust time\u{2026}") {
-                    pendingTime = note.timestamp
-                    showingAdjustTime = true
-                }
-                Button("Delete", role: .destructive) {
-                    Task { try? await store.deleteNote(note, undoManager: undoManager) }
-                }
+        .contextMenuWhenEditable(readOnly: readOnly) {
+            Button("Adjust time\u{2026}") {
+                pendingTime = note.timestamp
+                showingAdjustTime = true
+            }
+            Button("Delete", role: .destructive) {
+                Task { try? await store.deleteNote(note, undoManager: undoManager) }
             }
         }
         .sheet(isPresented: $showingAdjustTime) {
@@ -1300,6 +1296,22 @@ struct NoteRow: View {
                 .onKeyPress(.escape) { onCancelEdit(); return .handled }
         } else {
             Text(note.text!)
+        }
+    }
+}
+
+// MARK: - Helpers
+
+// Applies .contextMenu only when readOnly is false. An all-conditional
+// contextMenu body gives SwiftUI no static item to anchor the gesture
+// recognizer, so the menu silently fails to appear. -- claude, 2026-03-06
+fileprivate extension View {
+    @ViewBuilder
+    func contextMenuWhenEditable<M: View>(readOnly: Bool, @ViewBuilder menuItems: () -> M) -> some View {
+        if readOnly {
+            self
+        } else {
+            self.contextMenu(menuItems: menuItems)
         }
     }
 }
