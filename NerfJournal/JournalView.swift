@@ -915,7 +915,7 @@ struct TodoRow: View {
             }
         }
         .padding(.vertical, 2)
-        .contextMenuWhenEditable(readOnly: readOnly) {
+        .contextMenu {
             let affectedIDs: Set<Int64> = selectedIDs.contains(todo.id!) && selectedIDs.count > 1
                 ? selectedIDs : [todo.id!]
             let affectedTodos = store.todos.filter { affectedIDs.contains($0.id!) }
@@ -1250,7 +1250,7 @@ struct NoteRow: View {
                 editFieldFocused = true
             }
         }
-        .contextMenuWhenEditable(readOnly: readOnly) {
+        .contextMenu {
             Button("Adjust time\u{2026}") {
                 pendingTime = note.timestamp
                 showingAdjustTime = true
@@ -1296,22 +1296,6 @@ struct NoteRow: View {
                 .onKeyPress(.escape) { onCancelEdit(); return .handled }
         } else {
             Text(note.text!)
-        }
-    }
-}
-
-// MARK: - Helpers
-
-// Applies .contextMenu only when readOnly is false. An all-conditional
-// contextMenu body gives SwiftUI no static item to anchor the gesture
-// recognizer, so the menu silently fails to appear. -- claude, 2026-03-06
-fileprivate extension View {
-    @ViewBuilder
-    func contextMenuWhenEditable<M: View>(readOnly: Bool, @ViewBuilder menuItems: () -> M) -> some View {
-        if readOnly {
-            self
-        } else {
-            self.contextMenu(menuItems: menuItems)
         }
     }
 }
