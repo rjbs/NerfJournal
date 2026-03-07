@@ -12,8 +12,8 @@ statically typed, compiled, and designed around a distinction — value types vs
 reference types — that will shape every decision in the units that follow.
 
 This unit covers the language features you'll see constantly in NerfJournal's
-source: structs, enums, optionals, protocols, extensions, closures, and computed
-properties. None of this is SwiftUI-specific; it's just Swift.
+source: structs, enums, optionals, protocols, extensions, modules, closures,
+and computed properties. None of this is SwiftUI-specific; it's just Swift.
 
 The single most important idea in this unit is that **structs are value types**.
 Everything else makes more sense once that has settled in.
@@ -87,12 +87,35 @@ if let n = nick {
 }
 ```
 
-**`guard let`** — like `if let` but inverted: exit early if nil, continue with
-the unwrapped value:
+**`guard let`** — assert a precondition and bail out if it fails:
 ```swift
 guard let n = nick else { return }
-// n is String from here on
+// n is String from here on, for the rest of the enclosing scope
 ```
+
+`guard` always requires an `else` — it's a compile-time requirement, not
+optional syntax. The `else` body must exit the current scope via `return`,
+`throw`, `break`, `continue`, or a `Never`-returning function like
+`fatalError()`.
+
+The key difference from `if let` is **where the unwrapped binding lives**.
+With `if let`, `n` only exists inside the braces. With `guard let`, `n` is
+available for the rest of the enclosing scope:
+
+```swift
+if let n = nick {
+    greet(n)    // n available here
+}
+// n is gone here
+
+guard let n = nick else { return }
+greet(n)        // n available here
+doMoreWith(n)   // and here — no extra nesting
+```
+
+`guard` is the "happy path stays at the outer indentation level" pattern.
+Use it when you're asserting a precondition and want to continue with
+confidence; use `if let` when you're genuinely branching on the optional.
 
 **`??`** — provide a default when nil:
 ```swift
@@ -138,7 +161,9 @@ enum Direction { case north, south, east, west }
 var heading = Direction.north
 ```
 
-**Raw values** — backed by a primitive type:
+**Raw values** — backed by a primitive type. The type name after the colon
+(`String` here) is the raw value type, not a protocol conformance — even
+though it uses the same syntax:
 ```swift
 enum Status: String {
     case pending = "pending"
@@ -147,6 +172,12 @@ enum Status: String {
 print(Status.done.rawValue)   // "done"
 Status(rawValue: "done")      // Optional<Status> — might not match
 ```
+
+When the raw type is `String`, Swift auto-derives each case's raw value from
+its name if you don't specify one explicitly. The compiler synthesizes
+[`RawRepresentable`](https://developer.apple.com/documentation/swift/rawrepresentable)
+conformance for you — that's what provides `.rawValue` and the failable
+initializer. `Int` raw values auto-increment from 0 by default.
 
 **Associated values** — each case carries data:
 ```swift
@@ -215,6 +246,17 @@ struct Todo: Describable {
 }
 ```
 
+The `{ get }` after a property requirement declares the minimum access the
+conforming type must provide. `{ get }` means readable; `{ get set }` means
+readable and writable. This is a floor, not a ceiling: a mutable `var`
+satisfies `{ get }`, and so does a `let` constant — constants are always
+readable. A `let` would *not* satisfy `{ get set }`.
+
+Note that `func summarize() -> String` and a computed `var summarize: String`
+are not interchangeable — they have different types (`() -> String` vs.
+`String`) and different call syntax. A `func` requirement must be satisfied by
+a method.
+
 If `Todo` declares conformance to `Describable` but doesn't implement
 `description` or `summarize`, the code won't compile. The contract is enforced.
 
@@ -278,6 +320,40 @@ This adds `sortedForDisplay()` to any array of `Todo` values. You call it as
 `todos.sortedForDisplay()` as if it were a method the standard library always
 had.
 
+Extensions are **module-scoped**: once defined, they're available everywhere in
+the same module — any file, without any import. They don't bleed into other
+modules. More on modules next.
+
+---
+
+## Modules
+
+A **module** is the unit of code distribution and namespace isolation in Swift.
+Every compiled target is a module: NerfJournal is a module, GRDB is a module,
+SwiftUI is a module. When you write `import GRDB`, you're making that module's
+public declarations available in your file.
+
+NerfJournal's own source files — `PageStore.swift`, `Todo.swift`,
+`JournalView.swift`, and everything else in the Xcode target — all belong to
+the `NerfJournal` module. That's why `PageStore` can reference `AppDatabase`
+without any import: they're already in the same module.
+
+Access control in Swift is defined relative to module boundaries:
+
+| keyword | visible to |
+|---|---|
+| `private` | the current declaration (or same file for extensions) |
+| `internal` | anywhere in the same module *(the default)* |
+| `public` | any module that imports this one |
+
+Most NerfJournal types are `internal` without saying so explicitly — the
+default is correct for app code. GRDB's types are `public` because it ships as
+a library other modules consume.
+
+The CLI tool in `cli/` is a separate module. It can't reach into the app's
+Swift code at all — which is why it writes directly to SQLite rather than
+calling `PageStore`.
+
 ---
 
 ## Closures
@@ -292,6 +368,18 @@ let greet = { (name: String) -> String in
 }
 greet("rjbs")   // "Hello, rjbs"
 ```
+
+The `in` keyword is a pure separator token — it marks where the signature ends
+and the body begins. There's no deeper semantic meaning. When you let Swift
+infer the types and use shorthand argument names, the entire signature
+(including `in`) disappears:
+
+```swift
+let greet: (String) -> String = { "Hello, \($0)" }
+```
+
+`in` was chosen because it's already a reserved word (from `for...in`) and
+reads naturally as "given these parameters, *in* this body."
 
 Swift has extensive syntactic sugar for closures passed as function arguments.
 When the last argument is a closure, you can write it *after* the parentheses
@@ -400,6 +488,8 @@ defined in the Swift standard library (and your own code can define them too).
   — including associated values and pattern matching
 - [Protocols](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/protocols/)
 - [Extensions](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/extensions/)
+- [Access Control](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/accesscontrol/)
+  — modules, targets, and the `public`/`internal`/`private` hierarchy
 - [Closures](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/closures/)
 
 ---
