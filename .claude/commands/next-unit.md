@@ -8,7 +8,8 @@ for future chapters, make those changes and commit it.
 
 Then review the file `learning/questions.md`, which reflects questions from the
 reader during the last unit.  Merge the material from the questions into the
-unit they came from.  Commit that.
+unit they came from.  Remove the now-merged questions from the questions file.
+Commit that.
 
 Then write the next unit from the syllabus.  When doing so, reflect on the
 question-and-answers content you just merged into the previous unit.  That
