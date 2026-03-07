@@ -22,6 +22,7 @@ struct JournalView: View {
     @EnvironmentObject private var pageStore: PageStore
     @EnvironmentObject private var bundleStore: BundleStore
     @EnvironmentObject private var categoryStore: CategoryStore
+    @EnvironmentObject private var exportGroupStore: ExportGroupStore
 
     @State private var calendarPopoverVisible = false
 
@@ -55,6 +56,7 @@ struct JournalView: View {
                 try? await pageStore.load()
                 try? await bundleStore.load()
                 try? await categoryStore.load()
+                try? await exportGroupStore.load()
             }
     }
 
@@ -914,115 +916,110 @@ struct TodoRow: View {
         }
         .padding(.vertical, 2)
         .contextMenu {
-            if !readOnly {
-                let affectedIDs: Set<Int64> = selectedIDs.contains(todo.id!) && selectedIDs.count > 1
-                    ? selectedIDs : [todo.id!]
-                let affectedTodos = store.todos.filter { affectedIDs.contains($0.id!) }
+            let affectedIDs: Set<Int64> = selectedIDs.contains(todo.id!) && selectedIDs.count > 1
+                ? selectedIDs : [todo.id!]
+            let affectedTodos = store.todos.filter { affectedIDs.contains($0.id!) }
 
-                if affectedTodos.count > 1 {
-                    Menu("Mark") {
-                        Button("Pending") {
-                            Task { try? await store.bulkMarkPending(affectedTodos, undoManager: undoManager) }
-                        }
-                        Button("Complete") {
-                            Task { try? await store.bulkComplete(affectedTodos, undoManager: undoManager) }
-                        }
-                        Button("Abandoned") {
-                            Task { try? await store.bulkAbandon(affectedTodos) }
-                        }
+            if affectedTodos.count > 1 {
+                Menu("Mark") {
+                    Button("Pending") {
+                        Task { try? await store.bulkMarkPending(affectedTodos, undoManager: undoManager) }
                     }
-
-                    Menu("Set Category") {
-                        Button("None") {
-                            Task { try? await store.setBulkCategory(nil, forTodoIDs: affectedIDs, undoManager: undoManager) }
-                        }
-                        Divider()
-                        ForEach(categoryStore.categories) { category in
-                            Button(category.name) {
-                                Task { try? await store.setBulkCategory(category.id, forTodoIDs: affectedIDs, undoManager: undoManager) }
-                            }
-                        }
+                    Button("Complete") {
+                        Task { try? await store.bulkComplete(affectedTodos, undoManager: undoManager) }
                     }
-
-                    Divider()
-
-                    Button("Delete", role: .destructive) {
-                        Task { try? await store.bulkDelete(affectedTodos, undoManager: undoManager) }
-                    }
-                } else {
-                    Menu("Mark") {
-                        if !todo.isPending {
-                            Button("Pending") {
-                                Task { try? await store.markPending(todo, undoManager: undoManager) }
-                            }
-                        }
-                        if !todo.isDone {
-                            Button("Complete") {
-                                Task { try? await store.completeTodo(todo, undoManager: undoManager) }
-                            }
-                        }
-                        if !todo.isAbandoned {
-                            Button("Abandoned") {
-                                Task { try? await store.abandonTodo(todo) }
-                            }
-                        }
-                    }
-
-                    Picker("Category", selection: Binding(
-                        get: { todo.categoryID },
-                        set: { newID in
-                            Task { try? await store.setCategory(newID, for: todo, undoManager: undoManager) }
-                        }
-                    )) {
-                        Text("None").tag(nil as Int64?)
-                        ForEach(categoryStore.categories) { category in
-                            Text(category.name).tag(category.id as Int64?)
-                        }
-                    }
-                    .pickerStyle(.inline)
-
-                    Divider()
-
-                    Button("Set URL\u{2026}") {
-                        urlText = todo.externalURL ?? ""
-                        showingSetURLAlert = true
-                    }
-
-                    if let endingDate = todo.ending?.date {
-                        Button("Adjust time\u{2026}") {
-                            pendingEndingTime = endingDate
-                            showingAdjustEndingTime = true
-                        }
-                    }
-
-                    if todo.isPending {
-                        Divider()
-                        Button("Send to tomorrow") {
-                            let tomorrow = Calendar.current.startOfDay(
-                                for: Calendar.current.date(byAdding: .day, value: 1, to: Date())!
-                            )
-                            Task { try? await store.sendToDate(affectedTodos, date: tomorrow, undoManager: undoManager) }
-                        }
-                        Button("Send to future\u{2026}") {
-                            todoToSendToFuture = todo
-                            sendToFutureDate = Calendar.current.startOfDay(
-                                for: Calendar.current.date(byAdding: .day, value: 1, to: Date())!
-                            )
-                        }
-                    }
-
-                    Divider()
-
-                    Button("Delete", role: .destructive) {
-                        Task { try? await store.deleteTodo(todo, undoManager: undoManager) }
+                    Button("Abandoned") {
+                        Task { try? await store.bulkAbandon(affectedTodos) }
                     }
                 }
-            }
 
-            Divider()
+                Menu("Set Category") {
+                    Button("None") {
+                        Task { try? await store.setBulkCategory(nil, forTodoIDs: affectedIDs, undoManager: undoManager) }
+                    }
+                    Divider()
+                    ForEach(categoryStore.categories) { category in
+                        Button(category.name) {
+                            Task { try? await store.setBulkCategory(category.id, forTodoIDs: affectedIDs, undoManager: undoManager) }
+                        }
+                    }
+                }
 
-            Button("Copy section as mrkdwn") {
-                copyGroupAsMrkdwn()
+                Divider()
+
+                Button("Delete", role: .destructive) {
+                    Task { try? await store.bulkDelete(affectedTodos, undoManager: undoManager) }
+                }
+            } else {
+                Menu("Mark") {
+                    if !todo.isPending {
+                        Button("Pending") {
+                            Task { try? await store.markPending(todo, undoManager: undoManager) }
+                        }
+                    }
+                    if !todo.isDone {
+                        Button("Complete") {
+                            Task { try? await store.completeTodo(todo, undoManager: undoManager) }
+                        }
+                    }
+                    if !todo.isAbandoned {
+                        Button("Abandoned") {
+                            Task { try? await store.abandonTodo(todo) }
+                        }
+                    }
+                }
+
+                Picker("Category", selection: Binding(
+                    get: { todo.categoryID },
+                    set: { newID in
+                        Task { try? await store.setCategory(newID, for: todo, undoManager: undoManager) }
+                    }
+                )) {
+                    Text("None").tag(nil as Int64?)
+                    ForEach(categoryStore.categories) { category in
+                        Text(category.name).tag(category.id as Int64?)
+                    }
+                }
+                .pickerStyle(.inline)
+
+                Divider()
+
+                Button("Set URL\u{2026}") {
+                    urlText = todo.externalURL ?? ""
+                    showingSetURLAlert = true
+                }
+
+                if let endingDate = todo.ending?.date {
+                    Button("Adjust time\u{2026}") {
+                        let cal = Calendar.current
+                        pendingEndingTime = cal.isDate(endingDate, inSameDayAs: pageDate)
+                            ? endingDate
+                            : cal.date(bySettingHour: 12, minute: 0, second: 0, of: pageDate)!
+                        showingAdjustEndingTime = true
+                    }
+                }
+
+                if todo.isPending {
+                    Divider()
+                    Button("Send to tomorrow") {
+                        let tomorrow = Calendar.current.startOfDay(
+                            for: Calendar.current.date(byAdding: .day, value: 1, to: Date())!
+                        )
+                        Task { try? await store.sendToDate(affectedTodos, date: tomorrow, undoManager: undoManager) }
+                    }
+                    Button("Send to future\u{2026}") {
+                        todoToSendToFuture = todo
+                        sendToFutureDate = Calendar.current.startOfDay(
+                            for: Calendar.current.date(byAdding: .day, value: 1, to: Date())!
+                        )
+                    }
+                }
+
+                Divider()
+
+                Button("Delete", role: .destructive) {
+                    Task { try? await store.deleteTodo(todo, undoManager: undoManager) }
+                }
             }
         }
         .alert("Set URL", isPresented: $showingSetURLAlert) {
@@ -1090,10 +1087,10 @@ struct TodoRow: View {
     }
 
     private var adjustEndingTimeDayRange: ClosedRange<Date> {
-        guard let endingDate = todo.ending?.date else { return Date()...Date() }
+        guard todo.ending != nil else { return Date()...Date() }
         let cal = Calendar.current
-        let start = cal.startOfDay(for: endingDate)
-        let end = cal.date(bySettingHour: 23, minute: 59, second: 59, of: endingDate)!
+        let start = cal.startOfDay(for: pageDate)
+        let end = cal.date(bySettingHour: 23, minute: 59, second: 59, of: pageDate)!
         return start...end
     }
 
@@ -1194,17 +1191,6 @@ struct TodoRow: View {
         }
     }
 
-    private func copyGroupAsMrkdwn() {
-        let lines = store.todos
-            .filter { $0.categoryID == todo.categoryID }
-            .compactMap { t -> String? in
-                if t.isPending { return "* \(t.title)" }
-                if t.isDone    { return "* :white_check_mark: \(t.title)" }
-                return nil
-            }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(lines.joined(separator: "\n") + "\n", forType: .string)
-    }
 }
 
 // MARK: - NoteRow
@@ -1268,14 +1254,12 @@ struct NoteRow: View {
             }
         }
         .contextMenu {
-            if !readOnly {
-                Button("Adjust time\u{2026}") {
-                    pendingTime = note.timestamp
-                    showingAdjustTime = true
-                }
-                Button("Delete", role: .destructive) {
-                    Task { try? await store.deleteNote(note, undoManager: undoManager) }
-                }
+            Button("Adjust time\u{2026}") {
+                pendingTime = note.timestamp
+                showingAdjustTime = true
+            }
+            Button("Delete", role: .destructive) {
+                Task { try? await store.deleteNote(note, undoManager: undoManager) }
             }
         }
         .sheet(isPresented: $showingAdjustTime) {

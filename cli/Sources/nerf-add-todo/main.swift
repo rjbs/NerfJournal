@@ -169,7 +169,9 @@ let dbPath = args.databasePath ?? defaultDatabasePath()
 
 let dbQueue: DatabaseQueue
 do {
-    dbQueue = try DatabaseQueue(path: dbPath)
+    var config = Configuration()
+    config.busyMode = .timeout(5)
+    dbQueue = try DatabaseQueue(path: dbPath, configuration: config)
 } catch {
     fputs("error: could not open database at \(dbPath): \(error)\n", stderr)
     exit(1)

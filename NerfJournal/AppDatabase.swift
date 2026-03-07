@@ -3,6 +3,9 @@ import GRDB
 
 extension Notification.Name {
     static let nerfJournalDatabaseDidChange = Notification.Name("org.rjbs.nerfjournal.databaseDidChange")
+    // Posted by PageStore.refreshContents() so other stores can stay in sync
+    // with live todo mutations without a full database reload. -- claude, 2026-03-06
+    static let nerfJournalTodosDidChange = Notification.Name("org.rjbs.nerfjournal.todosDidChange")
 }
 
 // Snapshot of the entire database, used for export and import.
@@ -222,6 +225,21 @@ struct AppDatabase {
 
         migrator.registerMigration("v5") { db in
             try db.execute(sql: "ALTER TABLE todo RENAME COLUMN added TO start")
+        }
+
+        migrator.registerMigration("v6") { db in
+            try db.create(table: "exportGroup") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("name", .text).notNull()
+                t.column("sortOrder", .integer).notNull().defaults(to: 0)
+            }
+            try db.create(table: "exportGroupMember") { t in
+                t.column("groupID", .integer).notNull()
+                    .references("exportGroup", onDelete: .cascade)
+                // NULL categoryID represents uncategorized ("Other") todos.
+                t.column("categoryID", .integer)
+                    .references("category", onDelete: .cascade)
+            }
         }
 
         try migrator.migrate(db)

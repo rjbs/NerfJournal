@@ -27,6 +27,16 @@ final class JournalStore: ObservableObject {
                 self.selectedNotes = []
             }
         }
+        NotificationCenter.default.addObserver(
+            forName: .nerfJournalTodosDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, let date = self.selectedDate else { return }
+                try? await self.selectDate(date)
+            }
+        }
     }
 
     var isSelectedPageLast: Bool {

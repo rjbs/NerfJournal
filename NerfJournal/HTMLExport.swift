@@ -1,5 +1,35 @@
 import Foundation
 
+// Formats todos as Slack mrkdwn for copying to the clipboard.
+// Only pending and done todos are included (abandoned items are omitted).
+// Within each category group, items are sorted by start date. If the
+// filtered todos span more than one category group, a bold header line is
+// emitted before each group.
+func exportPageMrkdwn(todos: [Todo], categories: [Category]) -> String {
+    let eligible = todos
+        .filter { $0.isPending || $0.isDone }
+        .sorted { $0.start < $1.start }
+    let groups = groupedByCategory(eligible, categoryID: \.categoryID, categories: categories)
+
+    var lines: [String] = []
+    let useHeaders = groups.count > 1
+
+    for group in groups {
+        if useHeaders {
+            lines.append("*\(group.category?.name ?? "Other")*")
+        }
+        for todo in group.items {
+            lines.append(todo.isDone ? "* :white_check_mark: \(todo.title)" : "* \(todo.title)")
+        }
+        if useHeaders {
+            lines.append("")
+        }
+    }
+
+    if lines.last == "" { lines.removeLast() }
+    return lines.isEmpty ? "" : lines.joined(separator: "\n") + "\n"
+}
+
 func exportPageHTML(date: Date, todos: [Todo], notes: [Note], categories: [Category]) -> String {
     let cal = Calendar.current
     let pageDay = cal.startOfDay(for: date)

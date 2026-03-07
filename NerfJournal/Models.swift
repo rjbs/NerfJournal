@@ -175,6 +175,27 @@ struct Note: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
     }
 }
 
+struct ExportGroup: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
+    var id: Int64?
+    var name: String
+    var sortOrder: Int
+
+    static let databaseTableName = "exportGroup"
+
+    mutating func didInsert(_ inserted: InsertionSuccess) {
+        id = inserted.rowID
+    }
+}
+
+// Junction record linking an ExportGroup to a category it contains.
+// categoryID == nil represents the "Other" bucket (uncategorized todos).
+struct ExportGroupMember: Codable, FetchableRecord, TableRecord {
+    var groupID: Int64
+    var categoryID: Int64?
+
+    static let databaseTableName = "exportGroupMember"
+}
+
 extension [Todo] {
     // Sort by insertion order (id); cross-category ordering is done in the view
     // using category.sortOrder.

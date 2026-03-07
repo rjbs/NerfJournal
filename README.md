@@ -157,6 +157,28 @@ Roughly in priority order:
 - Notion publishing: generate a "work diary" page summarizing a day's
   page and post it to a configured Notion database
 
+## Testing
+
+No automated tests exist yet. The architecture is amenable to them; here is
+where to start.
+
+**Store / mutation tests** (highest value) — `AppDatabase` accepts a `path:`
+argument; pass `":memory:"` to get a fresh in-memory SQLite for each test.
+The stores can then be exercised against a real database without touching disk
+or launching the UI. Good candidates: `completeTodo`, `abandonTodo`,
+`bulkDelete`, `applyBundle`, `setEndingTime`; assert DB state and undo
+behavior. Stores are `@MainActor`, so test methods should also be `@MainActor`
+or use `await MainActor.run { ... }`.
+
+**Export tests** — `exportPageHTML` and `exportPageMrkdwn` are pure functions;
+exercise them with known todo/category fixtures and assert the output strings.
+
+**Migration tests** — create a pre-migration DB via raw SQL, run the migrator,
+verify the target tables exist and any preserved data survived correctly.
+
+**UI tests** (`XCUITest`) — slow, brittle, and require the app to inject a test
+database via a launch argument. Probably not worth the effort for a personal app.
+
 ## Refactoring Queue
 
 Known structural improvements that aren't urgent but are worth doing:

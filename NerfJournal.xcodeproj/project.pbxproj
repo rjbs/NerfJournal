@@ -24,6 +24,8 @@
 		83CBBA281A601CBA00E9B192 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA291A601CBA00E9B192 /* AppDelegate.swift */; };
 		83CBBA2A1A601CBA00E9B192 /* QuickNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA2B1A601CBA00E9B192 /* QuickNoteView.swift */; };
 		83CBBA2C1A601CBA00E9B192 /* HTMLExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA2D1A601CBA00E9B192 /* HTMLExport.swift */; };
+		83CBBA301A601CBA00E9B192 /* ExportGroupStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA311A601CBA00E9B192 /* ExportGroupStore.swift */; };
+		83CBBA321A601CBA00E9B192 /* ExportGroupManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA331A601CBA00E9B192 /* ExportGroupManagerView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -45,6 +47,8 @@
 		83CBBA291A601CBA00E9B192 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		83CBBA2B1A601CBA00E9B192 /* QuickNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNoteView.swift; sourceTree = "<group>"; };
 		83CBBA2D1A601CBA00E9B192 /* HTMLExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLExport.swift; sourceTree = "<group>"; };
+		83CBBA311A601CBA00E9B192 /* ExportGroupStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportGroupStore.swift; sourceTree = "<group>"; };
+		83CBBA331A601CBA00E9B192 /* ExportGroupManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportGroupManagerView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -85,6 +89,8 @@
 				83CBBA291A601CBA00E9B192 /* AppDelegate.swift */,
 				83CBBA2B1A601CBA00E9B192 /* QuickNoteView.swift */,
 				83CBBA2D1A601CBA00E9B192 /* HTMLExport.swift */,
+				83CBBA311A601CBA00E9B192 /* ExportGroupStore.swift */,
+				83CBBA331A601CBA00E9B192 /* ExportGroupManagerView.swift */,
 				83CBBA0C1A601CBA00E9B192 /* Assets.xcassets */,
 				83CBBA0D1A601CBA00E9B192 /* NerfJournal.entitlements */,
 			);
@@ -186,6 +192,8 @@
 				83CBBA281A601CBA00E9B192 /* AppDelegate.swift in Sources */,
 				83CBBA2A1A601CBA00E9B192 /* QuickNoteView.swift in Sources */,
 				83CBBA2C1A601CBA00E9B192 /* HTMLExport.swift in Sources */,
+				83CBBA301A601CBA00E9B192 /* ExportGroupStore.swift in Sources */,
+				83CBBA321A601CBA00E9B192 /* ExportGroupManagerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -7,6 +7,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var eventHandlerRef: EventHandlerRef?
     private var panel: NSPanel?
     private var activationToken: NSObjectProtocol?
+    private var quickNoteStore: QuickNoteStore?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         registerGlobalHotKey()
@@ -27,7 +28,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             { (_, _, userData) -> OSStatus in
                 guard let userData else { return noErr }
                 let delegate = Unmanaged<AppDelegate>.fromOpaque(userData).takeUnretainedValue()
-                DispatchQueue.main.async { delegate.showQuickNotePanel() }
+                DispatchQueue.main.async { MainActor.assumeIsolated { delegate.showQuickNotePanel() } }
                 return noErr
             },
             1, [eventSpec],
@@ -40,18 +41,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         )
     }
 
+    @MainActor
     func showQuickNotePanel() {
         if let existing = panel, existing.isVisible {
+            // Second press while open toggles between note and todo mode.
+            quickNoteStore?.isTodo.toggle()
             existing.makeKeyAndOrderFront(nil)
             return
         }
-        let view = QuickNoteView {
+        let store = QuickNoteStore()
+        quickNoteStore = store
+        let view = QuickNoteView(dismiss: {
             self.panel?.orderOut(nil)
             self.panel = nil
-        }
+            self.quickNoteStore = nil
+        }, store: store)
         let hosting = NSHostingController(rootView: view)
         let p = NSPanel(contentViewController: hosting)
-        p.title = "Quick Note"
+        p.title = "Quick Entry"
         p.isFloatingPanel = true
         p.level = .floating
         p.setContentSize(hosting.view.fittingSize)
