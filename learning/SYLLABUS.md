@@ -70,10 +70,10 @@ and what goes wrong with the obvious alternative.
 
 `ObservableObject`, `@Published`, and the three ways to attach one to a view
 (`@StateObject`, `@ObservedObject`, `@EnvironmentObject`). How NerfJournal's
-five stores (`PageStore`, `JournalStore`, `BundleStore`, `CategoryStore`,
-`AppDatabase`) fit this model — who owns them, who reads them, how updates
-propagate. Why `@MainActor` is needed when SQLite writes happen on background
-threads. This is where MVC intuition maps most cleanly.
+six stores (`PageStore`, `JournalStore`, `BundleStore`, `CategoryStore`,
+`ExportGroupStore`, `AppDatabase`) fit this model — who owns them, who reads
+them, how updates propagate. Why `@MainActor` is needed when SQLite writes
+happen on background threads. This is where MVC intuition maps most cleanly.
 
 **Files to look at:** `PageStore.swift`, `NerfJournalApp.swift`, `JournalView.swift`
 
@@ -84,10 +84,11 @@ threads. This is where MVC intuition maps most cleanly.
 The `App` protocol, `Scene`, and the difference between `Window` and
 `WindowGroup`. Why NerfJournal uses `Window` (single instances, no "New
 Window" in the File menu). `Commands`, `CommandMenu`, and `CommandGroup` for
-menu customization. How the three windows — journal, bundle manager, future log
-— are declared and why they each receive different environment objects.
+menu customization. How the four windows — journal, bundle manager, future log,
+export groups — are declared and why they each receive different environment
+objects.
 
-**Files to look at:** `NerfJournalApp.swift`, `TodoCommands.swift`
+**Files to look at:** `NerfJournalApp.swift`, `TodoCommands.swift`, `ExportGroupManagerView.swift`
 
 ---
 
@@ -101,7 +102,7 @@ have their own store instance. `NotificationCenter` for in-process events.
 boundaries.
 
 **Files to look at:** `TodoCommands.swift`, `PageStore.swift` (`init` observer),
-`DatabaseExport.swift` (post-import notification)
+`HTMLExport.swift` (post-import notification)
 
 ---
 
@@ -128,4 +129,4 @@ creating a new one. Stale closure captures in `ForEach` context menus and how
 to work around them. Bulk operations and single-undo-step design.
 
 **Files to look at:** `PageStore.swift` (all `undo`-related methods),
-`JournalPageDetailView.swift` (context menus)
+`JournalView.swift` (context menus)
