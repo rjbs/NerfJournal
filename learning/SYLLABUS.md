@@ -60,7 +60,10 @@ breaking UI into small reusable pieces.
 *down* the view tree (parent owns state, passes it to children) and signals
 flow *back up* (via bindings). The two-way binding model. Why the
 `todoToSetURL`/`showingAlert` pattern in NerfJournal is the correct approach,
-and what goes wrong with the obvious alternative.
+and what goes wrong with the obvious alternative. View identity and lifetime:
+how SwiftUI decides what changed (structural identity vs. explicit identity via
+`Identifiable` and `.id()`), and why this determines when `@State` is
+preserved or reset.
 
 **Files to look at:** `BundleDetailView.swift`, `JournalView.swift` (`@State` declarations)
 
