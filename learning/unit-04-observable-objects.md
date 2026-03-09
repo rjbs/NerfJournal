@@ -54,10 +54,10 @@ re-renders the view when it fires. You never write the subscription code
 — attaching the store to a view (covered below) wires it up automatically.
 
 **Why classes?** Because the whole point is *shared mutable state*. Structs are
-value types — every assignment copies. If `PageStore` were a struct, each view
-would hold its own independent copy, and a mutation in one view would be
+value types — every assignment copies. If `CategoryStore` were a struct, each
+view would hold its own independent copy, and a mutation in one view would be
 invisible to all others. Classes share a single instance by reference, so all
-views observing the same `PageStore` object see the same data.
+views observing the same `CategoryStore` object see the same data.
 
 ---
 
