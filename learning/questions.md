@@ -175,7 +175,7 @@ NerfJournal discards the token (doesn't capture the return value), which is
 only safe because the stores live for the entire app lifetime. It's a latent
 correctness issue that happens not to matter in practice here.
 
-The older selector-based API (`addObserver(_:selector:name:object:)`) has
+The older selector-based API ([`addObserver(_:selector:name:object:)`](https://developer.apple.com/documentation/foundation/notificationcenter/addobserver(_:selector:name:object:))) has
 automatically cleaned up dead observers since macOS 10.11, so `deinit`
 cleanup is only needed with the block-based form.
 
