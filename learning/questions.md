@@ -10,6 +10,39 @@ These may eventually be synthesized back into the unit text.
 
 ---
 
+## Unit 1: Swift as a Language
+
+### What does `_` mean in a function parameter: `func foo(_ bar: T)`?
+
+Swift lets every parameter have two names: an **argument label** used at the
+call site, and a **parameter name** used inside the function body:
+
+```swift
+func foo(argumentLabel parameterName: Type)
+```
+
+`_` as the argument label means "no label" — the caller omits it:
+
+```swift
+// with _:    store.completeTodo(myTodo, undoManager: mgr)
+// without _: store.completeTodo(todo: myTodo, undoManager: mgr)
+```
+
+Inside the function, the parameter is still called by its parameter name.
+`_` only suppresses the external label.
+
+It's a convention borrowed from Objective-C, where the first argument's role
+was implied by the method name itself. `completeTodo(myTodo)` reads naturally
+— the "what" is already in the name, so labeling it `todo:` would be
+redundant. Subsequent parameters (`undoManager:`) get labels because their
+roles aren't implied by the function name.
+
+When argument label and parameter name would be the same word, Swift lets you
+write just `undoManager: UndoManager?` rather than
+`undoManager undoManager: UndoManager?`.
+
+---
+
 ## Unit 4: Observable Objects and Stores
 
 ### What is the difference between `@State` and `@StateObject`?
@@ -41,35 +74,6 @@ to SwiftUI — it would only notice if you replaced the whole reference.
 
 The lifetime guarantee is the same: tied to the view's position in the
 hierarchy, surviving re-renders, torn down when the view leaves the tree.
-
-### What does `_` mean in a function parameter: `func foo(_ bar: T)`?
-
-Swift lets every parameter have two names: an **argument label** used at the
-call site, and a **parameter name** used inside the function body:
-
-```swift
-func foo(argumentLabel parameterName: Type)
-```
-
-`_` as the argument label means "no label" — the caller omits it:
-
-```swift
-// with _:    store.completeTodo(myTodo, undoManager: mgr)
-// without _: store.completeTodo(todo: myTodo, undoManager: mgr)
-```
-
-Inside the function, the parameter is still called by its parameter name.
-`_` only suppresses the external label.
-
-It's a convention borrowed from Objective-C, where the first argument's role
-was implied by the method name itself. `completeTodo(myTodo)` reads naturally
-— the "what" is already in the name, so labeling it `todo:` would be
-redundant. Subsequent parameters (`undoManager:`) get labels because their
-roles aren't implied by the function name.
-
-When argument label and parameter name would be the same word, Swift lets you
-write just `undoManager: UndoManager?` rather than
-`undoManager undoManager: UndoManager?`.
 
 ### Why `@EnvironmentObject` instead of just passing the store as an init parameter?
 
