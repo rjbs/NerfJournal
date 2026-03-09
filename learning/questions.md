@@ -42,3 +42,36 @@ to SwiftUI — it would only notice if you replaced the whole reference.
 The lifetime guarantee is the same: tied to the view's position in the
 hierarchy, surviving re-renders, torn down when the view leaves the tree.
 
+### Why `@EnvironmentObject` instead of just passing the store as an init parameter?
+
+The core reason is **prop drilling** — threading a value through every layer
+of the view hierarchy even when intermediate layers don't need it.
+
+Consider NerfJournal's hierarchy:
+
+```
+NerfJournalApp
+└── JournalView(pageStore:)
+    └── JournalPageDetailView(pageStore:)
+        └── ForEach(todos) { todo in
+                TodoRow(pageStore:, todo:)  ← actually uses it
+            }
+```
+
+With a plain init parameter, every view in the chain must declare it, receive
+it, and forward it — including views that don't use `pageStore` themselves but
+must carry it to pass down. `@EnvironmentObject` skips the chain: inject once
+at the top, and any view in the subtree declares it and reaches it directly.
+
+Change observation is also part of the answer. A plain `let pageStore:
+PageStore` property wouldn't subscribe to `objectWillChange` — you'd get stale
+renders. You'd need `@ObservedObject var pageStore: PageStore`, which still
+requires prop drilling. `@EnvironmentObject` is essentially `@ObservedObject`
+sourced from the environment rather than from an init parameter — observation
+is included.
+
+`JournalView(pageStore: myPageStore)` would work fine if only `JournalView`
+needed it. The problem is that `TodoRow`, `FutureLogRow`, `BundleDetailView`,
+and many other deeply nested views need it too. The React equivalent is
+Context — same problem, same solution.
+
