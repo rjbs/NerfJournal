@@ -227,6 +227,40 @@ array containing every case. It shows up in the category picker UI.
 
 ---
 
+## Implicit Member Expression
+
+When the expected type is known from context, you can write `.memberName`
+instead of `TypeName.memberName`. Swift fills in the type automatically. This
+is called an **implicit member expression**, and you'll see it constantly in
+NerfJournal.
+
+It works for enum cases and static properties alike:
+
+```swift
+case .done          // TodoEnding.Kind.done — enum case
+queue: .main        // OperationQueue.main  — static property on a class
+forName: .nerfJournalDatabaseDidChange  // Notification.Name(...) — static constant via extension
+```
+
+The last one looks surprising because `.nerfJournalDatabaseDidChange` is not a
+built-in value — it's a static constant defined in an extension on
+`Notification.Name`. But the dot-syntax shorthand works identically for static
+properties as for enum cases, as long as the type is inferable from context:
+
+```swift
+extension Notification.Name {
+    static let nerfJournalDatabaseDidChange = Notification.Name("nerfJournalDatabaseDidChange")
+}
+```
+
+The rule: if there's only one type that could make sense in that position, you
+can drop the type name and keep just the dot. It works wherever Swift can
+determine the type from context — function parameter types, variable
+annotations, return types. The `switch` cases in the Enums section above
+(`case .done`, `case .north`) all use implicit member expression.
+
+---
+
 ## Protocols
 
 A protocol defines a set of requirements — methods, properties — that a type
@@ -409,6 +443,39 @@ variable and later reading it gives you the current value of that variable, not
 a snapshot. This leads to a class of bug you'll see flagged in Unit 8: a closure
 in a context menu captures `todo` by reference to the variable, but by the time
 the closure runs, the list may have changed. Worth keeping in mind.
+
+---
+
+## Argument Labels
+
+Swift functions and methods can have two names for each parameter: an
+**argument label** used at the call site, and a **parameter name** used inside
+the function body:
+
+```swift
+func move(from source: Point, to destination: Point) { ... }
+move(from: origin, to: target)   // labels at call site
+// inside the function, `source` and `destination` are the names
+```
+
+`_` as the argument label means "no label" — the caller omits it:
+
+```swift
+func completeTodo(_ todo: Todo, undoManager: UndoManager?) { ... }
+
+store.completeTodo(myTodo, undoManager: mgr)   // with _
+// without _: store.completeTodo(todo: myTodo, undoManager: mgr)
+```
+
+This convention comes from Objective-C, where the first argument's role was
+implied by the method name itself. `completeTodo(myTodo)` reads naturally —
+the "what" is already in the name, so labeling it `todo:` would be redundant.
+Subsequent parameters (`undoManager:`) get labels because their roles aren't
+implied by the function name.
+
+When argument label and parameter name would be the same word, Swift lets you
+write just `undoManager: UndoManager?` rather than
+`undoManager undoManager: UndoManager?`.
 
 ---
 

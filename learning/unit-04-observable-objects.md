@@ -95,6 +95,26 @@ The rule: use `@StateObject` for the view that *creates* the object; use
 parameter. In NerfJournal, `@ObservedObject` doesn't appear at all — stores
 are created at the top with `@StateObject` and shared via the environment.
 
+**`@State` vs `@StateObject`**: both tie storage to a view's lifetime in the
+hierarchy. The difference is what they store and how SwiftUI detects changes.
+`@State` stores a value type (struct, Int, Bool). SwiftUI owns the storage
+directly and detects changes via the property wrapper's setter — when you
+assign to a `@State` property, SwiftUI sees the write and schedules a
+re-render. `@StateObject` stores a reference type — specifically an
+`ObservableObject`. SwiftUI manages the object's lifetime (creates it once,
+keeps it alive), but doesn't watch for assignments to the property itself.
+Instead, it subscribes to the object's `objectWillChange` publisher. The
+object announces its own changes via `@Published`; SwiftUI listens.
+
+```swift
+@State private var count = 0               // SwiftUI watches the assignment
+@StateObject private var store = MyStore() // SwiftUI watches store.objectWillChange
+```
+
+A mutable class stored in a plain `@State var` would be invisible to SwiftUI —
+it would only notice if you replaced the whole reference, not if you mutated
+the object's contents.
+
 ### `@EnvironmentObject` — reads from the injected environment
 
 [`@EnvironmentObject`](https://developer.apple.com/documentation/swiftui/environmentobject)
@@ -115,6 +135,31 @@ struct JournalView: View {
     // ...
 }
 ```
+
+**Why not just pass the store as an init parameter?** The core reason is
+*prop drilling* — threading a value through every layer of the view hierarchy
+even when intermediate layers don't need it. Consider NerfJournal's hierarchy:
+
+```
+NerfJournalApp
+└── JournalView(pageStore:)
+    └── JournalPageDetailView(pageStore:)
+        └── ForEach(todos) { todo in
+                TodoRow(pageStore:, todo:)  ← actually uses it
+            }
+```
+
+With a plain init parameter, every view in the chain must declare it, receive
+it, and forward it — including views that don't use `pageStore` themselves but
+must carry it to pass down. `@EnvironmentObject` skips the chain: inject once
+at the top, and any view in the subtree declares it and reaches it directly.
+
+A plain `let pageStore: PageStore` property also wouldn't subscribe to
+`objectWillChange` — you'd get stale renders. You'd need `@ObservedObject var
+pageStore: PageStore`, which still requires prop drilling. `@EnvironmentObject`
+is essentially `@ObservedObject` sourced from the environment rather than from
+an init parameter — observation is included. The React equivalent is Context —
+same problem, same solution.
 
 If a view declares `@EnvironmentObject var pageStore: PageStore` but no
 `PageStore` was injected, the app crashes at runtime. This is the one sharp
@@ -230,6 +275,35 @@ In NerfJournal's case the stores live for the entire app lifetime, so the
 cycle would never actually cause a leak. The pattern is still correct practice
 — any time you capture `self` in a closure that gets stored somewhere (an
 observer, a completion handler), use `[weak self]`.
+
+One subtlety: `[weak self]` prevents the retain cycle and ensures the closure
+exits harmlessly if `self` is gone, but *the closure itself remains registered
+in NotificationCenter and keeps firing*. With the block-based API
+(`addObserver(forName:object:queue:using:)`), the block is retained by
+NotificationCenter until explicitly removed. For short-lived objects this
+matters — you need to capture the token the method returns and remove it in
+`deinit`:
+
+```swift
+private var observers: [NSObjectProtocol] = []
+
+init() {
+    let token = NotificationCenter.default.addObserver(
+        forName: .nerfJournalDatabaseDidChange, ...
+    ) { [weak self] _ in ... }
+    observers.append(token)
+}
+
+deinit {
+    observers.forEach { NotificationCenter.default.removeObserver($0) }
+}
+```
+
+NerfJournal discards the token (doesn't capture the return value). This is
+only safe because the stores live for the entire app lifetime. The older
+selector-based API ([`addObserver(_:selector:name:object:)`](https://developer.apple.com/documentation/foundation/notificationcenter/addobserver(_:selector:name:object:)))
+has automatically cleaned up dead observers since macOS 10.11, so `deinit`
+cleanup is only needed with the block-based form.
 
 ---
 
