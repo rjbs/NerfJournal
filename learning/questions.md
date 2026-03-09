@@ -12,6 +12,43 @@ These may eventually be synthesized back into the unit text.
 
 ## Unit 1: Swift as a Language
 
+### How does the leading-dot shorthand work: `.nerfJournalDatabaseDidChange`, `.main`, `.done`?
+
+This is Swift's **implicit member expression**. When the expected type is known
+from context, you can write `.memberName` instead of `TypeName.memberName` and
+Swift fills in the type.
+
+`addObserver(forName:)` declares its parameter as `Notification.Name?`. Swift
+sees `.nerfJournalDatabaseDidChange`, knows it needs a `Notification.Name`, and
+looks for a static member with that name on `Notification.Name` — finding it in
+the extension. `queue: .main` works the same way: the parameter expects
+`OperationQueue?`, `.main` is a static property on `OperationQueue`.
+
+It works wherever Swift can determine the type from context — function parameter
+types, variable annotations, return types. The rule: if there's only one type
+that could make sense, you can drop the type name and keep just the dot.
+
+It works the same for enum cases and static constants:
+
+```swift
+case .done          // TodoEnding.Kind.done — enum case
+queue: .main        // OperationQueue.main  — static property on a class
+forName: .nerfJournalDatabaseDidChange  // Notification.Name(...) — static
+                                        //   constant on a struct, via extension
+```
+
+The extension is what makes the last one feel surprising. The value isn't an
+enum case — it's a static constant defined in an extension:
+
+```swift
+extension Notification.Name {
+    static let nerfJournalDatabaseDidChange = Notification.Name("nerfJournalDatabaseDidChange")
+}
+```
+
+But the dot-syntax shorthand works identically for static properties as for
+enum cases, as long as the type is inferable from context.
+
 ### What does `_` mean in a function parameter: `func foo(_ bar: T)`?
 
 Swift lets every parameter have two names: an **argument label** used at the
