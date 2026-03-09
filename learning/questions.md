@@ -145,3 +145,37 @@ needed it. The problem is that `TodoRow`, `FutureLogRow`, `BundleDetailView`,
 and many other deeply nested views need it too. The React equivalent is
 Context — same problem, same solution.
 
+### With `[weak self]` in a NotificationCenter observer, does the dead block linger forever?
+
+Yes — with the block-based API (`addObserver(forName:object:queue:using:)`),
+the block is retained by NotificationCenter until explicitly removed. `[weak
+self]` prevents the retain cycle and ensures the block exits harmlessly if
+`self` is gone, but the block itself remains registered and fires on every
+notification, doing nothing.
+
+For short-lived objects this matters. The fix is to capture the token the
+method returns and remove it in `deinit`:
+
+```swift
+private var observers: [NSObjectProtocol] = []
+
+init() {
+    let token = NotificationCenter.default.addObserver(
+        forName: .nerfJournalDatabaseDidChange, ...
+    ) { [weak self] _ in ... }
+    observers.append(token)
+}
+
+deinit {
+    observers.forEach { NotificationCenter.default.removeObserver($0) }
+}
+```
+
+NerfJournal discards the token (doesn't capture the return value), which is
+only safe because the stores live for the entire app lifetime. It's a latent
+correctness issue that happens not to matter in practice here.
+
+The older selector-based API (`addObserver(_:selector:name:object:)`) has
+automatically cleaned up dead observers since macOS 10.11, so `deinit`
+cleanup is only needed with the block-based form.
+
