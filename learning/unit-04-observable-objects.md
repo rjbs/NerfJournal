@@ -131,12 +131,12 @@ a distinct type.
 
 ```
 NerfJournalApp (@StateObject)
-├── PageStore       — current page's todos, notes, future todos; all mutations
-├── JournalStore    — read-only index of pages; drives calendar highlighted dates
-├── BundleStore     — task bundles and their todos
-├── CategoryStore   — categories (name, color, sort order)
+├── PageStore        — current page's todos, notes, future todos; all mutations
+├── JournalStore     — read-only index of pages; drives calendar highlighted dates
+├── BundleStore      — task bundles and their todos
+├── CategoryStore    — categories (name, color, sort order)
 ├── ExportGroupStore — export groups and memberships
-└── AppDatabase     — wraps the GRDB DatabaseQueue; runs migrations
+└── AppDatabase      — wraps the GRDB DatabaseQueue; runs migrations
 ```
 
 `AppDatabase` is the odd one out — it's not an `ObservableObject` at all.
