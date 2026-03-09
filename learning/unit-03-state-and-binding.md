@@ -45,6 +45,21 @@ were a plain struct with a plain `var count`, mutating it inside a closure
 wouldn't be possible (structs are value types — the closure captures a copy),
 and even if it were, it wouldn't notify SwiftUI to re-render.
 
+To be precise about what "owned by SwiftUI" means: when SwiftUI first renders
+a view, it allocates persistent storage for each `@State` property, keyed to
+that view's position in the hierarchy. The struct itself *does* contain a
+`@State` wrapper — but that wrapper is a thin shell that knows where to find
+the real value in SwiftUI's external storage, not the storage itself. Accessing
+the property goes through the wrapper to the external store; writing to it
+writes there and enqueues a re-render.
+
+The struct instance is genuinely thrown away and recreated on every render.
+SwiftUI calls `body` fresh each time. The new instance's wrapper reconnects to
+the *same* storage as before, because the view occupies the same position in
+the hierarchy. The wrapper is the thread of continuity; the struct is
+scaffolding that gets rebuilt. Two views of the same type at *different*
+positions get independent storage slots.
+
 `@State` is always `private` — it's local to the declaring view. If another
 view needs to read or write the value, you pass a *binding* to it.
 
@@ -236,13 +251,23 @@ and `TodoRow` throughout NerfJournal.
 
 ## View Identity and `@State` Lifetime
 
-SwiftUI uses *identity* to decide which view is which across re-renders — and
-identity determines whether `@State` is preserved or reset.
+SwiftUI maintains a persistent *view graph* — a render tree that outlives any
+individual struct instance. Your struct's `body` is the *input* to that tree,
+not the tree itself. When a re-render is triggered, SwiftUI calls `body` to get
+a fresh description, diffs it against what's already in the graph, and patches
+in place: updating values where the structure is the same, creating new nodes
+(with fresh `@State`) where new views appeared, and tearing down nodes (and
+their state) where views disappeared.
 
-**Structural identity** is the default. A view's identity is its *position in
-the view hierarchy*. Two views of the same type at the same position are
-considered the same view; their state is preserved. A view at a position that
-disappears loses its state.
+Instance identity is useless for this matching — struct instances are ephemeral
+by design, and two successive instances at the same position are
+indistinguishable as objects. So SwiftUI uses *structural position* as the
+stable identity instead.
+
+**Structural identity**: a view's identity is its *position in the view
+hierarchy*. Two views of the same type at the same position are considered the
+same view; their state is preserved. A view at a position that disappears loses
+its state.
 
 ```swift
 // These are structurally distinct — different positions in the if/else:
@@ -281,7 +306,16 @@ TextField("", text: $text)
 
 This is occasionally useful when you want to guarantee a fresh view (and fresh
 `@State`) when data changes — for example, to clear a text field when switching
-between todos.
+between todos. The ID only needs to be unique *among siblings in the same
+parent* — not globally. `.id(currentTodo.id)` is fine even though `id` is an
+autoincrement integer, because that view isn't competing with any other view
+for that value; it just needs to produce a *different* value when `currentTodo`
+changes.
+
+The same scope applies to `ForEach` IDs — unique within the collection, not
+globally. The difference in intent:
+- `ForEach(items, id: \.id)` — IDs distinguish siblings *from each other*; must be unique within the collection at any given moment
+- `.id(value)` on a single view — signals "treat me as new when this value changes"; sibling uniqueness isn't the point
 
 ---
 
