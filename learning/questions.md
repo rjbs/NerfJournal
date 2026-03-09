@@ -50,6 +50,26 @@ views appeared, and tearing down nodes (and their state) where views
 disappeared.
 
 The view structs you write are the *input* to the tree, not the tree itself.
+
+### View identity — what is the scope of uniqueness for `.id()` and `ForEach` IDs?
+
+**Local to the parent** — not global. IDs only need to be unique among siblings
+within the same parent's `body`.
+
+The two uses have subtly different intents:
+
+- **`ForEach(items, id: \.id)`** — IDs distinguish siblings from each other;
+  must be unique within the collection at any given moment so SwiftUI can tell
+  items apart across updates.
+- **`.id(value)` on a single view** — signals "treat me as a new view when
+  this value changes"; uniqueness relative to other views isn't the point.
+
+So `.id(currentTodo.id)` on a `TextField` is fine even though `id` is an
+autoincrement `Int64`. That view isn't competing with any other view for that
+integer — it just needs to produce a *different* value when `currentTodo`
+changes, so SwiftUI resets the field's state.
+
+
 `DayCell(...)` in `body` is a value describing what should be at that slot;
 SwiftUI decides what to do with the actual on-screen elements. The struct fills
 a slot; SwiftUI manages the slot.
