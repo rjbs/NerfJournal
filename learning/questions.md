@@ -73,6 +73,25 @@ the concrete implementation.
 `CommandGroup`, etc. all conform to `Commands` — into a single combined value,
 exactly as `@ViewBuilder` collects `View`-conforming values.
 
+### Is a single-instance `WindowGroup` effectively a `Window`?
+
+Not in any formal sense — they're sibling types, both conforming to
+[`Scene`](https://developer.apple.com/documentation/swiftui/scene), with no
+subtype relationship between them. `Window` isn't implemented as a constrained
+`WindowGroup`; it's a distinct type added in macOS 13 specifically to express
+single-instance intent at the declaration site.
+
+The intuition is sound though: on iPhone, a `WindowGroup` *is* effectively a
+`Window` — the platform caps it at one instance because there's no windowed
+multitasking. The distinction is a macOS-only concern, which is probably why
+`Window` didn't exist until macOS 13 and still doesn't exist on iOS.
+
+The design choice to make them separate types rather than (say)
+`WindowGroup().singleInstance()` seems deliberate: a `Window` declaration is an
+unambiguous statement of intent that the framework can enforce, rather than a
+`WindowGroup` in a particular configuration that someone might accidentally
+change.
+
 ### Why is `WindowGroup` the only option for iOS, not just the default?
 
 [`Window`](https://developer.apple.com/documentation/swiftui/window) is a
