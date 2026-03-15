@@ -93,6 +93,13 @@ The `id:` parameter on `Window` is how SwiftUI and your code refer to this
 scene — you'll see it used with `openWindow(id:)` when a button needs to open
 a specific window.
 
+`Window` and `WindowGroup` are sibling types — both conform to `Scene`, with
+no subtype relationship between them. `Window` is not a constrained
+`WindowGroup`; it's a distinct type added in macOS 13 specifically for the
+single-instance case. On iPhone, `WindowGroup` happens to behave like `Window`
+anyway (the platform caps it at one instance), which is why the distinction is
+a macOS-only concern.
+
 ---
 
 ## NerfJournal's Four Windows
@@ -185,6 +192,11 @@ purposes and can overlap without conflict.
 
 SwiftUI's menu system is declarative too. A `Commands`-conforming type
 describes menu items; you attach it to a scene with the `.commands { }` modifier.
+The `Commands` protocol declares its `body` as `@CommandsBuilder var body:
+Self.Body { get }` — the same pattern as `@SceneBuilder` on `App` and
+`@ViewBuilder` on `View`. Conforming types inherit the result-builder attribute
+from the protocol requirement, which is why neither `TodoCommands` nor
+`DebugCommands` needs to annotate its own `body`.
 
 ```swift
 Window("Journal", id: "journal") { ... }
