@@ -46,6 +46,33 @@ everywhere else.
 
 ## Unit 5: App Structure and Multiple Windows
 
+### Where is `@CommandsBuilder`? `Commands.body` has no visible result-builder annotation.
+
+It's on the protocol requirement, not the conforming implementation.
+[`Commands`](https://developer.apple.com/documentation/swiftui/commands) is
+declared as:
+
+```swift
+public protocol Commands {
+    associatedtype Body: Commands
+    @CommandsBuilder var body: Self.Body { get }
+}
+```
+
+When a protocol requirement carries a result-builder attribute, Swift
+automatically applies it to any conforming implementation of that requirement.
+You don't re-annotate `body` in `DebugCommands` — the attribute is inherited.
+
+This is the same mechanism behind `@ViewBuilder`: `View.body` is declared
+`@ViewBuilder var body: Self.Body { get }`, yet conforming types never write
+`@ViewBuilder` on their own `body`. Multi-expression `body` properties work in
+both cases because the builder attribute flows from the protocol requirement to
+the concrete implementation.
+
+`@CommandsBuilder` collects `Commands`-conforming values — `CommandMenu`,
+`CommandGroup`, etc. all conform to `Commands` — into a single combined value,
+exactly as `@ViewBuilder` collects `View`-conforming values.
+
 ### Why is `WindowGroup` the only option for iOS, not just the default?
 
 [`Window`](https://developer.apple.com/documentation/swiftui/window) is a
