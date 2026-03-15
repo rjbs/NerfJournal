@@ -109,9 +109,13 @@ struct NerfJournalApp: App {
 
     var body: some Scene {
         Window("Journal", id: "journal") { ... }
+            .defaultSize(width: 540, height: 520)
         Window("Bundle Manager", id: "bundle-manager") { ... }
+            .defaultSize(width: 600, height: 480)
         Window("Future Log", id: "future-log") { ... }
+            .defaultSize(width: 480, height: 400)
         Window("Export Groups", id: "export-groups") { ... }
+            .defaultSize(width: 480, height: 360)
     }
 }
 ```
