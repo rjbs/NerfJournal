@@ -1,5 +1,8 @@
 <link rel="icon" type="image/png" href="{{ '/assets/images/favicon.png' | relative_url }}">
 <meta property="og:image" content="{{ '/assets/images/icon.png' | absolute_url }}">
+<style type='text/css'>
+.site-logo img, .site-logo { max-width: 32px; max-height: 32px; }
+</style>
 <script>
   function applySystemTheme() {
     var scheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
