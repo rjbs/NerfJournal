@@ -64,7 +64,8 @@ SwiftUI offers several scene types; the two you'll see on macOS are
 same window. It automatically adds a "New Window" item to the File menu. This
 is appropriate for document-based apps — each window edits a different
 document. Most introductory SwiftUI tutorials use `WindowGroup` because it's
-the default, and for iOS it's essentially required.
+the default, and on iOS it's the only option — `Window` is a macOS-only scene
+type and doesn't exist on iOS at all.
 
 **`Window`** is for a single, named window — one instance, always. No "New
 Window" item appears in the File menu for `Window` scenes. This is appropriate

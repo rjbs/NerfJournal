@@ -42,4 +42,19 @@ The split in NerfJournal is principled: `DistributedNotificationCenter` only
 where necessary (crossing the CLI process boundary), `NotificationCenter`
 everywhere else.
 
+---
+
+## Unit 5: App Structure and Multiple Windows
+
+### Why is `WindowGroup` the only option for iOS, not just the default?
+
+[`Window`](https://developer.apple.com/documentation/swiftui/window) is a
+macOS-only scene type — it doesn't exist on iOS at all. `WindowGroup` is the
+only scene type available for the main app content on iOS. The distinction
+doesn't matter much in practice on iPhone because `WindowGroup` there always
+produces exactly one window (iPhones don't have windowed multitasking). On iPad
+you can get multiple side-by-side instances if the app opts in via
+`UISceneConfiguration`, but that's deliberate. On macOS, `WindowGroup`
+automatically adds "New Window" to the File menu, which is why NerfJournal
+avoids it.
 
