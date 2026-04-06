@@ -91,11 +91,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 forName: NSApplication.didBecomeActiveNotification,
                 object: nil, queue: .main
             ) { [weak self, weak p] _ in
-                if let token = self?.activationToken {
-                    NotificationCenter.default.removeObserver(token)
-                    self?.activationToken = nil
+                MainActor.assumeIsolated {
+                    if let token = self?.activationToken {
+                        NotificationCenter.default.removeObserver(token)
+                        self?.activationToken = nil
+                    }
+                    p?.makeKeyAndOrderFront(nil)
                 }
-                p?.makeKeyAndOrderFront(nil)
             }
             NSApp.activate()
         }
