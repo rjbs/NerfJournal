@@ -36,5 +36,31 @@ get both the live reference *and* change notifications — the same combination
 you get from `@EnvironmentObject`, just routed up to menus instead of down to
 child views.
 
+### What if `pageStore` were reassigned to a new `PageStore` instance — would the focus environment pick it up?
+
+Yes. `.focusedSceneObject(pageStore)` is called inside the `App`'s `body`
+computed property, so SwiftUI re-evaluates it whenever the scene graph needs
+reconsideration. If the reference changed, the focus environment would update
+to point to the new object, and `@FocusedObject` readers would re-subscribe to
+the new one's `objectWillChange`.
+
+SwiftUI diffs scene modifiers much like it diffs view modifiers: applying
+`.focusedSceneObject(sameObjectAsBefore)` is cheap — if the reference hasn't
+changed, nothing downstream needs to update. Only when the reference actually
+differs does the focus environment swap.
+
+One wrinkle: `pageStore` here is a `@StateObject`, which exists specifically
+to prevent the reference from changing across re-renders. That's the main
+reason to use `@StateObject` over `@ObservedObject` — SwiftUI guarantees the
+object is created once per view lifetime and preserved, so `pageStore` is a
+stable reference until the `NerfJournalApp` instance itself goes away (which,
+for the top-level `App`, means never). You *could* assign a new value via
+`pageStore = PageStore()` from inside a method, and SwiftUI would honor it —
+but the whole point of `@StateObject` is that you usually don't.
+
+The mental model: the focus environment reflects whatever `body` publishes each
+time it runs; stability of the reference is a property of `@StateObject`, not
+of the publishing mechanism.
+
 
 
