@@ -168,6 +168,7 @@ struct MonthCalendarView: View {
             weekdayHeader
             dayGrid
         }
+        .frame(width: 240)
     }
 
     private var monthHeader: some View {
