@@ -104,19 +104,26 @@ Storage is local SQLite only. No iCloud sync or server component.
 
 ## CLI Tool
 
-`cli/` contains a standalone Swift Package, `nerf-add-todo`, that
-inserts a todo into today's journal page directly via SQLite, then
-notifies the running app to refresh immediately. Useful for scripts that
-gather work items (GitHub PRs, Linear tickets, etc.) and add them
-programmatically with proper exit-code feedback.
+`cli/` contains a standalone Swift Package, `nerf`, that talks to the
+journal database directly via SQLite and notifies the running app to
+refresh immediately. It is built with
+[swift-argument-parser](https://github.com/apple/swift-argument-parser)
+and dispatches to subcommands, so it grows as new chores come up. Useful
+for scripts that gather work items (GitHub PRs, Linear tickets, etc.) and
+add them programmatically with proper exit-code feedback.
 
 ```
 cd cli && swift build -c release
-cp .build/release/nerf-add-todo ~/bin
+cp .build/release/nerf ~/bin
 ```
 
+Run `nerf --help` for the subcommand list, or `nerf help <subcommand>`
+for the details of one.
+
+### `nerf add-todo`
+
 ```
-nerf-add-todo [--no-migrate] [--category NAME] [--url URL] TITLE...
+nerf add-todo [--no-migrate] [--category NAME] [--url URL] TITLE...
 ```
 
 - `--no-migrate`: mark the todo as non-migratable (default: migratable)
@@ -130,9 +137,23 @@ tool requires today's journal page to already exist.
 
 From Perl:
 ```perl
-system('nerf-add-todo', '--category', 'GitHub', "Review PR #$pr_number")
-    == 0 or die "nerf-add-todo failed: $?";
+system('nerf', 'add-todo', '--category', 'GitHub', "Review PR #$pr_number")
+    == 0 or die "nerf add-todo failed: $?";
 ```
+
+### `nerf categories`
+
+```
+nerf categories [--json] [--database PATH]
+```
+
+Lists the defined categories in display order, one per line, each
+prefixed with a filled circle (●) drawn in the category's color via a
+24-bit-color ANSI escape, followed by the name and color name.
+
+- `--json`: emit a JSON array of `{"name", "color"}` objects instead,
+  where `color` is a CSS `#aabbcc` string. Handy for piping to other
+  tools.
 
 ## Future Plans
 
