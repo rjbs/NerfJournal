@@ -23,6 +23,7 @@
 		83CC1A001B601CBA00E9B201 /* CategoryLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CC1A011B601CBA00E9B201 /* CategoryLabel.swift */; };
 		83CBBA281A601CBA00E9B192 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA291A601CBA00E9B192 /* AppDelegate.swift */; };
 		83CBBA2A1A601CBA00E9B192 /* QuickNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA2B1A601CBA00E9B192 /* QuickNoteView.swift */; };
+		83CBBA341A601CBA00E9B192 /* DateParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA351A601CBA00E9B192 /* DateParser.swift */; };
 		83CBBA2C1A601CBA00E9B192 /* HTMLExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA2D1A601CBA00E9B192 /* HTMLExport.swift */; };
 		83CBBA301A601CBA00E9B192 /* ExportGroupStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA311A601CBA00E9B192 /* ExportGroupStore.swift */; };
 		83CBBA321A601CBA00E9B192 /* ExportGroupManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA331A601CBA00E9B192 /* ExportGroupManagerView.swift */; };
@@ -46,6 +47,7 @@
 		83CC1A011B601CBA00E9B201 /* CategoryLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryLabel.swift; sourceTree = "<group>"; };
 		83CBBA291A601CBA00E9B192 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		83CBBA2B1A601CBA00E9B192 /* QuickNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNoteView.swift; sourceTree = "<group>"; };
+		83CBBA351A601CBA00E9B192 /* DateParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateParser.swift; sourceTree = "<group>"; };
 		83CBBA2D1A601CBA00E9B192 /* HTMLExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLExport.swift; sourceTree = "<group>"; };
 		83CBBA311A601CBA00E9B192 /* ExportGroupStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportGroupStore.swift; sourceTree = "<group>"; };
 		83CBBA331A601CBA00E9B192 /* ExportGroupManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportGroupManagerView.swift; sourceTree = "<group>"; };
@@ -88,6 +90,7 @@
 				83CC1A011B601CBA00E9B201 /* CategoryLabel.swift */,
 				83CBBA291A601CBA00E9B192 /* AppDelegate.swift */,
 				83CBBA2B1A601CBA00E9B192 /* QuickNoteView.swift */,
+				83CBBA351A601CBA00E9B192 /* DateParser.swift */,
 				83CBBA2D1A601CBA00E9B192 /* HTMLExport.swift */,
 				83CBBA311A601CBA00E9B192 /* ExportGroupStore.swift */,
 				83CBBA331A601CBA00E9B192 /* ExportGroupManagerView.swift */,
@@ -191,6 +194,7 @@
 				83CC1A001B601CBA00E9B201 /* CategoryLabel.swift in Sources */,
 				83CBBA281A601CBA00E9B192 /* AppDelegate.swift in Sources */,
 				83CBBA2A1A601CBA00E9B192 /* QuickNoteView.swift in Sources */,
+				83CBBA341A601CBA00E9B192 /* DateParser.swift in Sources */,
 				83CBBA2C1A601CBA00E9B192 /* HTMLExport.swift in Sources */,
 				83CBBA301A601CBA00E9B192 /* ExportGroupStore.swift in Sources */,
 				83CBBA321A601CBA00E9B192 /* ExportGroupManagerView.swift in Sources */,

@@ -1,13 +1,16 @@
 import AppKit
 import Carbon.HIToolbox
+import Combine
 import SwiftUI
 
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
     private var panel: NSPanel?
     private var activationToken: NSObjectProtocol?
     private var quickNoteStore: QuickNoteStore?
+    private var cancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         registerGlobalHotKey()
@@ -41,7 +44,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         )
     }
 
-    @MainActor
     func showQuickNotePanel() {
         if let existing = panel, existing.isVisible {
             // Second press while open toggles between note and todo mode.
@@ -49,14 +51,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             existing.makeKeyAndOrderFront(nil)
             return
         }
+        cancellables.removeAll()
         let store = QuickNoteStore()
         quickNoteStore = store
         let view = QuickNoteView(dismiss: {
             self.panel?.orderOut(nil)
             self.panel = nil
             self.quickNoteStore = nil
+            self.cancellables.removeAll()
         }, store: store)
         let hosting = NSHostingController(rootView: view)
+        hosting.sizingOptions = .preferredContentSize
         let p = NSPanel(contentViewController: hosting)
         p.title = "Quick Entry"
         p.isFloatingPanel = true
@@ -65,6 +70,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         p.center()
         p.orderFrontRegardless()
         panel = p
+
+        // Resize the panel whenever the SwiftUI content changes height (e.g.
+        // when the date or category picker expands). -- claude, 2026-04-06
+        hosting.publisher(for: \.preferredContentSize)
+            .dropFirst()
+            .filter { $0.width > 0 && $0.height > 0 }
+            .sink { [weak p] size in p?.setContentSize(size) }
+            .store(in: &cancellables)
 
         if NSApp.isActive {
             p.makeKeyAndOrderFront(nil)
@@ -78,11 +91,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 forName: NSApplication.didBecomeActiveNotification,
                 object: nil, queue: .main
             ) { [weak self, weak p] _ in
-                if let token = self?.activationToken {
-                    NotificationCenter.default.removeObserver(token)
-                    self?.activationToken = nil
+                MainActor.assumeIsolated {
+                    if let token = self?.activationToken {
+                        NotificationCenter.default.removeObserver(token)
+                        self?.activationToken = nil
+                    }
+                    p?.makeKeyAndOrderFront(nil)
                 }
-                p?.makeKeyAndOrderFront(nil)
             }
             NSApp.activate()
         }

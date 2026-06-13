@@ -212,6 +212,45 @@ if let name = args.categoryName {
     }
 }
 
+// Check for duplicates: skip if any open (ending IS NULL) todo has the same title or URL.
+struct DuplicateFound {
+    var field: String
+    var value: String
+}
+
+let duplicate: DuplicateFound?
+do {
+    duplicate = try dbQueue.read { db -> DuplicateFound? in
+        let titleDup = try Row.fetchOne(
+            db,
+            sql: "SELECT 1 FROM todo WHERE ending IS NULL AND title = ?",
+            arguments: [args.title]
+        )
+        if titleDup != nil {
+            return DuplicateFound(field: "title", value: args.title)
+        }
+        if let url = args.externalURL {
+            let urlDup = try Row.fetchOne(
+                db,
+                sql: "SELECT 1 FROM todo WHERE ending IS NULL AND externalURL = ?",
+                arguments: [url]
+            )
+            if urlDup != nil {
+                return DuplicateFound(field: "url", value: url)
+            }
+        }
+        return nil
+    }
+} catch {
+    fputs("warning: could not check for duplicates: \(error)\n", stderr)
+    duplicate = nil
+}
+
+if let dup = duplicate {
+    print("Didn't create todo for duplicate \(dup.field): \(dup.value)")
+    exit(0)
+}
+
 // Insert the todo.
 do {
     try dbQueue.write { db in

@@ -29,14 +29,14 @@ final class QuickNoteStore: ObservableObject {
         notify()
     }
 
-    func addTodo(title: String, categoryID: Int64?) async {
+    func addTodo(title: String, categoryID: Int64?, start: Date? = nil) async {
         let today = Calendar.current.startOfDay(for: Date())
         try? await AppDatabase.shared.dbQueue.write { db in
             var todo = Todo(
                 id: nil,
                 title: title,
                 shouldMigrate: true,
-                start: today,
+                start: start ?? today,
                 ending: nil,
                 categoryID: categoryID,
                 externalURL: nil
@@ -62,6 +62,10 @@ struct QuickNoteView: View {
     @State private var selectedCategoryID: Int64? = nil
     @State private var categoryPickerActive = false
     @State private var categoryPickerQuery = ""
+    @State private var datePickerActive = false
+    @State private var datePickerQuery = ""
+    @State private var parsedStartDate: Date? = nil
+    @State private var selectedStartDate: Date? = nil
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -92,10 +96,14 @@ struct QuickNoteView: View {
                             .onSubmit { submit() }
                             .onKeyPress(.escape) {
                                 if categoryPickerActive { cancelCategoryPicker(); return .handled }
+                                if datePickerActive { cancelDatePicker(); return .handled }
                                 dismiss()
                                 return .handled
                             }
-                            .onChange(of: text) { _, newText in updateCategoryPicker(for: newText) }
+                            .onChange(of: text) { _, newText in
+                                updateCategoryPicker(for: newText)
+                                updateDatePicker(for: newText)
+                            }
 
                         if store.isTodo, let catID = selectedCategoryID,
                            let cat = store.categories.first(where: { $0.id == catID }) {
@@ -119,6 +127,27 @@ struct QuickNoteView: View {
                             )
                             .foregroundStyle(cat.color.swatch)
                         }
+
+                        if store.isTodo, let date = selectedStartDate, !datePickerActive {
+                            HStack(spacing: 4) {
+                                Image(systemName: "calendar")
+                                    .font(.caption2)
+                                Text(formatDateBadge(date))
+                                    .font(.caption)
+                                Button { selectedStartDate = nil } label: {
+                                    Image(systemName: "xmark").font(.caption2)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(
+                                Capsule()
+                                    .fill(Color.accentColor.opacity(0.15))
+                                    .overlay(Capsule().stroke(Color.accentColor.opacity(0.4), lineWidth: 1))
+                            )
+                            .foregroundStyle(Color.accentColor)
+                        }
                     }
 
                     if store.isTodo && categoryPickerActive && !filteredCategories.isEmpty {
@@ -141,11 +170,31 @@ struct QuickNoteView: View {
                         }
                         .padding(.leading, 28)
                     }
+
+                    if store.isTodo && datePickerActive {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(parsedStartDate.map { formatDateBadge($0) } ?? "Unrecognized date")
+                                .font(.caption)
+                                .foregroundStyle(parsedStartDate != nil ? .primary : .secondary)
+                            DatePicker(
+                                "",
+                                selection: Binding(
+                                    get: { parsedStartDate ?? Calendar.current.startOfDay(for: Date()) },
+                                    set: { confirmDate($0) }
+                                ),
+                                in: Calendar.current.startOfDay(for: Date())...,
+                                displayedComponents: .date
+                            )
+                            .datePickerStyle(.compact)
+                            .labelsHidden()
+                        }
+                        .padding(.leading, 28)
+                    }
                 }
             }
         }
         .padding()
-        .frame(width: 500, height: 130, alignment: .top)
+        .frame(width: 500)
         .task { await store.load() }
         .onChange(of: store.loaded) {
             if store.todayPageID != nil { focused = true }
@@ -155,6 +204,10 @@ struct QuickNoteView: View {
                 selectedCategoryID = nil
                 categoryPickerActive = false
                 categoryPickerQuery = ""
+                selectedStartDate = nil
+                datePickerActive = false
+                datePickerQuery = ""
+                parsedStartDate = nil
             }
         }
     }
@@ -172,11 +225,16 @@ struct QuickNoteView: View {
             selectCategory(filteredCategories[0])
             return
         }
+        if datePickerActive {
+            if let date = parsedStartDate { confirmDate(date) }
+            return
+        }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { dismiss(); return }
         if store.isTodo {
             let catID = selectedCategoryID
-            Task { await store.addTodo(title: trimmed, categoryID: catID) }
+            let start = selectedStartDate
+            Task { await store.addTodo(title: trimmed, categoryID: catID, start: start) }
         } else {
             Task { await store.addNote(text: trimmed) }
         }
@@ -212,5 +270,59 @@ struct QuickNoteView: View {
         text = words.joined(separator: " ")
         categoryPickerActive = false
         categoryPickerQuery = ""
+    }
+
+    private func updateDatePicker(for text: String) {
+        guard store.isTodo else { datePickerActive = false; return }
+        let words = text.components(separatedBy: " ")
+        if let tilde = words.first(where: { $0.hasPrefix("~") }) {
+            let query = String(tilde.dropFirst())
+            datePickerActive = true
+            datePickerQuery = query
+            parsedStartDate = DateParser.parse(query)
+        } else {
+            datePickerActive = false
+            datePickerQuery = ""
+            parsedStartDate = nil
+        }
+    }
+
+    private func confirmDate(_ date: Date) {
+        selectedStartDate = Calendar.current.startOfDay(for: date)
+        var words = text.components(separatedBy: " ")
+        words.removeAll { $0.hasPrefix("~") }
+        text = words.joined(separator: " ").trimmingCharacters(in: .whitespaces)
+        if !text.isEmpty { text += " " }
+        datePickerActive = false
+        datePickerQuery = ""
+        parsedStartDate = nil
+        focused = true
+    }
+
+    private func cancelDatePicker() {
+        var words = text.components(separatedBy: " ")
+        words.removeAll { $0.hasPrefix("~") }
+        text = words.joined(separator: " ").trimmingCharacters(in: .whitespaces)
+        datePickerActive = false
+        datePickerQuery = ""
+        parsedStartDate = nil
+    }
+
+    private func formatDateBadge(_ date: Date) -> String {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let days = cal.dateComponents([.day], from: today, to: date).day ?? 0
+        switch days {
+        case 0:  return "Today"
+        case 1:  return "Tomorrow"
+        case 2...6:
+            let fmt = DateFormatter()
+            fmt.dateFormat = "EEEE"
+            return fmt.string(from: date)
+        default:
+            let fmt = DateFormatter()
+            fmt.dateFormat = "MMM d"
+            return fmt.string(from: date)
+        }
     }
 }

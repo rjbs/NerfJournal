@@ -112,7 +112,7 @@ programmatically with proper exit-code feedback.
 
 ```
 cd cli && swift build -c release
-cp .build/release/nerf-add-todo /usr/local/bin/
+cp .build/release/nerf-add-todo ~/bin
 ```
 
 ```
