@@ -319,6 +319,13 @@ struct JournalPageDetailView: View {
     @State private var editingNoteID: Int64? = nil
     @State private var selectedNoteID: Int64? = nil
 
+    // True while a child row is presenting a sheet/alert (adjust time, set URL,
+    // send to future). The List keeps keyboard focus behind these modals, so
+    // its .onKeyPress would otherwise swallow the Return meant for the sheet's
+    // default button and start editing the selected row instead.
+    // -- claude, 2026-06-13
+    @State private var rowModalPresented = false
+
     @AppStorage("resolvedWithNotes") private var resolvedWithNotes = false
 
     @Environment(\.undoManager) private var undoManager
@@ -354,6 +361,7 @@ struct JournalPageDetailView: View {
                                         readOnly: readOnly,
                                         isEditing: editingTodoID == todo.id,
                                         selectedIDs: selectedTodoIDs,
+                                        modalPresented: $rowModalPresented,
                                         onCommitEdit: { newTitle in
                                             let trimmed = newTitle.trimmingCharacters(in: .whitespaces)
                                             editingTodoID = nil
@@ -457,6 +465,7 @@ struct JournalPageDetailView: View {
                                     readOnly: readOnly,
                                     isEditing: editingNoteID == note.id,
                                     isSelected: selectedNoteID == note.id,
+                                    modalPresented: $rowModalPresented,
                                     onCommitEdit: { newText in
                                         let trimmed = newText.trimmingCharacters(in: .whitespaces)
                                         editingNoteID = nil
@@ -475,6 +484,10 @@ struct JournalPageDetailView: View {
                     }
                 }
                 .onKeyPress(phases: .down) { keyPress in
+                    // Stay out of the way of any row modal: let Return/Escape fall
+                    // through to the sheet's default/cancel button instead of being
+                    // captured here. -- claude, 2026-06-13
+                    if rowModalPresented { return .ignored }
                     if keyPress.key == .escape {
                         if !selectedTodoIDs.isEmpty { selectedTodoIDs = []; return .handled }
                         if selectedNoteID != nil { selectedNoteID = nil; return .handled }
@@ -689,6 +702,7 @@ struct JournalPageDetailView: View {
                         selectedIDs: selectedTodoIDs,
                         showCategoryDot: true,
                         activityTimestamp: todo.ending?.date,
+                        modalPresented: $rowModalPresented,
                         onCommitEdit: { newTitle in
                             let trimmed = newTitle.trimmingCharacters(in: .whitespaces)
                             editingTodoID = nil
@@ -705,6 +719,7 @@ struct JournalPageDetailView: View {
                         isEditing: editingNoteID == note.id,
                         isSelected: selectedNoteID == note.id,
                         activityTimestamp: note.timestamp,
+                        modalPresented: $rowModalPresented,
                         onCommitEdit: { newText in
                             let trimmed = newText.trimmingCharacters(in: .whitespaces)
                             editingNoteID = nil
@@ -806,6 +821,7 @@ struct TodoRow: View {
     var selectedIDs: Set<Int64> = []
     var showCategoryDot: Bool = false
     var activityTimestamp: Date? = nil
+    var modalPresented: Binding<Bool>? = nil
     var onCommitEdit: (String) -> Void = { _ in }
     var onCancelEdit: () -> Void = {}
 
@@ -829,6 +845,11 @@ struct TodoRow: View {
         case abandonedToday                          // abandoned on pageDate
         case migratedOpen                            // still pending today (past page)
         case migratedResolved(TodoEnding.Kind, Date) // ended after pageDate (past page)
+    }
+
+    private var anyModalPresented: Bool {
+        showingSetURLAlert || showingInvalidURLAlert
+            || showingAdjustEndingTime || todoToSendToFuture != nil
     }
 
     private var rowState: RowState {
@@ -1085,6 +1106,9 @@ struct TodoRow: View {
             .padding()
             .frame(minWidth: 300)
         }
+        .onChange(of: anyModalPresented) { _, presented in
+            modalPresented?.wrappedValue = presented
+        }
     }
 
     private var adjustEndingTimeDayRange: ClosedRange<Date> {
@@ -1205,6 +1229,7 @@ struct NoteRow: View {
     var isEditing: Bool = false
     var isSelected: Bool = false
     var activityTimestamp: Date? = nil
+    var modalPresented: Binding<Bool>? = nil
     var onCommitEdit: (String) -> Void = { _ in }
     var onCancelEdit: () -> Void = {}
 
@@ -1288,6 +1313,9 @@ struct NoteRow: View {
             }
             .padding()
             .frame(width: 220)
+        }
+        .onChange(of: showingAdjustTime) { _, presented in
+            modalPresented?.wrappedValue = presented
         }
     }
 

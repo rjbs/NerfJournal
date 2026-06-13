@@ -21,6 +21,7 @@ struct FutureLogView: View {
 
     @State private var selectedIDs: Set<Int64> = []
     @State private var editingTodoID: Int64? = nil
+    @State private var rowModalPresented = false
 
     var body: some View {
         Group {
@@ -35,6 +36,7 @@ struct FutureLogView: View {
                             todo: todo,
                             selectedIDs: selectedIDs,
                             isEditing: editingTodoID == todo.id,
+                            modalPresented: $rowModalPresented,
                             onCommitEdit: { newTitle in
                                 let trimmed = newTitle.trimmingCharacters(in: .whitespaces)
                                 editingTodoID = nil
@@ -47,6 +49,7 @@ struct FutureLogView: View {
                     }
                 }
                 .onKeyPress(phases: .down) { keyPress in
+                    if rowModalPresented { return .ignored }
                     if keyPress.key == .escape {
                         if !selectedIDs.isEmpty { selectedIDs = []; return .handled }
                         return .ignored
@@ -79,6 +82,7 @@ struct FutureLogRow: View {
     var selectedIDs: Set<Int64> = []
     var isEditing: Bool = false
     var showDate: Bool = true
+    var modalPresented: Binding<Bool>? = nil
     var onCommitEdit: (String) -> Void = { _ in }
     var onCancelEdit: () -> Void = {}
 
@@ -256,6 +260,13 @@ struct FutureLogRow: View {
             .padding()
             .frame(minWidth: 300)
         }
+        .onChange(of: anyModalPresented) { _, presented in
+            modalPresented?.wrappedValue = presented
+        }
+    }
+
+    private var anyModalPresented: Bool {
+        showingSendToDateSheet || showingSetURLAlert || showingInvalidURLAlert
     }
 
     private func commitURL() {
@@ -288,6 +299,7 @@ struct FutureLogForDateView: View {
 
     @State private var selectedIDs: Set<Int64> = []
     @State private var editingTodoID: Int64? = nil
+    @State private var rowModalPresented = false
 
     private var filteredTodos: [Todo] {
         pageStore.futureTodos.filter { Calendar.current.isDate($0.start, inSameDayAs: date) }
@@ -301,6 +313,7 @@ struct FutureLogForDateView: View {
                     selectedIDs: selectedIDs,
                     isEditing: editingTodoID == todo.id,
                     showDate: false,
+                    modalPresented: $rowModalPresented,
                     onCommitEdit: { newTitle in
                         let trimmed = newTitle.trimmingCharacters(in: .whitespaces)
                         editingTodoID = nil
@@ -313,6 +326,7 @@ struct FutureLogForDateView: View {
             }
         }
         .onKeyPress(phases: .down) { keyPress in
+            if rowModalPresented { return .ignored }
             if keyPress.key == .escape {
                 if !selectedIDs.isEmpty { selectedIDs = []; return .handled }
                 return .ignored
