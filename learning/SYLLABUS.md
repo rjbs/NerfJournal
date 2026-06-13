@@ -166,3 +166,24 @@ parsing module — the kind of plain-Swift code that the `~date` quick-entry
 feature is built on.
 
 **Files to look at:** `AppDelegate.swift`, `QuickNoteView.swift`, `DateParser.swift`
+
+---
+
+### Unit 11 — The Command-Line Tool: swift-argument-parser and a Standalone Executable
+
+NerfJournal's `nerf` CLI is a second, independent program that talks to the same
+SQLite file — a Swift Package executable (not part of the Xcode app project) with
+its own `Package.swift` and dependencies. The unit covers
+[swift-argument-parser](https://github.com/apple/swift-argument-parser): the
+declarative, property-wrapper-driven model where a command is a `ParsableCommand`
+struct whose `@Argument`, `@Option`, and `@Flag` properties *are* the parser, and
+`@main` is the entry point. Subcommands (`nerf add-todo`, `nerf categories`) via
+`CommandConfiguration`; shared flags mixed in with `@OptionGroup` (the
+`DatabaseOptions` `--database` group); error handling through thrown errors
+(`ValidationError`, a custom `CLIError`) that the framework turns into exit codes
+and messages. It also revisits, from the other side, why the CLI re-declares the
+app's model types instead of importing them, and how a non-`Codable` GRDB record
+must hand-write `encode(to:)` (the thread first pulled in Unit 7).
+
+**Files to look at:** `cli/Package.swift`, `cli/Sources/nerf/Nerf.swift`,
+`cli/Sources/nerf/AddTodo.swift`, `cli/Sources/nerf/Database.swift`
