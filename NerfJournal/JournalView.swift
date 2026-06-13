@@ -605,7 +605,7 @@ struct JournalPageDetailView: View {
             }
         }
         .onChange(of: selectedNoteID) { _, _ in editingNoteID = nil }
-        .focusedValue(\.focusAddTodo, readOnly ? nil : Binding<Bool>(
+        .focusedSceneValue(\.focusAddTodo, readOnly ? nil : Binding<Bool>(
             get: { addFieldFocused && !entryIsNote },
             set: { newValue in
                 if newValue {
@@ -615,7 +615,7 @@ struct JournalPageDetailView: View {
                 addFieldFocused = newValue
             }
         ))
-        .focusedValue(\.focusAddNote, readOnly ? nil : Binding<Bool>(
+        .focusedSceneValue(\.focusAddNote, readOnly ? nil : Binding<Bool>(
             get: { addFieldFocused && entryIsNote },
             set: { newValue in
                 if newValue {
