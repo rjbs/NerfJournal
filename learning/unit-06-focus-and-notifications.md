@@ -106,6 +106,54 @@ BundleManagerView()
 This lets the Debug menu's export/import/factory-reset commands function from
 the Bundle Manager window, which is a reasonable expectation.
 
+### What gets published: the reference, plus observation
+
+It's worth being precise about what `.focusedSceneObject(pageStore)` shares.
+`PageStore` is a class, so `pageStore` holds a *reference*. What flows into the
+focus environment is that reference — not a snapshot of its `@Published`
+properties at the moment of the call. Every reader is looking at the same live
+object, so mutations to `pageStore.todos`, `pageStore.page`, and so on are
+visible to all of them with no extra plumbing. This is the same reference
+semantics covered in Unit 1: passing a class instance passes a handle to one
+shared object, not a copy.
+
+What `.focusedSceneObject` (and the `@FocusedObject` that reads it) adds on top
+of plain reference-sharing is **observation**. Like `@ObservedObject` and
+`@EnvironmentObject` (Unit 4), `@FocusedObject` subscribes to the object's
+`objectWillChange` publisher. That subscription is what causes `TodoCommands`'
+body to re-evaluate when a `@Published` property changes — so a menu item's
+`.disabled(pageStore == nil)` or `.disabled(journalStore.pageDates.isEmpty)`
+actually re-checks itself as state changes. Without the subscription you'd still
+have the same live object, but nothing would tell the menu bar to re-evaluate
+its disabled state. With it, you get both the live reference *and* change
+notifications — the same combination `@EnvironmentObject` gives you, just routed
+*up* to menus instead of *down* to child views.
+
+### What if the reference were reassigned?
+
+Suppose `pageStore` were reassigned to a brand-new `PageStore` instance — would
+the focus environment pick up the new one? Yes. `.focusedSceneObject(pageStore)`
+is called inside the `App`'s `body` computed property, so SwiftUI re-evaluates
+it whenever the scene graph needs reconsideration. If the reference changed, the
+focus environment would update to point at the new object, and `@FocusedObject`
+readers would re-subscribe to the new object's `objectWillChange`.
+
+SwiftUI diffs scene modifiers much as it diffs view modifiers: applying
+`.focusedSceneObject(sameObjectAsBefore)` is cheap — if the reference hasn't
+changed, nothing downstream updates. Only when the reference actually differs
+does the focus environment swap.
+
+The wrinkle is that `pageStore` is a `@StateObject` (Unit 4), which exists
+precisely to *prevent* the reference from changing across re-renders. SwiftUI
+guarantees a `@StateObject` is created once per view lifetime and preserved, so
+`pageStore` is a stable reference until the `NerfJournalApp` instance itself
+goes away — which, for the top-level `App`, means never. You *could* write
+`pageStore = PageStore()` inside a method and SwiftUI would honor it, but the
+whole point of `@StateObject` is that you normally don't. The mental model: the
+focus environment reflects whatever `body` publishes each time it runs;
+stability of the reference is a property of `@StateObject`, not of the
+publishing mechanism.
+
 ---
 
 ## View-Level Focus: `focusedValue` and `FocusedValueKey`
