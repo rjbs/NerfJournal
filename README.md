@@ -144,11 +144,16 @@ system('nerf', 'add-todo', '--category', 'GitHub', "Review PR #$pr_number")
 ### `nerf categories`
 
 ```
-nerf categories [--database PATH]
+nerf categories [--json] [--database PATH]
 ```
 
-Lists the defined categories in display order, one per line, with each
-category's color.
+Lists the defined categories in display order, one per line, each
+prefixed with a filled circle (●) drawn in the category's color via a
+24-bit-color ANSI escape, followed by the name and color name.
+
+- `--json`: emit a JSON array of `{"name", "color"}` objects instead,
+  where `color` is a CSS `#aabbcc` string. Handy for piping to other
+  tools.
 
 ## Future Plans
 
