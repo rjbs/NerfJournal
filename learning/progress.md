@@ -15,5 +15,7 @@ nav_order: 3
 | 6 | Focus, Cross-Window Communication, and Notifications | written |
 | 7 | Persistence with GRDB | not started |
 | 8 | Undo, Transactions, and Correctness | not started |
+| 9 | Swift Concurrency | not started |
+| 10 | AppKit Interoperability and the Quick-Entry Panel | not started |
 
 ## Notes

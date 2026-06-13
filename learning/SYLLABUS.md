@@ -133,3 +133,36 @@ to work around them. Bulk operations and single-undo-step design.
 
 **Files to look at:** `PageStore.swift` (all `undo`-related methods),
 `JournalView.swift` (context menus)
+
+---
+
+### Unit 9 — Swift Concurrency
+
+`async`/`await`, `Task`, and actors — the model that replaces callback closures
+and dispatch queues. `@MainActor` as actor isolation, not just "run on the main
+thread": why the stores are `@MainActor`-isolated and what the compiler enforces
+as a result. `Sendable` and why a closure passed to a background queue can't
+freely touch `@MainActor` state. `MainActor.assumeIsolated` as the escape hatch
+for code that runs on the main queue but isn't statically known to (the
+notification-observer closures in `PageStore.init` and `AppDelegate`). How this
+maps to — and differs from — Rust's `Send`/`Sync` and Perl's lack of any of it.
+
+**Files to look at:** `AppDatabase.swift`, `PageStore.swift` (`init` observers,
+`async` mutations), `AppDelegate.swift` (`assumeIsolated`)
+
+---
+
+### Unit 10 — AppKit Interoperability and the Quick-Entry Panel
+
+SwiftUI does not stand alone on macOS. The global quick-entry panel is pure
+AppKit glue: an `NSApplicationDelegate` (bridged in via `@NSApplicationDelegateAdaptor`),
+a Carbon global hot key, an `NSPanel` floating window, and an `NSHostingController`
+that hosts a SwiftUI view inside it. The reverse direction too: observing a
+hosting controller's `preferredContentSize` with a Combine `publisher(for:)` to
+resize the panel as the SwiftUI content grows. Combine here is the same
+machinery underlying `@Published`/`ObservableObject`, now used explicitly.
+`DateParser` rounds out the unit as a self-contained, framework-free Swift
+parsing module — the kind of plain-Swift code that the `~date` quick-entry
+feature is built on.
+
+**Files to look at:** `AppDelegate.swift`, `QuickNoteView.swift`, `DateParser.swift`
