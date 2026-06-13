@@ -428,10 +428,12 @@ notification. Every mutating method on `PageStore` follows that template.
 
 ## The CLI: GRDB without `Codable`
 
-The `nerf-add-todo` command-line tool (Unit 6's distributed-notification sender)
-talks to the *same* SQLite file, but it is a separate Swift package that does not
-import the app's `Models.swift`. It re-declares the handful of types it needs —
-and in doing so it exposes what `Codable` was quietly doing for the app.
+The `nerf` command-line tool (Unit 6's distributed-notification sender; its
+structure is Unit 11's subject) talks to the *same* SQLite file through its
+`add-todo` subcommand, but it is a separate Swift package that does not import the
+app's `Models.swift`. It re-declares the handful of types it needs — in its
+`Database.swift` — and in doing so it exposes what `Codable` was quietly doing for
+the app.
 
 The CLI's `Todo` conforms to `MutablePersistableRecord` but **not** `Codable`:
 
@@ -473,7 +475,7 @@ the query builder would be more awkward than a literal statement:
 let titleDup = try Row.fetchOne(
     db,
     sql: "SELECT 1 FROM todo WHERE ending IS NULL AND title = ?",
-    arguments: [args.title]
+    arguments: [title]
 )
 ```
 
@@ -544,11 +546,12 @@ The three-query read block and the `start <= pageDate` / `start > pageDate` spli
 Map each query to the `@Published` property it fills. Note the extra main-actor
 `filter` on `ending.date` and the `.nerfJournalTodosDidChange` post at the end.
 
-### `cli/Sources/nerf-add-todo/main.swift` lines 43–67: a non-`Codable` record
+### `cli/Sources/nerf/Database.swift` lines 43–69: a non-`Codable` record
 
 The CLI's `Todo` with a hand-written `encode(to container:)`. Compare it to the
 app's `Todo`, which gets the same mapping for free from `Codable`. Then read the
-duplicate-check (lines ~215–250) for GRDB's raw-SQL API.
+duplicate-check in `cli/Sources/nerf/AddTodo.swift` (the `findDuplicate` method,
+lines ~103–125) for GRDB's raw-SQL API.
 
 ---
 

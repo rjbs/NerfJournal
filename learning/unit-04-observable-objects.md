@@ -361,7 +361,7 @@ that not every store goes to every window — `BundleManagerView` gets
 
 Read the `@MainActor` annotation, `ObservableObject` conformance, `@Published`
 properties, and the distributed notification observer in `init`. The observer
-is for the CLI tool — when `nerf-add-todo` inserts a todo from the command
+is for the CLI tool — when `nerf add-todo` inserts a todo from the command
 line, it posts a distributed notification that triggers a refresh here.
 
 ### `PageStore.swift` lines 475–515: `refreshContents`

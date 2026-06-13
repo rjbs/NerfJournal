@@ -296,7 +296,7 @@ the OS for something that doesn't cross any process boundary.
 
 ## Cross-Process Events: `DistributedNotificationCenter`
 
-The CLI tool (`nerf-add-todo`) runs as a separate process. When it inserts a
+The CLI tool (`nerf add-todo`) runs as a separate process. When it inserts a
 todo, the journal app needs to reload — but the two processes share no memory
 and have no direct connection.
 
