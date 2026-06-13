@@ -125,10 +125,13 @@ struct AppDatabase {
         }
 
         migrator.registerMigration("v2") { db in
-            // GRDB defers FK checks during migrations, so cascade actions
-            // don't fire. Delete in dependency order so FK checks pass at
-            // commit: note first (references both todo and journalPage),
-            // then todo (references journalPage), then journalPage.
+            // GRDB runs migrations with foreign keys off (the default
+            // foreignKeyChecks: .deferred) and does a single foreign_key_check
+            // at commit. Because this wipes every related table, that check
+            // sees an empty database no matter what order we delete in — so the
+            // children-first ordering here is defensive habit, not a
+            // requirement, and cascades wouldn't fire even if we relied on them.
+            // -- claude, 2026-06-13
             try db.execute(sql: "DELETE FROM note")
             try db.execute(sql: "DELETE FROM todo")
             try db.execute(sql: "DELETE FROM journalPage")
@@ -147,7 +150,9 @@ struct AppDatabase {
         }
 
         migrator.registerMigration("v3") { db in
-            // Wipe in FK-dependency order (children first).
+            // Wipe everything. As in v2, foreign keys are off during the
+            // migration, so the children-first order here is defensive, not
+            // required. -- claude, 2026-06-13
             try db.execute(sql: "DELETE FROM note")
             try db.execute(sql: "DELETE FROM todo")
             try db.execute(sql: "DELETE FROM bundleTodo")
