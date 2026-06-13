@@ -14,7 +14,7 @@ nav_order: 3
 | 5 | App Structure and Multiple Windows | written |
 | 6 | Focus, Cross-Window Communication, and Notifications | written |
 | 7 | Persistence with GRDB | written |
-| 8 | Undo, Transactions, and Correctness | not started |
+| 8 | Undo, Transactions, and Correctness | written |
 | 9 | Swift Concurrency | not started |
 | 10 | AppKit Interoperability and the Quick-Entry Panel | not started |
 | 11 | The Command-Line Tool: swift-argument-parser | not started |
