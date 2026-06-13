@@ -10,7 +10,10 @@ nav_order: 70
 Every store in NerfJournal is a thin layer over one SQLite file. The stores hold
 the *in-memory* picture — `@Published` arrays the views render — but the file on
 disk is the source of truth, and the path between them runs through
-[GRDB](https://github.com/groue/GRDB.swift), a Swift SQLite toolkit.
+[GRDB](https://github.com/groue/GRDB.swift), a Swift SQLite toolkit. The name is
+just its author signing his work — **G**wendal **R**oué + **DB** — which is why
+the repository lives at `groue/GRDB.swift`; there's no non-Swift "GRDB" it needs
+to be distinguished from.
 
 This unit is about that path. How a Swift `struct` becomes a row and back. How
 GRDB's record protocols relate to Swift's own `Codable`. Why NerfJournal has
