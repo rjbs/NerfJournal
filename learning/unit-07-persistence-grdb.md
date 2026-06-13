@@ -290,14 +290,31 @@ and less error-prone than writing column-by-column data-preserving SQL. The
 choice is a judgment call about what the data is worth at that moment, not a
 technical limitation.
 
-Two things in that destructive code are not optional, though:
+Two things about how that destructive code runs are worth getting exactly right
+— the first because it's easy to overstate:
 
-- **Delete order matters.** Rows are deleted children-first (`note`, then `todo`,
-  then `journalPage`, …) because of foreign keys. The v2 comment spells out the
-  trap: *"GRDB defers FK checks during migrations, so cascade actions don't fire.
-  Delete in dependency order so FK checks pass at commit."* You cannot lean on
-  `onDelete: .cascade` here — inside a migration the cascade is suppressed, so you
-  must honor the dependency graph by hand.
+- **Foreign keys are off during the migration.** By default GRDB registers each
+  migration with `foreignKeyChecks: .deferred`, which it implements (see
+  `Migration.swift`) as: set `PRAGMA foreign_keys = OFF`, run the migration body
+  inside a transaction, run `PRAGMA foreign_key_check` over the *whole database*
+  just before committing, then restore `PRAGMA foreign_keys = ON`. So inside the
+  body, constraints aren't enforced per-statement *and* cascade actions don't fire
+  (`ON DELETE CASCADE` needs foreign keys on). The single enforcement point is
+  that one full-database scan at commit.
+
+  A consequence worth stating plainly, because the in-code comment overstates it:
+  for a migration that wipes *every* related table, the delete order does **not**
+  actually matter. With enforcement deferred to a commit-time scan and the
+  committed end-state empty, there are no orphan rows for `foreign_key_check` to
+  find, whatever order you emptied the tables in. The children-first ordering here
+  — and even doing `DELETE` before `DROP TABLE` at all — is defensive habit, not a
+  requirement; with foreign keys off, `DROP TABLE` removes the rows with no
+  constraint action. Order *does* matter in two other cases: under
+  `foreignKeyChecks: .immediate` (foreign keys on, checked per statement), where
+  deleting a still-referenced parent fails on that statement; and under deferred
+  checks when the committed end-state still holds live rows whose foreign keys
+  must resolve — the classic create-new-table / copy-data / drop-old-table
+  rebuild, where the final scan runs against real data.
 - **The whole migration is one transaction.** GRDB wraps each migration in a
   transaction by default, so if any statement throws, the entire migration rolls
   back and the file stays at the previous version. A half-applied schema is not a
@@ -547,9 +564,12 @@ JSON object. Suppose you wanted `ending` to instead occupy two real columns
 would you change, would it affect the export JSON, and what migration would you
 write?
 
-**3.** The v3 migration deletes rows before dropping tables, in a specific order.
-What error would you expect if you dropped `journalPage` *before* deleting from
-`todo`? Why does `onDelete: .cascade` not save you here?
+**3.** The v3 migration deletes rows before dropping tables, children-first. Given
+that GRDB runs it with `foreignKeyChecks: .deferred` (foreign keys off during the
+body, one `foreign_key_check` at commit), would reordering those deletes —
+parent-first — actually change anything for this all-tables wipe? Now re-register
+the same migration with `foreignKeyChecks: .immediate`: which statement would
+fail, and why?
 
 **4.** `refreshContents` filters todos with `start <= pageDate` in SQL, then
 applies a second `ending.date >= pageDate` filter in Swift on the main actor. Why
