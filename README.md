@@ -163,6 +163,24 @@ prefixed with a filled circle (●) drawn in the category's color via a
   where `color` is a CSS `#aabbcc` string. Handy for piping to other
   tools.
 
+### `nerf todo`
+
+```
+nerf todo [--json] [--database PATH]
+```
+
+Prints today's remaining (still-open) todos — including work carried
+forward from earlier days, but not Future Log items dated ahead — grouped
+by category in the same order as the journal page view: categories by
+their sort order, then an "Other" group for uncategorized work. Each group
+header is the category's colored circle (●) and name; each todo whose
+`externalURL` is set has its title hyperlinked via an OSC 8 terminal
+escape. If today has no journal page yet, the items are printed anyway.
+
+- `--json`: emit a JSON array of `{"title", "category", "start", "url"}`
+  objects instead (in the same order), with `category` and `url` null when
+  unset and `start` as an ISO 8601 timestamp.
+
 ## Future Plans
 
 Roughly in priority order:
