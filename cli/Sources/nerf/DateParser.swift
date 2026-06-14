@@ -10,9 +10,11 @@ import Foundation
 //   sun / mon / tue / wed / thu / fri / sat  (next occurrence, always >= 1 day ahead)
 //   +N / +Nd                                 (N days from today)
 //   +Nw                                      (N weeks from today)
+//   an ISO 8601 date (2026-07-20) or timestamp (2026-07-20T09:00:00Z)
 enum DateParser {
     static func parse(_ query: String) -> Date? {
-        let q = query.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let q = trimmed.lowercased()
         guard !q.isEmpty else { return nil }
 
         let cal  = Calendar.current
@@ -46,7 +48,29 @@ enum DateParser {
             }
         }
 
+        // ISO 8601, with or without a time.  A full timestamp is reduced to the
+        // start of its day in the local calendar, matching the start-of-day Dates
+        // the shorthand forms above produce — `start` is a day, not a moment, so
+        // 2026-07-20T09:00:00Z and 2026-07-20 land on the same page. -- claude, 2026-06-14
+        if let date = parseISO8601(trimmed) {
+            return cal.startOfDay(for: date)
+        }
+
         return nil
+    }
+
+    private static func parseISO8601(_ s: String) -> Date? {
+        let iso = ISO8601DateFormatter()
+        if let date = iso.date(from: s) { return date }
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = iso.date(from: s) { return date }
+
+        // Date-only "yyyy-MM-dd", read as a day in the local calendar.
+        let dayOnly = DateFormatter()
+        dayOnly.locale = Locale(identifier: "en_US_POSIX")
+        dayOnly.timeZone = .current
+        dayOnly.dateFormat = "yyyy-MM-dd"
+        return dayOnly.date(from: s)
     }
 
     // Returns the next calendar date that falls on `target` weekday.
