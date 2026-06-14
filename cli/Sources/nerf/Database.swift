@@ -39,8 +39,8 @@ struct TodoEnding: DatabaseValueConvertible {
     }
 }
 
-// Todo only needs to be inserted (not read), but GRDB's MutablePersistableRecord
-// requires EncodableRecord, so encode(to:) is provided manually.
+// GRDB's MutablePersistableRecord requires EncodableRecord, so encode(to:) is
+// provided manually; FetchableRecord (below) adds the read side for `nerf todo`.
 struct Todo: MutablePersistableRecord {
     var id: Int64?
     var title: String
@@ -64,6 +64,18 @@ struct Todo: MutablePersistableRecord {
         container["ending"]        = ending
         container["categoryID"]    = categoryID
         container["externalURL"]   = externalURL
+    }
+}
+
+extension Todo: FetchableRecord {
+    init(row: Row) {
+        id            = row["id"]
+        title         = row["title"]
+        shouldMigrate = row["shouldMigrate"]
+        start         = row["start"]
+        ending        = row["ending"]
+        categoryID    = row["categoryID"]
+        externalURL   = row["externalURL"]
     }
 }
 
