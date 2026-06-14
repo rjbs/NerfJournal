@@ -132,10 +132,13 @@ nerf add-todo [--no-migrate] [--category NAME] [--strict] [--url URL] [--start W
 - `--strict`: when `--category` names an unknown category, create nothing
   and exit nonzero instead of warning and continuing
 - `--url URL`: set an `externalURL` on the todo
-- `--start WHEN`: set the todo's start date using the same shorthand as the
-  app's `~` quick-entry — `today`, `tomorrow`, a weekday (`wed`), `+Nd`
-  (days), or `+Nw` (weeks). A future date lands the todo in the Future Log;
-  omitting `--start` starts it today as before.
+- `--start WHEN`: set the todo's start date. Accepts the same shorthand as
+  the app's `~` quick-entry — `today`, `tomorrow`, a weekday (`wed`), `+Nd`
+  (days), or `+Nw` (weeks) — as well as an ISO 8601 date (`2026-07-20`) or
+  timestamp (`2026-07-20T09:00:00Z`). Since a todo's start is a day rather
+  than a moment, a timestamp is reduced to the start of its day in the local
+  calendar. A future date lands the todo in the Future Log; omitting
+  `--start` starts it today as before.
 - `--database PATH`: override the default database path (for testing)
 
 Exits 0 on success (quiet), 1 on any error (message to stderr). A todo
