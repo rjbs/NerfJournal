@@ -181,6 +181,19 @@ escape. If today has no journal page yet, the items are printed anyway.
   "url"}` objects instead (in the same order), with `category` and `url`
   null when unset and `start` as an ISO 8601 timestamp.
 
+### `nerf done` / `nerf abandon`
+
+```
+nerf done ID [--database PATH]
+nerf abandon ID [--database PATH]
+```
+
+End the todo with the given id (the same ids `nerf todo --json` reports),
+setting its ending to the current time — `done` or `abandoned`
+respectively. Both exit nonzero with a message, changing nothing, if the
+id matches no todo, if the todo hasn't started yet (a Future Log item), or
+if it has already been ended.
+
 ## Future Plans
 
 Roughly in priority order:
