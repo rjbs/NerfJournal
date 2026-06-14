@@ -48,12 +48,14 @@ struct AddTodo: ParsableCommand {
 
         let dbQueue = try db.open()
 
-        // Today's page must already exist; the CLI never creates pages.  A future
-        // todo lives in the Future Log rather than on today's page, but we still
-        // require an active journal so scripted callers fail loudly on a fresh DB.
-        let todayPage = try fetchTodayPage(dbQueue, date: today)
-        guard todayPage != nil else {
-            throw CLIError("no journal page for today — start one in NerfJournal first")
+        // A todo starting today must land on today's page, which the CLI never
+        // creates — so require it to exist.  A future-dated todo lives in the
+        // Future Log instead, so it needs no page and can be filed any day. -- claude, 2026-06-13
+        if startDate <= today {
+            let todayPage = try fetchTodayPage(dbQueue, date: today)
+            guard todayPage != nil else {
+                throw CLIError("no journal page for today — start one in NerfJournal first")
+            }
         }
 
         let categoryID = resolveCategory(dbQueue)

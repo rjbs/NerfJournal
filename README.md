@@ -136,8 +136,10 @@ nerf add-todo [--no-migrate] [--category NAME] [--url URL] [--start WHEN] TITLE.
   omitting `--start` starts it today as before.
 - `--database PATH`: override the default database path (for testing)
 
-Exits 0 on success (quiet), 1 on any error (message to stderr). The
-tool requires today's journal page to already exist.
+Exits 0 on success (quiet), 1 on any error (message to stderr). A todo
+starting today requires today's journal page to already exist; a
+future-dated todo (`--start tomorrow`, etc.) is filed into the Future Log
+and needs no page, so you can queue Monday's work on a Saturday.
 
 From Perl:
 ```perl
