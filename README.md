@@ -123,13 +123,17 @@ for the details of one.
 ### `nerf add-todo`
 
 ```
-nerf add-todo [--no-migrate] [--category NAME] [--url URL] TITLE...
+nerf add-todo [--no-migrate] [--category NAME] [--url URL] [--start WHEN] TITLE...
 ```
 
 - `--no-migrate`: mark the todo as non-migratable (default: migratable)
 - `--category NAME`: assign to a named category (case-insensitive; warns
   and continues without category if not found)
 - `--url URL`: set an `externalURL` on the todo
+- `--start WHEN`: set the todo's start date using the same shorthand as the
+  app's `~` quick-entry — `today`, `tomorrow`, a weekday (`wed`), `+Nd`
+  (days), or `+Nw` (weeks). A future date lands the todo in the Future Log;
+  omitting `--start` starts it today as before.
 - `--database PATH`: override the default database path (for testing)
 
 Exits 0 on success (quiet), 1 on any error (message to stderr). The
