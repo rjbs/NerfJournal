@@ -19,6 +19,10 @@ struct AddTodo: ParsableCommand {
     @Option(name: .long, help: "Set an external URL on the todo.")
     var url: String?
 
+    @Option(name: .long,
+            help: "Start date for the todo (e.g. \"tomorrow\", \"wed\", \"+3d\", \"+2w\"). Future dates land in the Future Log.")
+    var start: String?
+
     @OptionGroup var db: DatabaseOptions
 
     @Argument(help: "The todo title (all words are joined into one title).")
@@ -30,10 +34,23 @@ struct AddTodo: ParsableCommand {
             throw ValidationError("todo title is required")
         }
 
-        let dbQueue = try db.open()
         let today = Calendar.current.startOfDay(for: Date())
 
-        // Today's page must already exist; the CLI never creates pages.
+        let startDate: Date
+        if let start = self.start {
+            guard let parsed = DateParser.parse(start) else {
+                throw ValidationError("could not understand start date: \(start)")
+            }
+            startDate = parsed
+        } else {
+            startDate = today
+        }
+
+        let dbQueue = try db.open()
+
+        // Today's page must already exist; the CLI never creates pages.  A future
+        // todo lives in the Future Log rather than on today's page, but we still
+        // require an active journal so scripted callers fail loudly on a fresh DB.
         let todayPage = try fetchTodayPage(dbQueue, date: today)
         guard todayPage != nil else {
             throw CLIError("no journal page for today — start one in NerfJournal first")
@@ -52,7 +69,7 @@ struct AddTodo: ParsableCommand {
                     id: nil,
                     title: title,
                     shouldMigrate: !noMigrate,
-                    start: today,
+                    start: startDate,
                     ending: nil,
                     categoryID: categoryID,
                     externalURL: url
