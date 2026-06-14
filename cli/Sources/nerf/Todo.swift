@@ -69,6 +69,7 @@ struct TodoCommand: ParsableCommand {
 
     private func printJSON(_ groups: [CategoryGroup]) throws {
         struct Entry: Encodable {
+            var id: Int64?
             var title: String
             var category: String?
             var start: Date
@@ -76,9 +77,10 @@ struct TodoCommand: ParsableCommand {
 
             // Manual encode (not the synthesized one) so nil category/url emit
             // explicit JSON null rather than being omitted.
-            enum CodingKeys: String, CodingKey { case title, category, start, url }
+            enum CodingKeys: String, CodingKey { case id, title, category, start, url }
             func encode(to encoder: Encoder) throws {
                 var c = encoder.container(keyedBy: CodingKeys.self)
+                try c.encode(id, forKey: .id)
                 try c.encode(title, forKey: .title)
                 try c.encode(category, forKey: .category)
                 try c.encode(start, forKey: .start)
@@ -88,7 +90,8 @@ struct TodoCommand: ParsableCommand {
 
         let entries = groups.flatMap { group in
             group.items.map {
-                Entry(title: $0.title,
+                Entry(id: $0.id,
+                      title: $0.title,
                       category: group.category?.name,
                       start: $0.start,
                       url: $0.externalURL)

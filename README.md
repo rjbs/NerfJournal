@@ -177,9 +177,9 @@ header is the category's colored circle (●) and name; each todo whose
 `externalURL` is set has its title hyperlinked via an OSC 8 terminal
 escape. If today has no journal page yet, the items are printed anyway.
 
-- `--json`: emit a JSON array of `{"title", "category", "start", "url"}`
-  objects instead (in the same order), with `category` and `url` null when
-  unset and `start` as an ISO 8601 timestamp.
+- `--json`: emit a JSON array of `{"id", "title", "category", "start",
+  "url"}` objects instead (in the same order), with `category` and `url`
+  null when unset and `start` as an ISO 8601 timestamp.
 
 ## Future Plans
 
