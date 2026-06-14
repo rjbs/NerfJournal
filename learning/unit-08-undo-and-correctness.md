@@ -18,9 +18,9 @@ This unit works through NerfJournal's undo system end to end: where the
 through, how prior state is captured as a value before the database is touched,
 and why `restoreTodo` is careful to re-insert the *original* row identity rather
 than a fresh one. Along the way it covers how a bulk operation becomes a *single*
-undo step, how each mutation rides one SQLite transaction, and — in the spirit of
-the last unit's correction — exactly what this pattern does and does **not** give
-you. (It does not give you redo, and the code says so out loud.)
+undo step, how each mutation rides one SQLite transaction, and — being precise
+about where a mechanism stops holding — exactly what this pattern does and does
+**not** give you. (It does not give you redo, and the code says so out loud.)
 
 The relevant comparison is less to Perl or Rust than to the command pattern you
 may know from any GUI toolkit: an action and its inverse, pushed onto a stack.
@@ -292,9 +292,10 @@ The selection can include a future-dated todo (one shown only in the Future Log,
 Unit 6's `futureTodos`). If the capture scanned only `todos`, a selected future
 todo's prior category would be missing from the snapshot, and undo would silently
 fail to restore it. Searching `todos + futureTodos` ensures every id in the
-selection has its old value recorded. This is exactly the kind of "which set does
-the data actually live in?" precision that the FK discussion in Unit 7 rewarded:
-get the captured set wrong and undo is quietly incomplete.
+selection has its old value recorded. It is a "which set does the data actually
+live in?" question, and the answer has to match the query in `refreshContents`
+that produced those two arrays in the first place: get the captured set wrong and
+undo is quietly incomplete.
 
 ---
 
@@ -322,15 +323,15 @@ stack instead.
 The practical effect: pressing Cmd-Z repeatedly *toggles* the action (complete →
 undo uncompletes → undo completes again → …) rather than building a separate redo
 stack, and the Edit menu's Redo item stays empty. For a journaling app that's an
-acceptable trade — you can always undo your undo — and naming this limitation
-honestly (in the comments, and now here) is better than implying a redo that
-isn't wired up. If true redo were wanted, the fix would be to make the undo work
-happen synchronously within the handler, or to register the redo explicitly while
-`isUndoing` is set, rather than deferring through a `Task`.
+acceptable trade — you can always undo your undo — and the source comments name
+the limitation outright rather than implying a redo that isn't wired up. If true
+redo were wanted, the fix would be to make the undo work happen synchronously
+within the handler, or to register the redo explicitly while `isUndoing` is set,
+rather than deferring through a `Task`.
 
-This is the unit's version of Unit 7's lesson: state precisely *when* a mechanism
-holds. The inverse-registers-its-inverse trick gives you arbitrarily deep undo;
-it does **not**, through a deferred `Task`, give you redo.
+The takeaway is to be exact about where the mechanism stops: the
+inverse-registers-its-inverse trick gives you arbitrarily deep undo; it does
+**not**, through a deferred `Task`, give you redo.
 
 ---
 
