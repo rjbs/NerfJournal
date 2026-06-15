@@ -177,11 +177,16 @@ its own `Package.swift` and dependencies. The unit covers
 [swift-argument-parser](https://github.com/apple/swift-argument-parser): the
 declarative, property-wrapper-driven model where a command is a `ParsableCommand`
 struct whose `@Argument`, `@Option`, and `@Flag` properties *are* the parser, and
-`@main` is the entry point. Subcommands (`nerf add-todo`, `nerf categories`) via
+`@main` is the entry point. The subcommand set — `nerf add-todo`, `nerf
+categories`, `nerf todo` (read-only listing, with a `--json` mode), and the
+state-changing `nerf done` / `nerf abandon` — registered via
 `CommandConfiguration`; shared flags mixed in with `@OptionGroup` (the
 `DatabaseOptions` `--database` group); error handling through thrown errors
 (`ValidationError`, a custom `CLIError`) that the framework turns into exit codes
-and messages. It also revisits, from the other side, why the CLI re-declares the
+and messages — including the domain errors `done`/`abandon` raise for an unknown,
+unstarted, or already-ended todo. Plain-Swift supporting code shared with the app,
+such as the `DateParser` behind `--start` (ISO 8601 dates and the `~`-style
+relative grammar), shows how a module gets vendored into two targets at once. It also revisits, from the other side, why the CLI re-declares the
 app's model types instead of importing them, and how a non-`Codable` GRDB record
 must hand-write `encode(to:)` (the thread first pulled in Unit 7).
 
