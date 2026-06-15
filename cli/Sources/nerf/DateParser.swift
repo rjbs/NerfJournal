@@ -1,7 +1,8 @@
 import Foundation
 
-// Parses a short natural-language date string typed after `~` in the
-// quick-entry field.  Returns the start-of-day Date for the match, or nil if
+// Parses a short natural-language date string, mirroring the app's quick-entry
+// `~` parser (NerfJournal/DateParser.swift) so `nerf add-todo --start` accepts
+// the same vocabulary.  Returns the start-of-day Date for the match, or nil if
 // the query is unrecognized.
 //
 // Supported forms (all case-insensitive, prefix-matched where unambiguous):

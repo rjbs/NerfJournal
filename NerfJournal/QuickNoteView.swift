@@ -3,26 +3,32 @@ import GRDB
 
 @MainActor
 final class QuickNoteStore: ObservableObject {
-    @Published var todayPageID: Int64? = nil
     @Published var loaded = false
     @Published var isTodo = false
     @Published var categories: [Category] = []
 
     func load() async {
-        let today = Calendar.current.startOfDay(for: Date())
-        let result = try? await AppDatabase.shared.dbQueue.read { db -> (Int64?, [Category]) in
-            let pageID = try JournalPage.filter(Column("date") == today).fetchOne(db)?.id
-            let cats = try Category.order(Column("sortOrder")).fetchAll(db)
-            return (pageID, cats)
+        let cats = try? await AppDatabase.shared.dbQueue.read { db in
+            try Category.order(Column("sortOrder")).fetchAll(db)
         }
-        todayPageID = result?.0
-        categories = result?.1 ?? []
+        categories = cats ?? []
         loaded = true
     }
 
     func addNote(text: String) async {
-        guard let pageID = todayPageID else { return }
+        // A note belongs to a page, so create today's page if it doesn't exist
+        // yet. Todos have no such requirement, so addTodo doesn't do this.
+        // -- claude, 2026-06-14
         try? await AppDatabase.shared.dbQueue.write { db in
+            let today = Calendar.current.startOfDay(for: Date())
+            let pageID: Int64
+            if let existing = try JournalPage.filter(Column("date") == today).fetchOne(db)?.id {
+                pageID = existing
+            } else {
+                var page = JournalPage(id: nil, date: today)
+                try page.insert(db)
+                pageID = page.id!
+            }
             var note = Note(id: nil, pageID: pageID, timestamp: Date(), text: text)
             try note.insert(db)
         }
@@ -72,10 +78,6 @@ struct QuickNoteView: View {
         Group {
             if !store.loaded {
                 Color.clear
-            } else if store.todayPageID == nil {
-                Text("No journal page for today")
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 8) {
@@ -197,7 +199,7 @@ struct QuickNoteView: View {
         .frame(width: 500)
         .task { await store.load() }
         .onChange(of: store.loaded) {
-            if store.todayPageID != nil { focused = true }
+            if store.loaded { focused = true }
         }
         .onChange(of: store.isTodo) { _, isTodo in
             if !isTodo {

@@ -13,11 +13,19 @@ struct AddTodo: ParsableCommand {
     var noMigrate = false
 
     @Option(name: .long,
-            help: "Assign to the named category (warn and continue if not found).")
+            help: "Assign to the named category, matched case-insensitively (warn and continue if not found, unless --strict).")
     var category: String?
+
+    @Flag(name: .long,
+          help: "Fail without creating the todo if --category names an unknown category.")
+    var strict = false
 
     @Option(name: .long, help: "Set an external URL on the todo.")
     var url: String?
+
+    @Option(name: .long,
+            help: "Start date for the todo (e.g. \"tomorrow\", \"wed\", \"+3d\", \"+2w\"). Future dates land in the Future Log.")
+    var start: String?
 
     @OptionGroup var db: DatabaseOptions
 
@@ -30,16 +38,31 @@ struct AddTodo: ParsableCommand {
             throw ValidationError("todo title is required")
         }
 
-        let dbQueue = try db.open()
         let today = Calendar.current.startOfDay(for: Date())
 
-        // Today's page must already exist; the CLI never creates pages.
-        let todayPage = try fetchTodayPage(dbQueue, date: today)
-        guard todayPage != nil else {
-            throw CLIError("no journal page for today — start one in NerfJournal first")
+        let startDate: Date
+        if let start = self.start {
+            guard let parsed = DateParser.parse(start) else {
+                throw ValidationError("could not understand start date: \(start)")
+            }
+            startDate = parsed
+        } else {
+            startDate = today
         }
 
-        let categoryID = resolveCategory(dbQueue)
+        let dbQueue = try db.open()
+
+        // A todo starting today must land on today's page, which the CLI never
+        // creates — so require it to exist.  A future-dated todo lives in the
+        // Future Log instead, so it needs no page and can be filed any day. -- claude, 2026-06-13
+        if startDate <= today {
+            let todayPage = try fetchTodayPage(dbQueue, date: today)
+            guard todayPage != nil else {
+                throw CLIError("no journal page for today — start one in NerfJournal first")
+            }
+        }
+
+        let categoryID = try resolveCategory(dbQueue)
 
         if let dup = try findDuplicate(dbQueue, title: title) {
             print("Didn't create todo for duplicate \(dup.field): \(dup.value)")
@@ -52,7 +75,7 @@ struct AddTodo: ParsableCommand {
                     id: nil,
                     title: title,
                     shouldMigrate: !noMigrate,
-                    start: today,
+                    start: startDate,
                     ending: nil,
                     categoryID: categoryID,
                     externalURL: url
@@ -78,17 +101,27 @@ struct AddTodo: ParsableCommand {
         }
     }
 
-    // Resolves --category to an id, warning (but not failing) on a miss, since a
-    // miscategorized todo is better than a lost one for scripted callers.
-    private func resolveCategory(_ dbQueue: DatabaseQueue) -> Int64? {
+    // Resolves --category to an id (matched case-insensitively).  By default a
+    // miss warns but continues, since a miscategorized todo is better than a lost
+    // one for scripted callers; under --strict a miss instead throws so nothing
+    // is created and the program exits nonzero.
+    private func resolveCategory(_ dbQueue: DatabaseQueue) throws -> Int64? {
         guard let name = category else { return nil }
         do {
             let categories = try dbQueue.read { db in try Category.fetchAll(db) }
             if let match = categories.first(where: { $0.name.lowercased() == name.lowercased() }) {
                 return match.id
             }
+            if strict {
+                throw CLIError("category \"\(name)\" not found")
+            }
             fputs("warning: category \"\(name)\" not found — adding todo without category\n", stderr)
+        } catch let error as CLIError {
+            throw error
         } catch {
+            if strict {
+                throw CLIError("could not query categories: \(error)")
+            }
             fputs("warning: could not query categories: \(error) — adding todo without category\n", stderr)
         }
         return nil

@@ -123,17 +123,28 @@ for the details of one.
 ### `nerf add-todo`
 
 ```
-nerf add-todo [--no-migrate] [--category NAME] [--url URL] TITLE...
+nerf add-todo [--no-migrate] [--category NAME] [--strict] [--url URL] [--start WHEN] TITLE...
 ```
 
 - `--no-migrate`: mark the todo as non-migratable (default: migratable)
 - `--category NAME`: assign to a named category (case-insensitive; warns
   and continues without category if not found)
+- `--strict`: when `--category` names an unknown category, create nothing
+  and exit nonzero instead of warning and continuing
 - `--url URL`: set an `externalURL` on the todo
+- `--start WHEN`: set the todo's start date. Accepts the same shorthand as
+  the app's `~` quick-entry — `today`, `tomorrow`, a weekday (`wed`), `+Nd`
+  (days), or `+Nw` (weeks) — as well as an ISO 8601 date (`2026-07-20`) or
+  timestamp (`2026-07-20T09:00:00Z`). Since a todo's start is a day rather
+  than a moment, a timestamp is reduced to the start of its day in the local
+  calendar. A future date lands the todo in the Future Log; omitting
+  `--start` starts it today as before.
 - `--database PATH`: override the default database path (for testing)
 
-Exits 0 on success (quiet), 1 on any error (message to stderr). The
-tool requires today's journal page to already exist.
+Exits 0 on success (quiet), 1 on any error (message to stderr). A todo
+starting today requires today's journal page to already exist; a
+future-dated todo (`--start tomorrow`, etc.) is filed into the Future Log
+and needs no page, so you can queue Monday's work on a Saturday.
 
 From Perl:
 ```perl
@@ -154,6 +165,37 @@ prefixed with a filled circle (●) drawn in the category's color via a
 - `--json`: emit a JSON array of `{"name", "color"}` objects instead,
   where `color` is a CSS `#aabbcc` string. Handy for piping to other
   tools.
+
+### `nerf todo`
+
+```
+nerf todo [--json] [--database PATH]
+```
+
+Prints today's remaining (still-open) todos — including work carried
+forward from earlier days, but not Future Log items dated ahead — grouped
+by category in the same order as the journal page view: categories by
+their sort order, then an "Other" group for uncategorized work. Each group
+header is the category's colored circle (●) and name; each todo whose
+`externalURL` is set has its title hyperlinked via an OSC 8 terminal
+escape. If today has no journal page yet, the items are printed anyway.
+
+- `--json`: emit a JSON array of `{"id", "title", "category", "start",
+  "url"}` objects instead (in the same order), with `category` and `url`
+  null when unset and `start` as an ISO 8601 timestamp.
+
+### `nerf done` / `nerf abandon`
+
+```
+nerf done ID [--database PATH]
+nerf abandon ID [--database PATH]
+```
+
+End the todo with the given id (the same ids `nerf todo --json` reports),
+setting its ending to the current time — `done` or `abandoned`
+respectively. Both exit nonzero with a message, changing nothing, if the
+id matches no todo, if the todo hasn't started yet (a Future Log item), or
+if it has already been ended.
 
 ## Future Plans
 
