@@ -68,6 +68,17 @@ func loadIndex() async throws {
 }
 ```
 
+A word on that `db in`: it is the closure's *parameter*, not a special piece of
+isolation syntax. `read`/`write` run the closure on the `DatabaseQueue`'s own
+serial queue — that queue *is* the isolation domain — and pass in `db`, a GRDB
+[`Database`](https://swiftpackageindex.com/groue/grdb.swift/documentation/grdb/database)
+connection handle, as the capability you use to issue queries *while you are inside
+that domain*. It is scoped to the closure: GRDB expects you not to stash `db`
+somewhere and use it after the closure returns, because by then you are no longer
+on the queue. So the domain is established by *where the closure runs*; `db` is just
+the access token you are handed for the duration. (The aside below makes the
+analogy to an `actor` explicit.)
+
 `await` is not "block until done." It's "I might suspend here; the runtime is free
 to do other things until my result is ready." The function is `async`, so it can
 only be *called* from another `async` context or from a `Task` — which is why view
@@ -120,6 +131,50 @@ protecting lives on the main actor anyway (it drives the views), and the *other*
 shared state — the SQLite connection — is already serialized by GRDB's
 `DatabaseQueue` (Unit 7). Two serialization domains, one of them off-the-shelf, no
 hand-written actors required.
+
+### Aside: what a custom actor would look like
+
+Because NerfJournal never needs one, the unit hasn't yet shown the feature that
+gives the whole model its name. An [`actor`](https://developer.apple.com/documentation/swift/actor)
+is a reference type that defines its *own* isolation domain: its stored properties
+are protected the same way the main actor protects the stores, but the domain is
+private to that one instance rather than global. A sketch:
+
+```swift
+actor Counter {
+    private var value = 0                // isolated to this instance
+
+    func increment() { value += 1 }      // runs in the actor's domain
+    func current() -> Int { value }
+}
+```
+
+From *outside*, the actor's members are reached with `await`, because the call may
+have to wait for the actor to be free:
+
+```swift
+let counter = Counter()
+await counter.increment()                // hop into the actor's domain
+let n = await counter.current()          // await again
+```
+
+*Inside* the actor's own methods there is no `await` to touch `value` — you are
+already in its domain, exactly as a store method touches `todos` directly. The
+compiler guarantees no two tasks are inside `Counter` at once, so `value += 1`
+cannot race, with no lock written by hand. (`@MainActor` is simply this same idea
+hoisted to a *global* actor that many types can share, rather than one instance's
+private domain.)
+
+That is precisely the service `DatabaseQueue` performs for the SQLite connection:
+serialize all access through one domain, entered with `await` from outside. GRDB
+predates Swift's actors and implements it with a dispatch queue rather than the
+`actor` keyword, but conceptually `dbQueue.read { db in … }` *is* a call into an
+actor-like domain — which is why the `db` handle is valid only inside it, just as
+`value` is valid only inside `Counter`. NerfJournal gets one isolation domain from
+the language (`@MainActor`) and one from a library (`DatabaseQueue`), so it never
+declares an `actor` of its own. If it grew shared mutable state belonging to
+*neither* the UI nor the database — an in-memory cache written from several tasks,
+say — a custom `actor` is the tool it would reach for.
 
 ---
 
