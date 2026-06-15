@@ -16,7 +16,7 @@ nav_order: 3
 | 7 | Persistence with GRDB | written |
 | 8 | Undo, Transactions, and Correctness | written |
 | 9 | Swift Concurrency | written |
-| 10 | AppKit Interoperability and the Quick-Entry Panel | not started |
+| 10 | AppKit Interoperability and the Quick-Entry Panel | written |
 | 11 | The Command-Line Tool: swift-argument-parser | not started |
 
 ## Notes
