@@ -193,14 +193,25 @@ let store = QuickNoteStore()
 let view = QuickNoteView(dismiss: { /* tear down the panel */ }, store: store)
 let hosting = NSHostingController(rootView: view)
 hosting.sizingOptions = .preferredContentSize
-let p = NSPanel(contentViewController: hosting)
+
+let p = NSPanel(
+    contentRect: NSRect(x: 0, y: 0, width: 500, height: 96),
+    styleMask: [.titled, .closable, .nonactivatingPanel],
+    backing: .buffered,
+    defer: false
+)
+p.contentViewController = hosting
 p.title = "Quick Entry"
 p.isFloatingPanel = true
 p.level = .floating
+p.hidesOnDeactivate = false
+p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
 p.setContentSize(hosting.view.fittingSize)
 p.center()
-p.orderFrontRegardless()
 panel = p
+// ... the resize pipeline (below) ...
+p.orderFrontRegardless()
+p.makeKeyAndOrderFront(nil)
 ```
 
 [`NSHostingController`](https://developer.apple.com/documentation/swiftui/nshostingcontroller)
@@ -213,16 +224,128 @@ direction — AppKit *inside* SwiftUI — is `NSViewRepresentable`, not used her
 
 `NSPanel` is the AppKit class for auxiliary windows — palettes, inspectors,
 quick-entry boxes. `isFloatingPanel` and `.level = .floating` keep it above normal
-windows; `orderFrontRegardless()` shows it even when the app isn't active (the whole
-point of a global summon). These are plain AppKit object mutations — set a property,
+windows; `orderFrontRegardless()` and `makeKeyAndOrderFront` then place it and hand it
+key focus without waiting for the app to be activated first. (Whether it actually
+*appears* while the app stays in the background — the whole point of a global summon —
+turns out to hinge on more than these two calls.) These are plain AppKit object
+mutations — set a property,
 call a method — which is exactly the *imperative, mutable-object* model Unit 2
 contrasted SwiftUI against. The contrast is worth feeling directly: inside `hosting`
 the UI is a re-rendered value; one layer out, the window is an object you configure
 by poking its properties.
 
+But two of those construction choices — the `styleMask` argument and the
+`.nonactivatingPanel` flag inside it — are not free-floating style decisions. They
+are the difference between a panel that appears and one that never draws at all. That
+is the next, and subtlest, seam in this unit.
+
+### Why the panel must be nonactivating — and built that way
+
+The whole promise of the global hot key is that it summons the panel onto *wherever
+you already are*, without dragging NerfJournal — and its other windows — to the
+foreground or flinging you to another Space. The app stays in the background; only a
+small floating box appears. Delivering that turns out to depend on a single flag set
+at exactly the right moment, and getting it wrong fails in a way no compiler warns
+about.
+
+Start with the OS constraint. On macOS 15 (Sequoia), **cooperative activation**
+forbids a background app from programmatically bringing itself to the front: no
+variant of [`NSApp.activate()`](https://developer.apple.com/documentation/appkit/nsapplication/activate())
+will front a background app any more. So any show-path that *first* tried to activate
+the app and *then* order the window front now stalls at step one — the window is
+placed, given a frame, even made key, but the app never activates, so the panel is
+never composited (never actually drawn). You summon it and nothing appears until you
+Cmd-Tab over by hand, at which point it pops into view. That defeats the entire
+feature.
+
+The escape is a genuinely **nonactivating** panel. A nonactivating panel composites
+as a floating overlay *without* fronting the app at all — so it draws immediately, on
+whatever Space is active, and because the app is never activated, dismissing the panel
+never yanks focus to another Space either. Both halves of the original promise fall
+out of that one property.
+
+Here is the trap, and it's the real lesson of this section. You might expect to set it
+after construction, the same way every other property here is set:
+
+```swift
+let p = NSPanel(contentViewController: hosting)
+p.styleMask.insert(.nonactivatingPanel)   // looks right. is a no-op.
+```
+
+That compiles, runs, and *reports back as set* — read `p.styleMask` and the bit is
+there. But the activation behavior does not change. `.nonactivatingPanel` is one of
+those AppKit flags the window only honors as an argument to its initializer; inserting
+it afterward updates the stored mask without rewiring how the window activates, so
+`makeKeyAndOrderFront` still tries to activate the app — straight back into Sequoia's
+restriction. The fix is to pass it in the `styleMask:` argument at construction (which
+is why `showQuickNotePanel` uses the long `NSPanel(contentRect:styleMask:backing:defer:)`
+initializer rather than the convenient `init(contentViewController:)`):
+
+```swift
+let p = NSPanel(
+    contentRect: NSRect(x: 0, y: 0, width: 500, height: 96),
+    styleMask: [.titled, .closable, .nonactivatingPanel],
+    backing: .buffered,
+    defer: false
+)
+```
+
+This is worth banking as a category of bug, not just a fact about one flag. The type
+system models `styleMask` as a plain `OptionSet` you can mutate any time, so it cannot
+express "this bit is only honored at construction." A property that *accepts* a write
+is not the same as a property whose write *takes effect* — and AppKit, being decades
+of accreted Objective-C, has a scatter of such construction-only options. It's the
+same shape of hazard as the Carbon section's retain-count bookkeeping: an invariant
+the compiler can't check, left for you to know and uphold. (Rust has milder cousins —
+builders that consume `self` so a setting can only be chosen before `build()` — but
+nothing forces AppKit to be that disciplined.)
+
+The remaining two lines are the supporting cast. `hidesOnDeactivate = false` keeps the
+panel on screen even though the app is, by design, never the active one — without it a
+background app's panel would vanish the instant focus settled elsewhere.
+`collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]` lets the single panel
+appear on whatever Space (or full-screen app) you happen to be in, rather than being
+pinned to the Space NerfJournal was launched on — the spatial half of "summon it
+wherever I am."
+
+### One more consequence: render synchronously, load lazily
+
+Keeping the app in the background has a second, quieter fallout, and it lands in
+SwiftUI rather than AppKit. `QuickNoteView` loads its category list in a `.task` (Unit
+9) — an async job SwiftUI schedules when the view appears. But SwiftUI will not
+reliably *drive* that `.task` until the app activates, and here the app pointedly never
+does. An earlier version gated the entire view body on the load completing:
+
+```swift
+if !store.loaded { Color.clear } else { /* the real UI */ }
+```
+
+The result was a blank panel: summoned in the background, gated on a load that the
+background couldn't run, showing `Color.clear` until the user Cmd-Tabbed over and woke
+the `.task`. The fix is to invert the dependency — render the UI on the first
+*synchronous* pass and let the data trickle in:
+
+```swift
+var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+        // ... text field, lower region ...
+    }
+    .task { await store.load() }
+    .onAppear { focused = true }
+}
+```
+
+The text field needs no database to draw, so it shows and takes focus immediately;
+`store.load()` runs whenever it can, and its only job is to populate the `#`-completion
+category list, which simply isn't there for the first few milliseconds. The principle
+is a familiar one wearing AppKit clothes: **don't block the part of the UI that has no
+dependency on the part that does.** It's the same instinct as rendering a page shell
+before its data arrives, except the forcing function here is an OS activation rule, not
+network latency.
+
 ### Watching the SwiftUI content resize the AppKit window
 
-Here is the subtler seam. The SwiftUI content changes height as the user types — the
+One more seam runs the other way. The SwiftUI content changes height as the user types — the
 category picker row appears, the date picker expands. AppKit doesn't know that;
 `NSPanel` has a fixed content size until something tells it otherwise. We need to
 propagate a size change *out* of SwiftUI and *into* the AppKit window. The bridge is
@@ -437,6 +560,10 @@ logic into a Perl module that both a web app and a cron script can `use`.
   — host a SwiftUI view inside an AppKit view-controller hierarchy
 - [`NSPanel`](https://developer.apple.com/documentation/appkit/nspanel)
   — the auxiliary/floating-window class
+- [`.nonactivatingPanel`](https://developer.apple.com/documentation/appkit/nswindow/stylemask/nonactivatingpanel)
+  — the style-mask bit that lets a panel show without activating its app (set at construction)
+- [`NSApplication.activate()`](https://developer.apple.com/documentation/appkit/nsapplication/activate())
+  — the activation call Sequoia's cooperative activation refuses for a background app
 - [`Unmanaged`](https://developer.apple.com/documentation/swift/unmanaged)
   — stepping outside ARC at a C boundary; retained vs. unretained
 - [KVO with Combine: `publisher(for:)`](https://developer.apple.com/documentation/combine/kvo)
@@ -456,23 +583,34 @@ The single line that pulls `AppDelegate` into the SwiftUI app. Note it sits amon
 `@StateObject` stores — same `App` struct, same property-wrapper syntax, but this one
 reaches *down* into AppKit rather than holding SwiftUI state.
 
-### `AppDelegate.swift` lines 19–45: registering the hot key
+### `AppDelegate.swift` lines 18–44: registering the hot key
 
 `registerGlobalHotKey`. Read the comment on *why Carbon*, then trace the two C calls.
 Confirm the handler closure captures nothing, and find where `self` is smuggled in
 (`passUnretained(self).toOpaque()`) and pulled back out (`fromOpaque(...).takeUnretainedValue()`).
 
-### `AppDelegate.swift` lines 31–34: the C-callback boundary
+### `AppDelegate.swift` lines 30–35: the C-callback boundary
 
 The four lines inside the handler. Name each step: null-check the user data,
 reconstitute the delegate, hop to main, assert isolation, call the method. This is the
 whole `unsafe`-equivalent region — note how small it is.
 
-### `AppDelegate.swift` lines 55–80: building and watching the panel
+### `AppDelegate.swift` lines 62–99: building and watching the panel
 
 `showQuickNotePanel`'s construction half: `NSHostingController` wrapping `QuickNoteView`,
 the `NSPanel` configuration, and the `publisher(for: \.preferredContentSize)` pipeline.
-Read each Combine operator and find the `.store(in: &cancellables)` that keeps it alive.
+Read the comment on *why* the panel is built with an explicit `styleMask:` carrying
+`.nonactivatingPanel` (rather than the convenient `init(contentViewController:)` plus a
+later `styleMask.insert`), then read each Combine operator and find the
+`.store(in: &cancellables)` that keeps it alive.
+
+### `QuickNoteView.swift` lines 78–132: render synchronously, load lazily
+
+The view body and its `.task`/`.onAppear`. Note that nothing gates the body on
+`store.loaded`: the field draws and focuses on the first synchronous pass, and
+`store.load()` only fills the category completion list once it lands. Tie this back to
+the panel being summoned while the app is in the background, where SwiftUI won't drive
+the `.task` until activation.
 
 ### `QuickNoteView.swift` lines 18–53: the note/todo asymmetry
 
@@ -517,3 +655,17 @@ is doing the migration here nonetheless the wrong call?
 property on an AppKit object. Contrast this with how a SwiftUI view observes a
 `PageStore` change (Unit 4). Both are Combine underneath — what is SwiftUI doing for
 you in the store case that you had to do by hand here, and where is the line drawn?
+
+**7.** The panel passes `.nonactivatingPanel` in its `styleMask:` argument at
+construction; doing the same with `p.styleMask.insert(.nonactivatingPanel)` afterward
+compiles, reads back as set, and yet leaves the panel never drawing when summoned from
+the background. Explain why a write the API *accepts* needn't *take effect* — and name
+the other invariant in this unit (hint: the Carbon section) that the type system is
+likewise unable to check for you.
+
+**8.** An earlier `QuickNoteView` gated its whole body on `store.loaded`, showing
+`Color.clear` until the category load finished. With the panel summoned while the app
+is in the background, what specifically failed — and why does rendering the field
+synchronously while letting `store.load()` finish later fix it without losing the
+category completion? (Trace when SwiftUI actually drives a `.task` for a window the app
+never activates.)
