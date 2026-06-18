@@ -76,62 +76,60 @@ struct QuickNoteView: View {
     @FocusState private var focused: Bool
 
     var body: some View {
-        Group {
-            if !store.loaded {
-                Color.clear
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 8) {
-                        Button {
-                            store.isTodo.toggle()
-                            focused = true
-                        } label: {
-                            Image(systemName: store.isTodo ? "circle" : "bubble.left")
-                                .foregroundStyle(.secondary)
-                                .frame(width: 20)
-                        }
-                        .buttonStyle(.plain)
-                        .help(store.isTodo ? "Switch to note" : "Switch to todo")
-
-                        TextField(store.isTodo ? "Add todo\u{2026}" : "Add note\u{2026}", text: $text)
-                            .font(.system(size: 20))
-                            .focused($focused)
-                            .onSubmit { submit() }
-                            .onKeyPress(.escape) {
-                                if categoryPickerActive { cancelCategoryPicker(); return .handled }
-                                if datePickerActive { cancelDatePicker(); return .handled }
-                                dismiss()
-                                return .handled
-                            }
-                            .onKeyPress(.upArrow) {
-                                guard categoryPickerActive else { return .ignored }
-                                moveHighlight(-1)
-                                return .handled
-                            }
-                            .onKeyPress(.downArrow) {
-                                guard categoryPickerActive else { return .ignored }
-                                moveHighlight(1)
-                                return .handled
-                            }
-                            .onChange(of: text) { _, newText in
-                                updateCategoryPicker(for: newText)
-                                updateDatePicker(for: newText)
-                            }
-                    }
-
-                    if store.isTodo {
-                        lowerRegion
-                            .padding(.leading, 28)
-                    }
+        // The UI must render fully on the first *synchronous* pass: the panel is
+        // ordered front while NerfJournal is a background app, and SwiftUI won't
+        // reliably drive a `.task` (the category load) until the app activates.
+        // Gating the whole view on `store.loaded` left the panel showing empty
+        // until the user Cmd-Tabbed over. The text field needs no DB; categories
+        // simply populate the picker once the load lands. -- claude, 2026-06-18
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Button {
+                    store.isTodo.toggle()
+                    focused = true
+                } label: {
+                    Image(systemName: store.isTodo ? "circle" : "bubble.left")
+                        .foregroundStyle(.secondary)
+                        .frame(width: 20)
                 }
+                .buttonStyle(.plain)
+                .help(store.isTodo ? "Switch to note" : "Switch to todo")
+
+                TextField(store.isTodo ? "Add todo\u{2026}" : "Add note\u{2026}", text: $text)
+                    .font(.system(size: 20))
+                    .focused($focused)
+                    .onSubmit { submit() }
+                    .onKeyPress(.escape) {
+                        if categoryPickerActive { cancelCategoryPicker(); return .handled }
+                        if datePickerActive { cancelDatePicker(); return .handled }
+                        dismiss()
+                        return .handled
+                    }
+                    .onKeyPress(.upArrow) {
+                        guard categoryPickerActive else { return .ignored }
+                        moveHighlight(-1)
+                        return .handled
+                    }
+                    .onKeyPress(.downArrow) {
+                        guard categoryPickerActive else { return .ignored }
+                        moveHighlight(1)
+                        return .handled
+                    }
+                    .onChange(of: text) { _, newText in
+                        updateCategoryPicker(for: newText)
+                        updateDatePicker(for: newText)
+                    }
+            }
+
+            if store.isTodo {
+                lowerRegion
+                    .padding(.leading, 28)
             }
         }
         .padding()
         .frame(width: 500)
         .task { await store.load() }
-        .onChange(of: store.loaded) {
-            if store.loaded { focused = true }
-        }
+        .onAppear { focused = true }
         .onChange(of: store.isTodo) { _, isTodo in
             if !isTodo {
                 selectedCategoryID = nil
