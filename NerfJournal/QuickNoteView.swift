@@ -68,6 +68,7 @@ struct QuickNoteView: View {
     @State private var selectedCategoryID: Int64? = nil
     @State private var categoryPickerActive = false
     @State private var categoryPickerQuery = ""
+    @State private var categoryHighlight = 0
     @State private var datePickerActive = false
     @State private var datePickerQuery = ""
     @State private var parsedStartDate: Date? = nil
@@ -75,132 +76,60 @@ struct QuickNoteView: View {
     @FocusState private var focused: Bool
 
     var body: some View {
-        Group {
-            if !store.loaded {
-                Color.clear
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 8) {
-                        Button {
-                            store.isTodo.toggle()
-                            focused = true
-                        } label: {
-                            Image(systemName: store.isTodo ? "circle" : "bubble.left")
-                                .foregroundStyle(.secondary)
-                                .frame(width: 20)
-                        }
-                        .buttonStyle(.plain)
-                        .help(store.isTodo ? "Switch to note" : "Switch to todo")
-
-                        TextField(store.isTodo ? "Add todo\u{2026}" : "Add note\u{2026}", text: $text)
-                            .font(.system(size: 20))
-                            .focused($focused)
-                            .onSubmit { submit() }
-                            .onKeyPress(.escape) {
-                                if categoryPickerActive { cancelCategoryPicker(); return .handled }
-                                if datePickerActive { cancelDatePicker(); return .handled }
-                                dismiss()
-                                return .handled
-                            }
-                            .onChange(of: text) { _, newText in
-                                updateCategoryPicker(for: newText)
-                                updateDatePicker(for: newText)
-                            }
-
-                        if store.isTodo, let catID = selectedCategoryID,
-                           let cat = store.categories.first(where: { $0.id == catID }) {
-                            HStack(spacing: 4) {
-                                Circle()
-                                    .fill(cat.color.swatch)
-                                    .frame(width: 8, height: 8)
-                                Text(cat.name)
-                                    .font(.caption)
-                                Button { selectedCategoryID = nil } label: {
-                                    Image(systemName: "xmark").font(.caption2)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(
-                                Capsule()
-                                    .fill(cat.color.swatch.opacity(0.15))
-                                    .overlay(Capsule().stroke(cat.color.swatch.opacity(0.4), lineWidth: 1))
-                            )
-                            .foregroundStyle(cat.color.swatch)
-                        }
-
-                        if store.isTodo, let date = selectedStartDate, !datePickerActive {
-                            HStack(spacing: 4) {
-                                Image(systemName: "calendar")
-                                    .font(.caption2)
-                                Text(formatDateBadge(date))
-                                    .font(.caption)
-                                Button { selectedStartDate = nil } label: {
-                                    Image(systemName: "xmark").font(.caption2)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(
-                                Capsule()
-                                    .fill(Color.accentColor.opacity(0.15))
-                                    .overlay(Capsule().stroke(Color.accentColor.opacity(0.4), lineWidth: 1))
-                            )
-                            .foregroundStyle(Color.accentColor)
-                        }
-                    }
-
-                    if store.isTodo && categoryPickerActive && !filteredCategories.isEmpty {
-                        HStack(spacing: 6) {
-                            ForEach(filteredCategories) { cat in
-                                Button { selectCategory(cat) } label: {
-                                    HStack(spacing: 4) {
-                                        Circle()
-                                            .fill(cat.color.swatch)
-                                            .frame(width: 8, height: 8)
-                                        Text(cat.name).font(.caption)
-                                    }
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(Capsule().fill(cat.color.swatch.opacity(0.15)))
-                                    .foregroundStyle(cat.color.swatch)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        .padding(.leading, 28)
-                    }
-
-                    if store.isTodo && datePickerActive {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(parsedStartDate.map { formatDateBadge($0) } ?? "Unrecognized date")
-                                .font(.caption)
-                                .foregroundStyle(parsedStartDate != nil ? .primary : .secondary)
-                            DatePicker(
-                                "",
-                                selection: Binding(
-                                    get: { parsedStartDate ?? Calendar.current.startOfDay(for: Date()) },
-                                    set: { confirmDate($0) }
-                                ),
-                                in: Calendar.current.startOfDay(for: Date())...,
-                                displayedComponents: .date
-                            )
-                            .datePickerStyle(.compact)
-                            .labelsHidden()
-                        }
-                        .padding(.leading, 28)
-                    }
+        // The UI must render fully on the first *synchronous* pass: the panel is
+        // ordered front while NerfJournal is a background app, and SwiftUI won't
+        // reliably drive a `.task` (the category load) until the app activates.
+        // Gating the whole view on `store.loaded` left the panel showing empty
+        // until the user Cmd-Tabbed over. The text field needs no DB; categories
+        // simply populate the picker once the load lands. -- claude, 2026-06-18
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Button {
+                    store.isTodo.toggle()
+                    focused = true
+                } label: {
+                    Image(systemName: store.isTodo ? "circle" : "bubble.left")
+                        .foregroundStyle(.secondary)
+                        .frame(width: 20)
                 }
+                .buttonStyle(.plain)
+                .help(store.isTodo ? "Switch to note" : "Switch to todo")
+
+                TextField(store.isTodo ? "Add todo\u{2026}" : "Add note\u{2026}", text: $text)
+                    .font(.system(size: 20))
+                    .focused($focused)
+                    .onSubmit { submit() }
+                    .onKeyPress(.escape) {
+                        if categoryPickerActive { cancelCategoryPicker(); return .handled }
+                        if datePickerActive { cancelDatePicker(); return .handled }
+                        dismiss()
+                        return .handled
+                    }
+                    .onKeyPress(.upArrow) {
+                        guard categoryPickerActive else { return .ignored }
+                        moveHighlight(-1)
+                        return .handled
+                    }
+                    .onKeyPress(.downArrow) {
+                        guard categoryPickerActive else { return .ignored }
+                        moveHighlight(1)
+                        return .handled
+                    }
+                    .onChange(of: text) { _, newText in
+                        updateCategoryPicker(for: newText)
+                        updateDatePicker(for: newText)
+                    }
+            }
+
+            if store.isTodo {
+                lowerRegion
+                    .padding(.leading, 28)
             }
         }
         .padding()
         .frame(width: 500)
         .task { await store.load() }
-        .onChange(of: store.loaded) {
-            if store.loaded { focused = true }
-        }
+        .onAppear { focused = true }
         .onChange(of: store.isTodo) { _, isTodo in
             if !isTodo {
                 selectedCategoryID = nil
@@ -214,6 +143,121 @@ struct QuickNoteView: View {
         }
     }
 
+    // The region below the text field. By default it reports where the todo
+    // will land (its start date, plus the category once chosen); while the user
+    // is typing a `#` or `~` token it swaps to the matching completion UI.
+    // -- claude, 2026-06-17
+    @ViewBuilder
+    private var lowerRegion: some View {
+        if categoryPickerActive {
+            categoryList
+        } else if datePickerActive {
+            datePickerRegion
+        } else {
+            statusRow
+        }
+    }
+
+    private var statusRow: some View {
+        HStack(spacing: 8) {
+            dateChip
+            if let catID = selectedCategoryID,
+               let cat = store.categories.first(where: { $0.id == catID }) {
+                categoryChip(cat)
+            }
+        }
+    }
+
+    private var dateChip: some View {
+        let date = selectedStartDate ?? Calendar.current.startOfDay(for: Date())
+        return HStack(spacing: 4) {
+            Image(systemName: "calendar").font(.caption2)
+            Text(formatDateBadge(date)).font(.caption)
+            if selectedStartDate != nil {
+                Button { selectedStartDate = nil } label: {
+                    Image(systemName: "xmark").font(.caption2)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(
+            Capsule()
+                .fill(Color.accentColor.opacity(0.15))
+                .overlay(Capsule().stroke(Color.accentColor.opacity(0.4), lineWidth: 1))
+        )
+        .foregroundStyle(Color.accentColor)
+    }
+
+    private func categoryChip(_ cat: Category) -> some View {
+        HStack(spacing: 4) {
+            Circle().fill(cat.color.swatch).frame(width: 8, height: 8)
+            Text(cat.name).font(.caption)
+            Button { selectedCategoryID = nil } label: {
+                Image(systemName: "xmark").font(.caption2)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(
+            Capsule()
+                .fill(cat.color.swatch.opacity(0.15))
+                .overlay(Capsule().stroke(cat.color.swatch.opacity(0.4), lineWidth: 1))
+        )
+        .foregroundStyle(cat.color.swatch)
+    }
+
+    @ViewBuilder
+    private var categoryList: some View {
+        if filteredCategories.isEmpty {
+            Text("No matching category")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } else {
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(Array(filteredCategories.enumerated()), id: \.element.id) { index, cat in
+                    Button { selectCategory(cat) } label: {
+                        HStack(spacing: 8) {
+                            Circle().fill(cat.color.swatch).frame(width: 10, height: 10)
+                            Text(cat.name)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(index == clampedHighlight ? Color.accentColor.opacity(0.2) : .clear)
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private var datePickerRegion: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(parsedStartDate.map { formatDateBadge($0) } ?? "Unrecognized date")
+                .font(.caption)
+                .foregroundStyle(parsedStartDate != nil ? .primary : .secondary)
+            DatePicker(
+                "",
+                selection: Binding(
+                    get: { parsedStartDate ?? Calendar.current.startOfDay(for: Date()) },
+                    set: { confirmDate($0) }
+                ),
+                in: Calendar.current.startOfDay(for: Date())...,
+                displayedComponents: .date
+            )
+            .datePickerStyle(.compact)
+            .labelsHidden()
+        }
+    }
+
     private var filteredCategories: [Category] {
         guard categoryPickerActive else { return [] }
         let all = store.categories
@@ -222,9 +266,20 @@ struct QuickNoteView: View {
             : all.filter { $0.name.localizedCaseInsensitiveContains(categoryPickerQuery) }
     }
 
+    private var clampedHighlight: Int {
+        guard !filteredCategories.isEmpty else { return 0 }
+        return min(max(categoryHighlight, 0), filteredCategories.count - 1)
+    }
+
+    private func moveHighlight(_ delta: Int) {
+        let count = filteredCategories.count
+        guard count > 0 else { return }
+        categoryHighlight = (clampedHighlight + delta + count) % count
+    }
+
     private func submit() {
         if categoryPickerActive && !filteredCategories.isEmpty {
-            selectCategory(filteredCategories[0])
+            selectCategory(filteredCategories[clampedHighlight])
             return
         }
         if datePickerActive {
@@ -249,6 +304,7 @@ struct QuickNoteView: View {
         if let last = words.last, last.hasPrefix("#") {
             categoryPickerActive = true
             categoryPickerQuery = String(last.dropFirst())
+            categoryHighlight = 0
         } else {
             categoryPickerActive = false
             categoryPickerQuery = ""

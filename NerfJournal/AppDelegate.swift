@@ -8,7 +8,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
     private var panel: NSPanel?
-    private var activationToken: NSObjectProtocol?
     private var quickNoteStore: QuickNoteStore?
     private var cancellables = Set<AnyCancellable>()
 
@@ -62,13 +61,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }, store: store)
         let hosting = NSHostingController(rootView: view)
         hosting.sizingOptions = .preferredContentSize
-        let p = NSPanel(contentViewController: hosting)
+
+        // Build the panel as nonactivating *from construction*. Setting the style
+        // mask after the fact (styleMask.insert) reports as set but does not
+        // change the activation behavior — so makeKeyAndOrderFront still tried to
+        // activate the app, which Sequoia's cooperative activation refuses for a
+        // background app, leaving the panel placed but never composited. A truly
+        // nonactivating panel composites as a floating overlay without fronting
+        // the app at all — and not activating means dismissing it never pulls
+        // focus to another Space. -- claude, 2026-06-18
+        let p = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 500, height: 96),
+            styleMask: [.titled, .closable, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        p.contentViewController = hosting
         p.title = "Quick Entry"
         p.isFloatingPanel = true
         p.level = .floating
+        p.hidesOnDeactivate = false
+        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         p.setContentSize(hosting.view.fittingSize)
         p.center()
-        p.orderFrontRegardless()
         panel = p
 
         // Resize the panel whenever the SwiftUI content changes height (e.g.
@@ -79,28 +94,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .sink { [weak p] size in p?.setContentSize(size) }
             .store(in: &cancellables)
 
-        if NSApp.isActive {
-            p.makeKeyAndOrderFront(nil)
-        } else {
-            // On multi-display systems, calling makeKeyAndOrderFront immediately
-            // after activate() loses a race: the journal window on display 1 grabs
-            // key status during the activation handoff before we can claim it.
-            // Waiting for didBecomeActiveNotification ensures the app is fully
-            // active before we steal the key window. -- claude, 2026-03-02
-            activationToken = NotificationCenter.default.addObserver(
-                forName: NSApplication.didBecomeActiveNotification,
-                object: nil, queue: .main
-            ) { [weak self, weak p] _ in
-                MainActor.assumeIsolated {
-                    if let token = self?.activationToken {
-                        NotificationCenter.default.removeObserver(token)
-                        self?.activationToken = nil
-                    }
-                    p?.makeKeyAndOrderFront(nil)
-                }
-            }
-            NSApp.activate()
-        }
+        p.orderFrontRegardless()
+        p.makeKeyAndOrderFront(nil)
     }
 
     private func fourCharCode(_ str: String) -> FourCharCode {
