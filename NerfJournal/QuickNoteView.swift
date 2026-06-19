@@ -149,7 +149,10 @@ struct QuickNoteView: View {
 
     private var statusRow: some View {
         HStack(spacing: 8) {
-            if !store.isDone { dateChip }
+            // Always shown, including in done mode (where it reads "Today" with
+            // no clear button), so toggling pending/done doesn't change the
+            // panel's height. -- claude, 2026-06-19
+            dateChip
             if let catID = selectedCategoryID,
                let cat = store.categories.first(where: { $0.id == catID }) {
                 categoryChip(cat)
