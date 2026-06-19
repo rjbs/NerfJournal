@@ -2,6 +2,11 @@
 <meta property="og:image" content="{{ '/assets/images/icon.png' | absolute_url }}">
 <style type='text/css'>
 .site-logo img, .site-logo { max-width: 32px; max-height: 32px; }
+/* Constrain just-the-docs' inline SVGs at first paint so they don't balloon to
+   their default 300x150 before the theme stylesheet arrives. -- claude, 2026-06-19 */
+.search-icon { width: 1.2rem; height: 1.2rem; }
+.nav-list-expander svg { width: 1.5rem; height: 1.5rem; }
+.site-button svg, .site-title svg, svg.icon { width: 1.5rem; height: 1.5rem; }
 </style>
 <script>
   function applySystemTheme() {
