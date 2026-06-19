@@ -504,8 +504,8 @@ The matcher is prefix-based — `"today".hasPrefix(q)` asks "is what the user ty
 prefix of `today`?" — so the user can type as little as disambiguates. The *order*
 of the checks resolves the collision: `t` is a prefix of both words, and putting
 `today` first makes the shorter, more-common intent win. This is interaction design
-encoded as statement order, and the comment (which the curriculum's house style
-keeps) is there precisely because the ordering is load-bearing, not arbitrary.
+encoded as statement order, and the comment is there precisely because the ordering
+is load-bearing, not arbitrary.
 
 The ISO-8601 branch is the other careful bit:
 
