@@ -79,513 +79,63 @@
          "sortOrder" : 1
       }
    ],
-   "exportedAt" : "2026-03-01T22:06:39Z",
+   "exportedAt" : "2026-06-19T12:25:55Z",
    "journalPages" : [
       {
-         "date" : "2026-02-08T05:00:00Z",
+         "date" : "2026-05-29T04:00:00Z",
          "id" : 1
       },
       {
-         "date" : "2026-02-09T05:00:00Z",
+         "date" : "2026-05-30T04:00:00Z",
          "id" : 2
       },
       {
-         "date" : "2026-02-11T05:00:00Z",
+         "date" : "2026-06-01T04:00:00Z",
          "id" : 3
       },
       {
-         "date" : "2026-02-12T05:00:00Z",
+         "date" : "2026-06-02T04:00:00Z",
          "id" : 4
       },
       {
-         "date" : "2026-02-14T05:00:00Z",
+         "date" : "2026-06-04T04:00:00Z",
          "id" : 5
       },
       {
-         "date" : "2026-02-15T05:00:00Z",
+         "date" : "2026-06-05T04:00:00Z",
          "id" : 6
       },
       {
-         "date" : "2026-02-17T05:00:00Z",
+         "date" : "2026-06-07T04:00:00Z",
          "id" : 7
       },
       {
-         "date" : "2026-02-18T05:00:00Z",
+         "date" : "2026-06-08T04:00:00Z",
          "id" : 8
       },
       {
-         "date" : "2026-02-20T05:00:00Z",
+         "date" : "2026-06-10T04:00:00Z",
          "id" : 9
       },
       {
-         "date" : "2026-02-21T05:00:00Z",
+         "date" : "2026-06-11T04:00:00Z",
          "id" : 10
       },
       {
-         "date" : "2026-02-23T05:00:00Z",
+         "date" : "2026-06-13T04:00:00Z",
          "id" : 11
       },
       {
-         "date" : "2026-02-25T05:00:00Z",
+         "date" : "2026-06-15T04:00:00Z",
          "id" : 12
       },
       {
-         "date" : "2026-02-27T05:00:00Z",
+         "date" : "2026-06-17T04:00:00Z",
          "id" : 13
       },
       {
-         "date" : "2026-03-01T05:00:00Z",
+         "date" : "2026-06-19T04:00:00Z",
          "id" : 14
-      }
-   ],
-   "notes" : [
-      {
-         "id" : 1,
-         "pageID" : 1,
-         "relatedTodoID" : 1,
-         "text" : null,
-         "timestamp" : "2026-02-08T06:00:00Z"
-      },
-      {
-         "id" : 2,
-         "pageID" : 1,
-         "relatedTodoID" : 2,
-         "text" : null,
-         "timestamp" : "2026-02-08T06:00:00Z"
-      },
-      {
-         "id" : 3,
-         "pageID" : 1,
-         "relatedTodoID" : 3,
-         "text" : null,
-         "timestamp" : "2026-02-08T06:00:00Z"
-      },
-      {
-         "id" : 4,
-         "pageID" : 1,
-         "relatedTodoID" : null,
-         "text" : "Way more scope than expected. Splitting into two tickets.",
-         "timestamp" : "2026-02-08T21:31:11Z"
-      },
-      {
-         "id" : 5,
-         "pageID" : 1,
-         "relatedTodoID" : null,
-         "text" : "Build is broken on main — blocked until CI goes green.",
-         "timestamp" : "2026-02-08T18:42:19Z"
-      },
-      {
-         "id" : 6,
-         "pageID" : 2,
-         "relatedTodoID" : 4,
-         "text" : null,
-         "timestamp" : "2026-02-09T06:00:00Z"
-      },
-      {
-         "id" : 7,
-         "pageID" : 2,
-         "relatedTodoID" : 5,
-         "text" : null,
-         "timestamp" : "2026-02-09T06:00:00Z"
-      },
-      {
-         "id" : 8,
-         "pageID" : 2,
-         "relatedTodoID" : 7,
-         "text" : null,
-         "timestamp" : "2026-02-09T06:00:00Z"
-      },
-      {
-         "id" : 9,
-         "pageID" : 2,
-         "relatedTodoID" : 8,
-         "text" : null,
-         "timestamp" : "2026-02-09T06:00:00Z"
-      },
-      {
-         "id" : 10,
-         "pageID" : 3,
-         "relatedTodoID" : 6,
-         "text" : null,
-         "timestamp" : "2026-02-11T06:00:00Z"
-      },
-      {
-         "id" : 11,
-         "pageID" : 3,
-         "relatedTodoID" : 10,
-         "text" : null,
-         "timestamp" : "2026-02-11T06:00:00Z"
-      },
-      {
-         "id" : 12,
-         "pageID" : 3,
-         "relatedTodoID" : 11,
-         "text" : null,
-         "timestamp" : "2026-02-11T06:00:00Z"
-      },
-      {
-         "id" : 13,
-         "pageID" : 3,
-         "relatedTodoID" : 12,
-         "text" : null,
-         "timestamp" : "2026-02-11T06:00:00Z"
-      },
-      {
-         "id" : 14,
-         "pageID" : 3,
-         "relatedTodoID" : 13,
-         "text" : null,
-         "timestamp" : "2026-02-11T06:00:00Z"
-      },
-      {
-         "id" : 15,
-         "pageID" : 4,
-         "relatedTodoID" : 14,
-         "text" : null,
-         "timestamp" : "2026-02-12T06:00:00Z"
-      },
-      {
-         "id" : 16,
-         "pageID" : 4,
-         "relatedTodoID" : 15,
-         "text" : null,
-         "timestamp" : "2026-02-12T06:00:00Z"
-      },
-      {
-         "id" : 17,
-         "pageID" : 4,
-         "relatedTodoID" : 16,
-         "text" : null,
-         "timestamp" : "2026-02-12T06:00:00Z"
-      },
-      {
-         "id" : 18,
-         "pageID" : 4,
-         "relatedTodoID" : 17,
-         "text" : null,
-         "timestamp" : "2026-02-12T06:00:00Z"
-      },
-      {
-         "id" : 19,
-         "pageID" : 4,
-         "relatedTodoID" : null,
-         "text" : "Had to roll back — something off in prod. Investigating.",
-         "timestamp" : "2026-02-12T16:39:56Z"
-      },
-      {
-         "id" : 20,
-         "pageID" : 4,
-         "relatedTodoID" : null,
-         "text" : "Good session — found a cleaner solution than expected.",
-         "timestamp" : "2026-02-12T15:15:43Z"
-      },
-      {
-         "id" : 21,
-         "pageID" : 5,
-         "relatedTodoID" : 21,
-         "text" : null,
-         "timestamp" : "2026-02-14T06:00:00Z"
-      },
-      {
-         "id" : 22,
-         "pageID" : 5,
-         "relatedTodoID" : null,
-         "text" : "Got a second opinion from the platform team — on the right track.",
-         "timestamp" : "2026-02-14T15:48:41Z"
-      },
-      {
-         "id" : 23,
-         "pageID" : 6,
-         "relatedTodoID" : 20,
-         "text" : null,
-         "timestamp" : "2026-02-15T06:00:00Z"
-      },
-      {
-         "id" : 24,
-         "pageID" : 6,
-         "relatedTodoID" : 22,
-         "text" : null,
-         "timestamp" : "2026-02-15T06:00:00Z"
-      },
-      {
-         "id" : 25,
-         "pageID" : 6,
-         "relatedTodoID" : 23,
-         "text" : null,
-         "timestamp" : "2026-02-15T06:00:00Z"
-      },
-      {
-         "id" : 26,
-         "pageID" : 6,
-         "relatedTodoID" : 24,
-         "text" : null,
-         "timestamp" : "2026-02-15T06:00:00Z"
-      },
-      {
-         "id" : 27,
-         "pageID" : 6,
-         "relatedTodoID" : 25,
-         "text" : null,
-         "timestamp" : "2026-02-15T06:00:00Z"
-      },
-      {
-         "id" : 28,
-         "pageID" : 6,
-         "relatedTodoID" : null,
-         "text" : "Had to roll back — something off in prod. Investigating.",
-         "timestamp" : "2026-02-15T16:29:44Z"
-      },
-      {
-         "id" : 29,
-         "pageID" : 7,
-         "relatedTodoID" : 19,
-         "text" : null,
-         "timestamp" : "2026-02-17T06:00:00Z"
-      },
-      {
-         "id" : 30,
-         "pageID" : 7,
-         "relatedTodoID" : 26,
-         "text" : null,
-         "timestamp" : "2026-02-17T06:00:00Z"
-      },
-      {
-         "id" : 31,
-         "pageID" : 7,
-         "relatedTodoID" : 27,
-         "text" : null,
-         "timestamp" : "2026-02-17T06:00:00Z"
-      },
-      {
-         "id" : 32,
-         "pageID" : 7,
-         "relatedTodoID" : 28,
-         "text" : null,
-         "timestamp" : "2026-02-17T06:00:00Z"
-      },
-      {
-         "id" : 33,
-         "pageID" : 7,
-         "relatedTodoID" : 30,
-         "text" : null,
-         "timestamp" : "2026-02-17T06:00:00Z"
-      },
-      {
-         "id" : 34,
-         "pageID" : 7,
-         "relatedTodoID" : null,
-         "text" : "Pairing with Alice was helpful — got unstuck.",
-         "timestamp" : "2026-02-17T18:16:01Z"
-      },
-      {
-         "id" : 35,
-         "pageID" : 8,
-         "relatedTodoID" : 31,
-         "text" : null,
-         "timestamp" : "2026-02-18T06:00:00Z"
-      },
-      {
-         "id" : 36,
-         "pageID" : 8,
-         "relatedTodoID" : 32,
-         "text" : null,
-         "timestamp" : "2026-02-18T06:00:00Z"
-      },
-      {
-         "id" : 37,
-         "pageID" : 8,
-         "relatedTodoID" : 34,
-         "text" : null,
-         "timestamp" : "2026-02-18T06:00:00Z"
-      },
-      {
-         "id" : 38,
-         "pageID" : 8,
-         "relatedTodoID" : 35,
-         "text" : null,
-         "timestamp" : "2026-02-18T06:00:00Z"
-      },
-      {
-         "id" : 39,
-         "pageID" : 9,
-         "relatedTodoID" : 33,
-         "text" : null,
-         "timestamp" : "2026-02-20T06:00:00Z"
-      },
-      {
-         "id" : 40,
-         "pageID" : 9,
-         "relatedTodoID" : 38,
-         "text" : null,
-         "timestamp" : "2026-02-20T06:00:00Z"
-      },
-      {
-         "id" : 41,
-         "pageID" : 9,
-         "relatedTodoID" : 39,
-         "text" : null,
-         "timestamp" : "2026-02-20T06:00:00Z"
-      },
-      {
-         "id" : 42,
-         "pageID" : 9,
-         "relatedTodoID" : 40,
-         "text" : null,
-         "timestamp" : "2026-02-20T06:00:00Z"
-      },
-      {
-         "id" : 43,
-         "pageID" : 9,
-         "relatedTodoID" : null,
-         "text" : "Pairing with Alice was helpful — got unstuck.",
-         "timestamp" : "2026-02-20T20:13:04Z"
-      },
-      {
-         "id" : 44,
-         "pageID" : 9,
-         "relatedTodoID" : null,
-         "text" : "Meeting ran long, pushed afternoon items to tomorrow.",
-         "timestamp" : "2026-02-20T21:48:31Z"
-      },
-      {
-         "id" : 45,
-         "pageID" : 10,
-         "relatedTodoID" : 36,
-         "text" : null,
-         "timestamp" : "2026-02-21T06:00:00Z"
-      },
-      {
-         "id" : 46,
-         "pageID" : 10,
-         "relatedTodoID" : 41,
-         "text" : null,
-         "timestamp" : "2026-02-21T06:00:00Z"
-      },
-      {
-         "id" : 47,
-         "pageID" : 10,
-         "relatedTodoID" : 42,
-         "text" : null,
-         "timestamp" : "2026-02-21T06:00:00Z"
-      },
-      {
-         "id" : 48,
-         "pageID" : 10,
-         "relatedTodoID" : 43,
-         "text" : null,
-         "timestamp" : "2026-02-21T06:00:00Z"
-      },
-      {
-         "id" : 49,
-         "pageID" : 10,
-         "relatedTodoID" : 44,
-         "text" : null,
-         "timestamp" : "2026-02-21T06:00:00Z"
-      },
-      {
-         "id" : 50,
-         "pageID" : 10,
-         "relatedTodoID" : null,
-         "text" : "Finished earlier than expected and pulled in the next item.",
-         "timestamp" : "2026-02-21T17:04:28Z"
-      },
-      {
-         "id" : 51,
-         "pageID" : 11,
-         "relatedTodoID" : 45,
-         "text" : null,
-         "timestamp" : "2026-02-23T06:00:00Z"
-      },
-      {
-         "id" : 52,
-         "pageID" : 11,
-         "relatedTodoID" : 46,
-         "text" : null,
-         "timestamp" : "2026-02-23T06:00:00Z"
-      },
-      {
-         "id" : 53,
-         "pageID" : 11,
-         "relatedTodoID" : 48,
-         "text" : null,
-         "timestamp" : "2026-02-23T06:00:00Z"
-      },
-      {
-         "id" : 54,
-         "pageID" : 11,
-         "relatedTodoID" : 49,
-         "text" : null,
-         "timestamp" : "2026-02-23T06:00:00Z"
-      },
-      {
-         "id" : 55,
-         "pageID" : 11,
-         "relatedTodoID" : 50,
-         "text" : null,
-         "timestamp" : "2026-02-23T06:00:00Z"
-      },
-      {
-         "id" : 56,
-         "pageID" : 12,
-         "relatedTodoID" : 51,
-         "text" : null,
-         "timestamp" : "2026-02-25T06:00:00Z"
-      },
-      {
-         "id" : 57,
-         "pageID" : 12,
-         "relatedTodoID" : 52,
-         "text" : null,
-         "timestamp" : "2026-02-25T06:00:00Z"
-      },
-      {
-         "id" : 58,
-         "pageID" : 12,
-         "relatedTodoID" : 53,
-         "text" : null,
-         "timestamp" : "2026-02-25T06:00:00Z"
-      },
-      {
-         "id" : 59,
-         "pageID" : 12,
-         "relatedTodoID" : null,
-         "text" : "Way more scope than expected. Splitting into two tickets.",
-         "timestamp" : "2026-02-25T15:47:41Z"
-      },
-      {
-         "id" : 60,
-         "pageID" : 13,
-         "relatedTodoID" : 55,
-         "text" : null,
-         "timestamp" : "2026-02-27T06:00:00Z"
-      },
-      {
-         "id" : 61,
-         "pageID" : 13,
-         "relatedTodoID" : 56,
-         "text" : null,
-         "timestamp" : "2026-02-27T06:00:00Z"
-      },
-      {
-         "id" : 62,
-         "pageID" : 13,
-         "relatedTodoID" : 57,
-         "text" : null,
-         "timestamp" : "2026-02-27T06:00:00Z"
-      },
-      {
-         "id" : 63,
-         "pageID" : 13,
-         "relatedTodoID" : 58,
-         "text" : null,
-         "timestamp" : "2026-02-27T06:00:00Z"
-      },
-      {
-         "id" : 64,
-         "pageID" : 14,
-         "relatedTodoID" : null,
-         "text" : "Quick check-in with Bob, realigned on priorities.",
-         "timestamp" : "2026-03-01T17:15:43Z"
       }
    ],
    "taskBundles" : [
@@ -604,726 +154,870 @@
    ],
    "todos" : [
       {
-         "added" : "2026-02-08T05:00:00Z",
          "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-08T06:00:00Z",
+            "date" : "2026-05-29T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 1,
          "shouldMigrate" : false,
+         "start" : "2026-05-29T04:00:00Z",
          "title" : "Review sprint board"
       },
       {
-         "added" : "2026-02-08T05:00:00Z",
          "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-08T06:00:00Z",
+            "date" : "2026-05-29T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 2,
          "shouldMigrate" : false,
+         "start" : "2026-05-29T04:00:00Z",
          "title" : "Code review: auth PR"
       },
       {
-         "added" : "2026-02-08T05:00:00Z",
          "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-08T06:00:00Z",
+            "date" : "2026-05-29T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 3,
          "shouldMigrate" : true,
+         "start" : "2026-05-29T04:00:00Z",
          "title" : "Fix flaky CI tests"
       },
       {
-         "added" : "2026-02-08T05:00:00Z",
          "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-09T06:00:00Z",
+            "date" : "2026-05-30T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 4,
          "shouldMigrate" : true,
+         "start" : "2026-05-29T04:00:00Z",
          "title" : "Deploy hotfix to staging"
       },
       {
-         "added" : "2026-02-09T05:00:00Z",
-         "categoryID" : 1,
+         "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-09T06:00:00Z",
+            "date" : "2026-05-29T20:31:11Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 5,
-         "shouldMigrate" : true,
-         "title" : "Write migration guide"
+         "shouldMigrate" : false,
+         "start" : "2026-05-29T04:00:00Z",
+         "title" : "Way more scope than expected. Splitting into two tickets."
       },
       {
-         "added" : "2026-02-09T05:00:00Z",
-         "categoryID" : 1,
+         "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-11T06:00:00Z",
+            "date" : "2026-05-29T17:42:19Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 6,
-         "shouldMigrate" : true,
-         "title" : "Update API docs"
+         "shouldMigrate" : false,
+         "start" : "2026-05-29T04:00:00Z",
+         "title" : "Build is broken on main — blocked until CI goes green."
       },
       {
-         "added" : "2026-02-09T05:00:00Z",
-         "categoryID" : 2,
+         "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-09T06:00:00Z",
+            "date" : "2026-05-30T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 7,
-         "shouldMigrate" : false,
-         "title" : "1:1 with Alice"
+         "shouldMigrate" : true,
+         "start" : "2026-05-30T04:00:00Z",
+         "title" : "Write migration guide"
       },
       {
-         "added" : "2026-02-09T05:00:00Z",
-         "categoryID" : 2,
+         "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-09T06:00:00Z",
+            "date" : "2026-06-01T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 8,
-         "shouldMigrate" : false,
-         "title" : "Sprint planning"
+         "shouldMigrate" : true,
+         "start" : "2026-05-30T04:00:00Z",
+         "title" : "Update API docs"
       },
       {
-         "added" : "2026-02-09T05:00:00Z",
          "categoryID" : 2,
          "ending" : {
-            "date" : "2026-02-09T06:00:00Z",
-            "kind" : "abandoned"
+            "date" : "2026-05-30T05:00:00Z",
+            "kind" : "done"
          },
          "externalURL" : null,
          "id" : 9,
          "shouldMigrate" : false,
-         "title" : "Retrospective"
+         "start" : "2026-05-30T04:00:00Z",
+         "title" : "1:1 with Alice"
       },
       {
-         "added" : "2026-02-11T05:00:00Z",
-         "categoryID" : null,
+         "categoryID" : 2,
          "ending" : {
-            "date" : "2026-02-11T06:00:00Z",
+            "date" : "2026-05-30T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 10,
          "shouldMigrate" : false,
-         "title" : "Respond to Slack backlog"
+         "start" : "2026-05-30T04:00:00Z",
+         "title" : "Sprint planning"
       },
       {
-         "added" : "2026-02-11T05:00:00Z",
-         "categoryID" : null,
+         "categoryID" : 2,
          "ending" : {
-            "date" : "2026-02-11T06:00:00Z",
-            "kind" : "done"
+            "date" : "2026-05-30T05:00:00Z",
+            "kind" : "abandoned"
          },
          "externalURL" : null,
          "id" : 11,
          "shouldMigrate" : false,
-         "title" : "Update Jira tickets"
+         "start" : "2026-05-30T04:00:00Z",
+         "title" : "Retrospective"
       },
       {
-         "added" : "2026-02-11T05:00:00Z",
          "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-11T06:00:00Z",
+            "date" : "2026-06-01T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 12,
-         "shouldMigrate" : true,
-         "title" : "Review infrastructure costs"
+         "shouldMigrate" : false,
+         "start" : "2026-06-01T04:00:00Z",
+         "title" : "Respond to Slack backlog"
       },
       {
-         "added" : "2026-02-11T05:00:00Z",
-         "categoryID" : 1,
+         "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-11T06:00:00Z",
+            "date" : "2026-06-01T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 13,
-         "shouldMigrate" : true,
-         "title" : "Profile slow dashboard query"
+         "shouldMigrate" : false,
+         "start" : "2026-06-01T04:00:00Z",
+         "title" : "Update Jira tickets"
       },
       {
-         "added" : "2026-02-12T05:00:00Z",
-         "categoryID" : 1,
+         "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-12T06:00:00Z",
+            "date" : "2026-06-01T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 14,
          "shouldMigrate" : true,
-         "title" : "Refactor auth middleware"
+         "start" : "2026-06-01T04:00:00Z",
+         "title" : "Review infrastructure costs"
       },
       {
-         "added" : "2026-02-12T05:00:00Z",
-         "categoryID" : null,
+         "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-12T06:00:00Z",
+            "date" : "2026-06-01T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 15,
-         "shouldMigrate" : false,
-         "title" : "Write weekly summary"
+         "shouldMigrate" : true,
+         "start" : "2026-06-01T04:00:00Z",
+         "title" : "Profile slow dashboard query"
       },
       {
-         "added" : "2026-02-12T05:00:00Z",
          "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-12T06:00:00Z",
+            "date" : "2026-06-02T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 16,
          "shouldMigrate" : true,
-         "title" : "Investigate memory leak"
+         "start" : "2026-06-02T04:00:00Z",
+         "title" : "Refactor auth middleware"
       },
       {
-         "added" : "2026-02-12T05:00:00Z",
-         "categoryID" : 1,
+         "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-12T06:00:00Z",
+            "date" : "2026-06-02T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 17,
          "shouldMigrate" : false,
-         "title" : "Code review: search PR"
+         "start" : "2026-06-02T04:00:00Z",
+         "title" : "Write weekly summary"
       },
       {
-         "added" : "2026-02-12T05:00:00Z",
-         "categoryID" : 2,
+         "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-12T06:00:00Z",
-            "kind" : "abandoned"
+            "date" : "2026-06-02T05:00:00Z",
+            "kind" : "done"
          },
          "externalURL" : null,
          "id" : 18,
-         "shouldMigrate" : false,
-         "title" : "Schedule 1:1 with Bob"
+         "shouldMigrate" : true,
+         "start" : "2026-06-02T04:00:00Z",
+         "title" : "Investigate memory leak"
       },
       {
-         "added" : "2026-02-14T05:00:00Z",
-         "categoryID" : null,
+         "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-17T06:00:00Z",
+            "date" : "2026-06-02T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 19,
-         "shouldMigrate" : true,
-         "title" : "Post-mortem writeup"
+         "shouldMigrate" : false,
+         "start" : "2026-06-02T04:00:00Z",
+         "title" : "Code review: search PR"
       },
       {
-         "added" : "2026-02-14T05:00:00Z",
-         "categoryID" : 1,
+         "categoryID" : 2,
          "ending" : {
-            "date" : "2026-02-15T06:00:00Z",
-            "kind" : "done"
+            "date" : "2026-06-02T05:00:00Z",
+            "kind" : "abandoned"
          },
          "externalURL" : null,
          "id" : 20,
-         "shouldMigrate" : true,
-         "title" : "Set up new dev environment"
+         "shouldMigrate" : false,
+         "start" : "2026-06-02T04:00:00Z",
+         "title" : "Schedule 1:1 with Bob"
       },
       {
-         "added" : "2026-02-14T05:00:00Z",
          "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-14T06:00:00Z",
+            "date" : "2026-06-02T15:39:56Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 21,
          "shouldMigrate" : false,
-         "title" : "Review sprint board"
+         "start" : "2026-06-02T04:00:00Z",
+         "title" : "Had to roll back — something off in prod. Investigating."
       },
       {
-         "added" : "2026-02-15T05:00:00Z",
-         "categoryID" : 1,
+         "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-15T06:00:00Z",
+            "date" : "2026-06-02T14:15:43Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 22,
          "shouldMigrate" : false,
-         "title" : "Code review: auth PR"
+         "start" : "2026-06-02T04:00:00Z",
+         "title" : "Good session — found a cleaner solution than expected."
       },
       {
-         "added" : "2026-02-15T05:00:00Z",
-         "categoryID" : 1,
+         "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-15T06:00:00Z",
+            "date" : "2026-06-07T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 23,
          "shouldMigrate" : true,
-         "title" : "Fix flaky CI tests"
+         "start" : "2026-06-04T04:00:00Z",
+         "title" : "Post-mortem writeup"
       },
       {
-         "added" : "2026-02-15T05:00:00Z",
          "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-15T06:00:00Z",
+            "date" : "2026-06-05T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 24,
          "shouldMigrate" : true,
-         "title" : "Deploy hotfix to staging"
+         "start" : "2026-06-04T04:00:00Z",
+         "title" : "Set up new dev environment"
       },
       {
-         "added" : "2026-02-15T05:00:00Z",
-         "categoryID" : 1,
+         "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-15T06:00:00Z",
+            "date" : "2026-06-04T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 25,
-         "shouldMigrate" : true,
-         "title" : "Write migration guide"
+         "shouldMigrate" : false,
+         "start" : "2026-06-04T04:00:00Z",
+         "title" : "Review sprint board"
       },
       {
-         "added" : "2026-02-17T05:00:00Z",
-         "categoryID" : 1,
+         "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-17T06:00:00Z",
+            "date" : "2026-06-04T14:48:41Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 26,
-         "shouldMigrate" : true,
-         "title" : "Update API docs"
+         "shouldMigrate" : false,
+         "start" : "2026-06-04T04:00:00Z",
+         "title" : "Got a second opinion from the platform team — on the right track."
       },
       {
-         "added" : "2026-02-17T05:00:00Z",
-         "categoryID" : 2,
+         "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-17T06:00:00Z",
+            "date" : "2026-06-05T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 27,
          "shouldMigrate" : false,
-         "title" : "1:1 with Alice"
+         "start" : "2026-06-05T04:00:00Z",
+         "title" : "Code review: auth PR"
       },
       {
-         "added" : "2026-02-17T05:00:00Z",
-         "categoryID" : 2,
+         "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-17T06:00:00Z",
+            "date" : "2026-06-05T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 28,
-         "shouldMigrate" : false,
-         "title" : "Sprint planning"
+         "shouldMigrate" : true,
+         "start" : "2026-06-05T04:00:00Z",
+         "title" : "Fix flaky CI tests"
       },
       {
-         "added" : "2026-02-17T05:00:00Z",
-         "categoryID" : 2,
+         "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-17T06:00:00Z",
-            "kind" : "abandoned"
+            "date" : "2026-06-05T05:00:00Z",
+            "kind" : "done"
          },
          "externalURL" : null,
          "id" : 29,
-         "shouldMigrate" : false,
-         "title" : "Retrospective"
+         "shouldMigrate" : true,
+         "start" : "2026-06-05T04:00:00Z",
+         "title" : "Deploy hotfix to staging"
       },
       {
-         "added" : "2026-02-17T05:00:00Z",
-         "categoryID" : null,
+         "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-17T06:00:00Z",
+            "date" : "2026-06-05T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 30,
-         "shouldMigrate" : false,
-         "title" : "Respond to Slack backlog"
+         "shouldMigrate" : true,
+         "start" : "2026-06-05T04:00:00Z",
+         "title" : "Write migration guide"
       },
       {
-         "added" : "2026-02-18T05:00:00Z",
          "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-18T06:00:00Z",
+            "date" : "2026-06-05T15:29:44Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 31,
          "shouldMigrate" : false,
-         "title" : "Update Jira tickets"
+         "start" : "2026-06-05T04:00:00Z",
+         "title" : "Had to roll back — something off in prod. Investigating."
       },
       {
-         "added" : "2026-02-18T05:00:00Z",
-         "categoryID" : null,
+         "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-18T06:00:00Z",
+            "date" : "2026-06-07T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 32,
          "shouldMigrate" : true,
-         "title" : "Review infrastructure costs"
+         "start" : "2026-06-07T04:00:00Z",
+         "title" : "Update API docs"
       },
       {
-         "added" : "2026-02-18T05:00:00Z",
-         "categoryID" : 1,
+         "categoryID" : 2,
          "ending" : {
-            "date" : "2026-02-20T06:00:00Z",
+            "date" : "2026-06-07T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 33,
-         "shouldMigrate" : true,
-         "title" : "Profile slow dashboard query"
+         "shouldMigrate" : false,
+         "start" : "2026-06-07T04:00:00Z",
+         "title" : "1:1 with Alice"
       },
       {
-         "added" : "2026-02-18T05:00:00Z",
-         "categoryID" : 1,
+         "categoryID" : 2,
          "ending" : {
-            "date" : "2026-02-18T06:00:00Z",
+            "date" : "2026-06-07T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 34,
-         "shouldMigrate" : true,
-         "title" : "Refactor auth middleware"
+         "shouldMigrate" : false,
+         "start" : "2026-06-07T04:00:00Z",
+         "title" : "Sprint planning"
       },
       {
-         "added" : "2026-02-18T05:00:00Z",
-         "categoryID" : null,
+         "categoryID" : 2,
          "ending" : {
-            "date" : "2026-02-18T06:00:00Z",
-            "kind" : "done"
+            "date" : "2026-06-07T05:00:00Z",
+            "kind" : "abandoned"
          },
          "externalURL" : null,
          "id" : 35,
          "shouldMigrate" : false,
-         "title" : "Write weekly summary"
+         "start" : "2026-06-07T04:00:00Z",
+         "title" : "Retrospective"
       },
       {
-         "added" : "2026-02-20T05:00:00Z",
-         "categoryID" : 1,
+         "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-21T06:00:00Z",
+            "date" : "2026-06-07T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 36,
-         "shouldMigrate" : true,
-         "title" : "Investigate memory leak"
+         "shouldMigrate" : false,
+         "start" : "2026-06-07T04:00:00Z",
+         "title" : "Respond to Slack backlog"
       },
       {
-         "added" : "2026-02-20T05:00:00Z",
-         "categoryID" : 1,
+         "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-20T06:00:00Z",
-            "kind" : "abandoned"
+            "date" : "2026-06-07T17:16:01Z",
+            "kind" : "done"
          },
          "externalURL" : null,
          "id" : 37,
          "shouldMigrate" : false,
-         "title" : "Code review: search PR"
+         "start" : "2026-06-07T04:00:00Z",
+         "title" : "Pairing with Alice was helpful — got unstuck."
       },
       {
-         "added" : "2026-02-20T05:00:00Z",
-         "categoryID" : 2,
+         "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-20T06:00:00Z",
+            "date" : "2026-06-08T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 38,
          "shouldMigrate" : false,
-         "title" : "Schedule 1:1 with Bob"
+         "start" : "2026-06-08T04:00:00Z",
+         "title" : "Update Jira tickets"
       },
       {
-         "added" : "2026-02-20T05:00:00Z",
          "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-20T06:00:00Z",
+            "date" : "2026-06-08T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 39,
          "shouldMigrate" : true,
-         "title" : "Post-mortem writeup"
+         "start" : "2026-06-08T04:00:00Z",
+         "title" : "Review infrastructure costs"
       },
       {
-         "added" : "2026-02-20T05:00:00Z",
          "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-20T06:00:00Z",
+            "date" : "2026-06-10T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 40,
          "shouldMigrate" : true,
-         "title" : "Set up new dev environment"
+         "start" : "2026-06-08T04:00:00Z",
+         "title" : "Profile slow dashboard query"
       },
       {
-         "added" : "2026-02-21T05:00:00Z",
-         "categoryID" : null,
+         "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-21T06:00:00Z",
+            "date" : "2026-06-08T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 41,
-         "shouldMigrate" : false,
-         "title" : "Review sprint board"
+         "shouldMigrate" : true,
+         "start" : "2026-06-08T04:00:00Z",
+         "title" : "Refactor auth middleware"
       },
       {
-         "added" : "2026-02-21T05:00:00Z",
-         "categoryID" : 1,
+         "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-21T06:00:00Z",
+            "date" : "2026-06-08T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 42,
          "shouldMigrate" : false,
-         "title" : "Code review: auth PR"
+         "start" : "2026-06-08T04:00:00Z",
+         "title" : "Write weekly summary"
       },
       {
-         "added" : "2026-02-21T05:00:00Z",
          "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-21T06:00:00Z",
+            "date" : "2026-06-11T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 43,
          "shouldMigrate" : true,
-         "title" : "Fix flaky CI tests"
+         "start" : "2026-06-10T04:00:00Z",
+         "title" : "Investigate memory leak"
       },
       {
-         "added" : "2026-02-21T05:00:00Z",
          "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-21T06:00:00Z",
-            "kind" : "done"
+            "date" : "2026-06-10T05:00:00Z",
+            "kind" : "abandoned"
          },
          "externalURL" : null,
          "id" : 44,
-         "shouldMigrate" : true,
-         "title" : "Deploy hotfix to staging"
+         "shouldMigrate" : false,
+         "start" : "2026-06-10T04:00:00Z",
+         "title" : "Code review: search PR"
       },
       {
-         "added" : "2026-02-21T05:00:00Z",
-         "categoryID" : 1,
+         "categoryID" : 2,
          "ending" : {
-            "date" : "2026-02-23T06:00:00Z",
+            "date" : "2026-06-10T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 45,
-         "shouldMigrate" : true,
-         "title" : "Write migration guide"
+         "shouldMigrate" : false,
+         "start" : "2026-06-10T04:00:00Z",
+         "title" : "Schedule 1:1 with Bob"
       },
       {
-         "added" : "2026-02-23T05:00:00Z",
-         "categoryID" : 1,
+         "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-23T06:00:00Z",
+            "date" : "2026-06-10T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 46,
          "shouldMigrate" : true,
-         "title" : "Update API docs"
+         "start" : "2026-06-10T04:00:00Z",
+         "title" : "Post-mortem writeup"
       },
       {
-         "added" : "2026-02-23T05:00:00Z",
-         "categoryID" : 2,
+         "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-23T06:00:00Z",
-            "kind" : "abandoned"
+            "date" : "2026-06-10T05:00:00Z",
+            "kind" : "done"
          },
          "externalURL" : null,
          "id" : 47,
-         "shouldMigrate" : false,
-         "title" : "1:1 with Alice"
+         "shouldMigrate" : true,
+         "start" : "2026-06-10T04:00:00Z",
+         "title" : "Set up new dev environment"
       },
       {
-         "added" : "2026-02-23T05:00:00Z",
-         "categoryID" : 2,
+         "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-23T06:00:00Z",
+            "date" : "2026-06-10T19:13:04Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 48,
          "shouldMigrate" : false,
-         "title" : "Sprint planning"
+         "start" : "2026-06-10T04:00:00Z",
+         "title" : "Pairing with Alice was helpful — got unstuck."
       },
       {
-         "added" : "2026-02-23T05:00:00Z",
-         "categoryID" : 2,
+         "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-23T06:00:00Z",
+            "date" : "2026-06-10T20:48:31Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 49,
          "shouldMigrate" : false,
-         "title" : "Retrospective"
+         "start" : "2026-06-10T04:00:00Z",
+         "title" : "Meeting ran long, pushed afternoon items to tomorrow."
       },
       {
-         "added" : "2026-02-23T05:00:00Z",
          "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-23T06:00:00Z",
+            "date" : "2026-06-11T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 50,
          "shouldMigrate" : false,
-         "title" : "Respond to Slack backlog"
+         "start" : "2026-06-11T04:00:00Z",
+         "title" : "Review sprint board"
       },
       {
-         "added" : "2026-02-25T05:00:00Z",
-         "categoryID" : null,
+         "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-25T06:00:00Z",
+            "date" : "2026-06-11T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 51,
          "shouldMigrate" : false,
-         "title" : "Update Jira tickets"
+         "start" : "2026-06-11T04:00:00Z",
+         "title" : "Code review: auth PR"
       },
       {
-         "added" : "2026-02-25T05:00:00Z",
-         "categoryID" : null,
+         "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-25T06:00:00Z",
+            "date" : "2026-06-11T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 52,
          "shouldMigrate" : true,
-         "title" : "Review infrastructure costs"
+         "start" : "2026-06-11T04:00:00Z",
+         "title" : "Fix flaky CI tests"
       },
       {
-         "added" : "2026-02-25T05:00:00Z",
          "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-25T06:00:00Z",
+            "date" : "2026-06-11T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 53,
          "shouldMigrate" : true,
-         "title" : "Profile slow dashboard query"
+         "start" : "2026-06-11T04:00:00Z",
+         "title" : "Deploy hotfix to staging"
       },
       {
-         "added" : "2026-02-27T05:00:00Z",
          "categoryID" : 1,
-         "ending" : null,
+         "ending" : {
+            "date" : "2026-06-13T05:00:00Z",
+            "kind" : "done"
+         },
          "externalURL" : null,
          "id" : 54,
          "shouldMigrate" : true,
-         "title" : "Refactor auth middleware"
+         "start" : "2026-06-11T04:00:00Z",
+         "title" : "Write migration guide"
       },
       {
-         "added" : "2026-02-27T05:00:00Z",
          "categoryID" : null,
          "ending" : {
-            "date" : "2026-02-27T06:00:00Z",
+            "date" : "2026-06-11T16:04:28Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 55,
          "shouldMigrate" : false,
-         "title" : "Write weekly summary"
+         "start" : "2026-06-11T04:00:00Z",
+         "title" : "Finished earlier than expected and pulled in the next item."
       },
       {
-         "added" : "2026-02-27T05:00:00Z",
          "categoryID" : 1,
          "ending" : {
-            "date" : "2026-02-27T06:00:00Z",
+            "date" : "2026-06-13T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 56,
          "shouldMigrate" : true,
-         "title" : "Investigate memory leak"
+         "start" : "2026-06-13T04:00:00Z",
+         "title" : "Update API docs"
       },
       {
-         "added" : "2026-02-27T05:00:00Z",
-         "categoryID" : 1,
+         "categoryID" : 2,
          "ending" : {
-            "date" : "2026-02-27T06:00:00Z",
-            "kind" : "done"
+            "date" : "2026-06-13T05:00:00Z",
+            "kind" : "abandoned"
          },
          "externalURL" : null,
          "id" : 57,
          "shouldMigrate" : false,
-         "title" : "Code review: search PR"
+         "start" : "2026-06-13T04:00:00Z",
+         "title" : "1:1 with Alice"
       },
       {
-         "added" : "2026-02-27T05:00:00Z",
          "categoryID" : 2,
          "ending" : {
-            "date" : "2026-02-27T06:00:00Z",
+            "date" : "2026-06-13T05:00:00Z",
             "kind" : "done"
          },
          "externalURL" : null,
          "id" : 58,
          "shouldMigrate" : false,
-         "title" : "Schedule 1:1 with Bob"
+         "start" : "2026-06-13T04:00:00Z",
+         "title" : "Sprint planning"
       },
       {
-         "added" : "2026-03-01T05:00:00Z",
-         "categoryID" : null,
-         "ending" : null,
+         "categoryID" : 2,
+         "ending" : {
+            "date" : "2026-06-13T05:00:00Z",
+            "kind" : "done"
+         },
          "externalURL" : null,
          "id" : 59,
-         "shouldMigrate" : true,
-         "title" : "Post-mortem writeup"
+         "shouldMigrate" : false,
+         "start" : "2026-06-13T04:00:00Z",
+         "title" : "Retrospective"
       },
       {
-         "added" : "2026-03-01T05:00:00Z",
-         "categoryID" : 1,
-         "ending" : null,
+         "categoryID" : null,
+         "ending" : {
+            "date" : "2026-06-13T05:00:00Z",
+            "kind" : "done"
+         },
          "externalURL" : null,
          "id" : 60,
-         "shouldMigrate" : true,
-         "title" : "Set up new dev environment"
+         "shouldMigrate" : false,
+         "start" : "2026-06-13T04:00:00Z",
+         "title" : "Respond to Slack backlog"
       },
       {
-         "added" : "2026-03-01T05:00:00Z",
          "categoryID" : null,
-         "ending" : null,
+         "ending" : {
+            "date" : "2026-06-15T05:00:00Z",
+            "kind" : "done"
+         },
          "externalURL" : null,
          "id" : 61,
          "shouldMigrate" : false,
+         "start" : "2026-06-15T04:00:00Z",
+         "title" : "Update Jira tickets"
+      },
+      {
+         "categoryID" : null,
+         "ending" : {
+            "date" : "2026-06-15T05:00:00Z",
+            "kind" : "done"
+         },
+         "externalURL" : null,
+         "id" : 62,
+         "shouldMigrate" : true,
+         "start" : "2026-06-15T04:00:00Z",
+         "title" : "Review infrastructure costs"
+      },
+      {
+         "categoryID" : 1,
+         "ending" : {
+            "date" : "2026-06-15T05:00:00Z",
+            "kind" : "done"
+         },
+         "externalURL" : null,
+         "id" : 63,
+         "shouldMigrate" : true,
+         "start" : "2026-06-15T04:00:00Z",
+         "title" : "Profile slow dashboard query"
+      },
+      {
+         "categoryID" : null,
+         "ending" : {
+            "date" : "2026-06-15T14:47:41Z",
+            "kind" : "done"
+         },
+         "externalURL" : null,
+         "id" : 64,
+         "shouldMigrate" : false,
+         "start" : "2026-06-15T04:00:00Z",
+         "title" : "Way more scope than expected. Splitting into two tickets."
+      },
+      {
+         "categoryID" : 1,
+         "ending" : null,
+         "externalURL" : null,
+         "id" : 65,
+         "shouldMigrate" : true,
+         "start" : "2026-06-17T04:00:00Z",
+         "title" : "Refactor auth middleware"
+      },
+      {
+         "categoryID" : null,
+         "ending" : {
+            "date" : "2026-06-17T05:00:00Z",
+            "kind" : "done"
+         },
+         "externalURL" : null,
+         "id" : 66,
+         "shouldMigrate" : false,
+         "start" : "2026-06-17T04:00:00Z",
+         "title" : "Write weekly summary"
+      },
+      {
+         "categoryID" : 1,
+         "ending" : {
+            "date" : "2026-06-17T05:00:00Z",
+            "kind" : "done"
+         },
+         "externalURL" : null,
+         "id" : 67,
+         "shouldMigrate" : true,
+         "start" : "2026-06-17T04:00:00Z",
+         "title" : "Investigate memory leak"
+      },
+      {
+         "categoryID" : 1,
+         "ending" : {
+            "date" : "2026-06-17T05:00:00Z",
+            "kind" : "done"
+         },
+         "externalURL" : null,
+         "id" : 68,
+         "shouldMigrate" : false,
+         "start" : "2026-06-17T04:00:00Z",
+         "title" : "Code review: search PR"
+      },
+      {
+         "categoryID" : 2,
+         "ending" : {
+            "date" : "2026-06-17T05:00:00Z",
+            "kind" : "done"
+         },
+         "externalURL" : null,
+         "id" : 69,
+         "shouldMigrate" : false,
+         "start" : "2026-06-17T04:00:00Z",
+         "title" : "Schedule 1:1 with Bob"
+      },
+      {
+         "categoryID" : null,
+         "ending" : null,
+         "externalURL" : null,
+         "id" : 70,
+         "shouldMigrate" : true,
+         "start" : "2026-06-19T04:00:00Z",
+         "title" : "Post-mortem writeup"
+      },
+      {
+         "categoryID" : 1,
+         "ending" : null,
+         "externalURL" : null,
+         "id" : 71,
+         "shouldMigrate" : true,
+         "start" : "2026-06-19T04:00:00Z",
+         "title" : "Set up new dev environment"
+      },
+      {
+         "categoryID" : null,
+         "ending" : null,
+         "externalURL" : null,
+         "id" : 72,
+         "shouldMigrate" : false,
+         "start" : "2026-06-19T04:00:00Z",
          "title" : "Review sprint board"
+      },
+      {
+         "categoryID" : null,
+         "ending" : {
+            "date" : "2026-06-19T16:15:43Z",
+            "kind" : "done"
+         },
+         "externalURL" : null,
+         "id" : 73,
+         "shouldMigrate" : false,
+         "start" : "2026-06-19T04:00:00Z",
+         "title" : "Quick check-in with Bob, realigned on priorities."
       }
    ],
-   "version" : 3
+   "version" : 7
 }
 

@@ -72,7 +72,6 @@ struct JournalView: View {
                     JournalPageDetailView(
                         date: page.date,
                         todos: pageStore.todos,
-                        notes: pageStore.notes,
                         readOnly: false
                     )
                 } else {
@@ -82,7 +81,6 @@ struct JournalView: View {
                 JournalPageDetailView(
                     date: journalStore.selectedDate!,
                     todos: journalStore.selectedTodos,
-                    notes: journalStore.selectedNotes,
                     readOnly: true
                 )
             } else {
@@ -303,7 +301,6 @@ struct JournalPageDetailView: View {
 
     let date: Date
     let todos: [Todo]
-    let notes: [Note]
     var readOnly: Bool = true
 
     @State private var newEntryText = ""
@@ -312,12 +309,12 @@ struct JournalPageDetailView: View {
     @FocusState private var addFieldFocused: Bool
     @State private var selectedTodoIDs: Set<Int64> = []
     @State private var editingTodoID: Int64? = nil
-    @State private var entryIsNote = false
+    // When true, the add-field logs an unplanned thing that already happened
+    // (a born-done todo) instead of a pending one. -- claude, 2026-06-18
+    @State private var entryIsDone = false
     @State private var selectedCategoryID: Int64? = nil
     @State private var categoryPickerActive = false
     @State private var categoryPickerQuery = ""
-    @State private var editingNoteID: Int64? = nil
-    @State private var selectedNoteID: Int64? = nil
 
     // True while a child row is presenting a sheet/alert (adjust time, set URL,
     // send to future). The List keeps keyboard focus behind these modals, so
@@ -326,7 +323,10 @@ struct JournalPageDetailView: View {
     // -- claude, 2026-06-13
     @State private var rowModalPresented = false
 
-    @AppStorage("resolvedWithNotes") private var resolvedWithNotes = false
+    // Key kept as "resolvedWithNotes" for backward compatibility with saved
+    // preferences, though notes are gone; it now governs only whether resolved
+    // todos appear in a trailing Activity section. -- claude, 2026-06-18
+    @AppStorage("resolvedWithNotes") private var showActivitySection = false
 
     @Environment(\.undoManager) private var undoManager
 
@@ -342,9 +342,9 @@ struct JournalPageDetailView: View {
 
             ScrollViewReader { scrollProxy in
                 List(selection: $selectedTodoIDs) {
-                    // On past pages with resolvedWithNotes, the Activity section
-                    // leads so you see "what happened" before the leftovers.
-                    if resolvedWithNotes && readOnly && !activityItems.isEmpty {
+                    // On past pages with the Activity section on, it leads so you
+                    // see "what happened" before the leftovers.
+                    if showActivitySection && readOnly && !activityTodos.isEmpty {
                         activitySection
                     }
 
@@ -352,7 +352,7 @@ struct JournalPageDetailView: View {
                         Text("No tasks recorded for this day.")
                             .foregroundStyle(.secondary)
                     } else {
-                        ForEach(todoGroups(for: resolvedWithNotes ? openTodos : todos), id: \.id) { group in
+                        ForEach(todoGroups(for: showActivitySection ? openTodos : todos), id: \.id) { group in
                             Section {
                                 ForEach(group.items) { todo in
                                     TodoRow(
@@ -380,18 +380,17 @@ struct JournalPageDetailView: View {
                             Section {
                                 HStack(spacing: 8) {
                                     Button {
-                                        entryIsNote.toggle()
-                                        if entryIsNote { selectedCategoryID = nil; categoryPickerActive = false }
+                                        entryIsDone.toggle()
                                         addFieldFocused = true
                                     } label: {
-                                        Image(systemName: entryIsNote ? "bubble.left" : "circle")
+                                        Image(systemName: entryIsDone ? "checkmark.circle" : "circle")
                                             .foregroundStyle(.secondary)
                                             .frame(width: 16)
                                     }
                                     .buttonStyle(.plain)
-                                    .help(entryIsNote ? "Switch to todo" : "Switch to note")
+                                    .help(entryIsDone ? "Switch to a pending todo" : "Switch to logging a done thing")
 
-                                    TextField(entryIsNote ? "Add note\u{2026}" : "Add todo\u{2026}", text: $newEntryText)
+                                    TextField(entryIsDone ? "Log a done thing\u{2026}" : "Add todo\u{2026}", text: $newEntryText)
                                         .focused($addFieldFocused)
                                         .onSubmit { submitEntry() }
                                         .onKeyPress(.escape) {
@@ -402,7 +401,7 @@ struct JournalPageDetailView: View {
                                         .onKeyPress("\t") { .handled }
                                         .onChange(of: newEntryText) { _, text in updateCategoryPicker(for: text) }
 
-                                    if !entryIsNote, let catID = selectedCategoryID,
+                                    if let catID = selectedCategoryID,
                                        let cat = categoryStore.categories.first(where: { $0.id == catID }) {
                                         HStack(spacing: 4) {
                                             Circle()
@@ -427,7 +426,7 @@ struct JournalPageDetailView: View {
                                 }
                                 .id("addEntryField")
 
-                                if !entryIsNote && categoryPickerActive && !filteredCategories.isEmpty {
+                                if categoryPickerActive && !filteredCategories.isEmpty {
                                     HStack(spacing: 6) {
                                         ForEach(filteredCategories) { cat in
                                             Button { selectCategory(cat) } label: {
@@ -451,36 +450,10 @@ struct JournalPageDetailView: View {
                         }
                     }
 
-                    // On today's mutable page with resolvedWithNotes, the Activity
-                    // section trails so open work stays front and centre.
-                    if resolvedWithNotes && !readOnly && !activityItems.isEmpty {
+                    // On today's mutable page with the Activity section on, it
+                    // trails so open work stays front and centre.
+                    if showActivitySection && !readOnly && !activityTodos.isEmpty {
                         activitySection
-                    }
-
-                    if !resolvedWithNotes && !textNotes.isEmpty {
-                        Section("Notes") {
-                            ForEach(textNotes) { note in
-                                NoteRow(
-                                    note: note,
-                                    readOnly: readOnly,
-                                    isEditing: editingNoteID == note.id,
-                                    isSelected: selectedNoteID == note.id,
-                                    modalPresented: $rowModalPresented,
-                                    onCommitEdit: { newText in
-                                        let trimmed = newText.trimmingCharacters(in: .whitespaces)
-                                        editingNoteID = nil
-                                        guard !trimmed.isEmpty else { return }
-                                        Task { try? await pageStore.setNoteText(trimmed, for: note, undoManager: undoManager) }
-                                    },
-                                    onCancelEdit: { editingNoteID = nil }
-                                )
-                                .onTapGesture {
-                                    guard !readOnly else { return }
-                                    selectedNoteID = note.id
-                                    selectedTodoIDs = []
-                                }
-                            }
-                        }
                     }
                 }
                 .onKeyPress(phases: .down) { keyPress in
@@ -490,49 +463,10 @@ struct JournalPageDetailView: View {
                     if rowModalPresented { return .ignored }
                     if keyPress.key == .escape {
                         if !selectedTodoIDs.isEmpty { selectedTodoIDs = []; return .handled }
-                        if selectedNoteID != nil { selectedNoteID = nil; return .handled }
                         return .ignored
                     }
-                    // Notes are untagged and invisible to the List's built-in
-                    // arrow navigation. When the selection is inside the Activity
-                    // section, handle up/down manually using activityItems order.
-                    // -- claude, 2026-03-02
-                    if (keyPress.key == .upArrow || keyPress.key == .downArrow),
-                       resolvedWithNotes, !activityItems.isEmpty,
-                       editingTodoID == nil, editingNoteID == nil {
-                        let delta = keyPress.key == .downArrow ? 1 : -1
-                        let currentIndex: Int? = {
-                            if let noteID = selectedNoteID {
-                                return activityItems.firstIndex {
-                                    guard case .note(let n) = $0 else { return false }
-                                    return n.id == noteID
-                                }
-                            }
-                            if selectedTodoIDs.count == 1, let id = selectedTodoIDs.first {
-                                return activityItems.firstIndex {
-                                    guard case .todo(let t) = $0 else { return false }
-                                    return t.id == id
-                                }
-                            }
-                            return nil
-                        }()
-                        if let idx = currentIndex {
-                            let next = idx + delta
-                            if next >= 0, next < activityItems.count {
-                                switch activityItems[next] {
-                                case .todo(let t): selectedTodoIDs = [t.id!]; selectedNoteID = nil
-                                case .note(let n): selectedNoteID = n.id; selectedTodoIDs = []
-                                }
-                            }
-                            return .handled
-                        }
-                    }
-                    guard !readOnly, editingTodoID == nil, editingNoteID == nil, !addFieldFocused else { return .ignored }
+                    guard !readOnly, editingTodoID == nil, !addFieldFocused else { return .ignored }
                     guard keyPress.key == .return else { return .ignored }
-                    if let noteID = selectedNoteID {
-                        editingNoteID = noteID
-                        return .handled
-                    }
                     guard !selectedTodoIDs.isEmpty else { return .ignored }
                     if keyPress.modifiers.contains(.command) {
                         let selectedTodos = todos.filter { selectedTodoIDs.contains($0.id!) }
@@ -550,9 +484,8 @@ struct JournalPageDetailView: View {
                     }
                     return .ignored
                 }
-                .onChange(of: selectedTodoIDs) { _, newIDs in
+                .onChange(of: selectedTodoIDs) { _, _ in
                     editingTodoID = nil
-                    if !newIDs.isEmpty { selectedNoteID = nil }
                 }
                 .onChange(of: scrollToFieldRequest) { _, _ in
                     // Double-defer: first Task lets SwiftUI finish inserting the row
@@ -572,11 +505,11 @@ struct JournalPageDetailView: View {
         .toolbar {
             ToolbarItem {
                 Button {
-                    resolvedWithNotes.toggle()
+                    showActivitySection.toggle()
                 } label: {
-                    Image(systemName: resolvedWithNotes ? "checkmark.circle.fill" : "checkmark.circle")
+                    Image(systemName: showActivitySection ? "checkmark.circle.fill" : "checkmark.circle")
                 }
-                .help(resolvedWithNotes ? "Show resolved items in place" : "Show Activity section")
+                .help(showActivitySection ? "Show resolved items in place" : "Show Activity section")
             }
             ToolbarItem {
                 Menu {
@@ -604,22 +537,11 @@ struct JournalPageDetailView: View {
                 categoryPickerQuery = ""
             }
         }
-        .onChange(of: selectedNoteID) { _, _ in editingNoteID = nil }
         .focusedSceneValue(\.focusAddTodo, readOnly ? nil : Binding<Bool>(
-            get: { addFieldFocused && !entryIsNote },
+            get: { addFieldFocused && !entryIsDone },
             set: { newValue in
                 if newValue {
-                    entryIsNote = false; showAddField = true; selectedTodoIDs = []
-                    scrollToFieldRequest += 1
-                }
-                addFieldFocused = newValue
-            }
-        ))
-        .focusedSceneValue(\.focusAddNote, readOnly ? nil : Binding<Bool>(
-            get: { addFieldFocused && entryIsNote },
-            set: { newValue in
-                if newValue {
-                    entryIsNote = true; showAddField = true; selectedTodoIDs = []; selectedNoteID = nil
+                    entryIsDone = false; showAddField = true; selectedTodoIDs = []
                     scrollToFieldRequest += 1
                 }
                 addFieldFocused = newValue
@@ -628,7 +550,7 @@ struct JournalPageDetailView: View {
     }
 
     // Todos whose ending falls on pageDate — shown in the Activity section when
-    // resolvedWithNotes is on. Ordered by ending time, tiebroken by id.
+    // it's on. Ordered by ending time, tiebroken by id.
     private var activityTodos: [Todo] {
         todos
             .filter { todo in
@@ -649,41 +571,6 @@ struct JournalPageDetailView: View {
         }
     }
 
-    // A single item in the Activity section: either a resolved todo or a note.
-    private enum ActivityItem: Identifiable {
-        case todo(Todo)
-        case note(Note)
-
-        var id: String {
-            switch self {
-            case .todo(let t): return "todo-\(t.id!)"
-            case .note(let n): return "note-\(n.id!)"
-            }
-        }
-
-        var timestamp: Date {
-            switch self {
-            case .todo(let t): return t.ending!.date
-            case .note(let n): return n.timestamp
-            }
-        }
-    }
-
-    // Resolved todos and notes merged into a single chronological sequence.
-    // On timestamp ties, todos sort before notes; within each kind, by id.
-    private var activityItems: [ActivityItem] {
-        let items = activityTodos.map(ActivityItem.todo) + textNotes.map(ActivityItem.note)
-        return items.sorted {
-            if $0.timestamp != $1.timestamp { return $0.timestamp < $1.timestamp }
-            switch ($0, $1) {
-            case (.todo(let a), .todo(let b)): return a.id! < b.id!
-            case (.note(let a), .note(let b)): return a.id! < b.id!
-            case (.todo, .note):               return true
-            case (.note, .todo):               return false
-            }
-        }
-    }
-
     private func todoGroups(for sourceTodos: [Todo]) -> [(id: String, category: Category?, items: [Todo])] {
         groupedByCategory(sourceTodos, categoryID: \.categoryID, categories: categoryStore.categories)
     }
@@ -691,55 +578,27 @@ struct JournalPageDetailView: View {
     @ViewBuilder
     private var activitySection: some View {
         Section("Activity") {
-            ForEach(activityItems) { item in
-                switch item {
-                case .todo(let todo):
-                    TodoRow(
-                        todo: todo,
-                        pageDate: date,
-                        readOnly: readOnly,
-                        isEditing: editingTodoID == todo.id,
-                        selectedIDs: selectedTodoIDs,
-                        showCategoryDot: true,
-                        activityTimestamp: todo.ending?.date,
-                        modalPresented: $rowModalPresented,
-                        onCommitEdit: { newTitle in
-                            let trimmed = newTitle.trimmingCharacters(in: .whitespaces)
-                            editingTodoID = nil
-                            guard !trimmed.isEmpty else { return }
-                            Task { try? await pageStore.setTitle(trimmed, for: todo, undoManager: undoManager) }
-                        },
-                        onCancelEdit: { editingTodoID = nil }
-                    )
-                    .tag(todo.id!)
-                case .note(let note):
-                    NoteRow(
-                        note: note,
-                        readOnly: readOnly,
-                        isEditing: editingNoteID == note.id,
-                        isSelected: selectedNoteID == note.id,
-                        activityTimestamp: note.timestamp,
-                        modalPresented: $rowModalPresented,
-                        onCommitEdit: { newText in
-                            let trimmed = newText.trimmingCharacters(in: .whitespaces)
-                            editingNoteID = nil
-                            guard !trimmed.isEmpty else { return }
-                            Task { try? await pageStore.setNoteText(trimmed, for: note, undoManager: undoManager) }
-                        },
-                        onCancelEdit: { editingNoteID = nil }
-                    )
-                    .onTapGesture {
-                        guard !readOnly else { return }
-                        selectedNoteID = note.id
-                        selectedTodoIDs = []
-                    }
-                }
+            ForEach(activityTodos) { todo in
+                TodoRow(
+                    todo: todo,
+                    pageDate: date,
+                    readOnly: readOnly,
+                    isEditing: editingTodoID == todo.id,
+                    selectedIDs: selectedTodoIDs,
+                    showCategoryDot: true,
+                    activityTimestamp: todo.ending?.date,
+                    modalPresented: $rowModalPresented,
+                    onCommitEdit: { newTitle in
+                        let trimmed = newTitle.trimmingCharacters(in: .whitespaces)
+                        editingTodoID = nil
+                        guard !trimmed.isEmpty else { return }
+                        Task { try? await pageStore.setTitle(trimmed, for: todo, undoManager: undoManager) }
+                    },
+                    onCancelEdit: { editingTodoID = nil }
+                )
+                .tag(todo.id!)
             }
         }
-    }
-
-    private var textNotes: [Note] {
-        notes.filter { $0.text != nil }
     }
 
     private func submitEntry() {
@@ -749,27 +608,18 @@ struct JournalPageDetailView: View {
         }
         let text = newEntryText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { addFieldFocused = false; return }
-        if entryIsNote {
-            Task {
-                try? await pageStore.addNote(text: text)
-                newEntryText = ""
-                showAddField = true
-                addFieldFocused = true
-            }
-        } else {
-            let catID = selectedCategoryID
-            Task {
-                try? await pageStore.addTodo(title: text, shouldMigrate: true, categoryID: catID)
-                newEntryText = ""
-                selectedCategoryID = nil
-                showAddField = true
-                addFieldFocused = true
-            }
+        let catID = selectedCategoryID
+        let done = entryIsDone
+        Task {
+            try? await pageStore.addTodo(title: text, shouldMigrate: true, categoryID: catID, done: done)
+            newEntryText = ""
+            selectedCategoryID = nil
+            showAddField = true
+            addFieldFocused = true
         }
     }
 
     private func updateCategoryPicker(for text: String) {
-        guard !entryIsNote else { categoryPickerActive = false; return }
         let words = text.components(separatedBy: " ")
         if let last = words.last, last.hasPrefix("#") {
             categoryPickerActive = true
@@ -1218,120 +1068,6 @@ struct TodoRow: View {
 
 }
 
-// MARK: - NoteRow
-
-struct NoteRow: View {
-    @EnvironmentObject private var store: PageStore
-    @Environment(\.undoManager) private var undoManager
-
-    let note: Note
-    var readOnly: Bool = false
-    var isEditing: Bool = false
-    var isSelected: Bool = false
-    var activityTimestamp: Date? = nil
-    var modalPresented: Binding<Bool>? = nil
-    var onCommitEdit: (String) -> Void = { _ in }
-    var onCancelEdit: () -> Void = {}
-
-    @State private var editText = ""
-    @FocusState private var editFieldFocused: Bool
-    @State private var showingAdjustTime = false
-    @State private var pendingTime: Date = .now
-
-    // The closed range of times the note may be moved to: midnight…23:59:59
-    // on whichever calendar day the note currently lives on.
-    private var adjustTimeDayRange: ClosedRange<Date> {
-        let cal = Calendar.current
-        let start = cal.startOfDay(for: note.timestamp)
-        let end = cal.date(bySettingHour: 23, minute: 59, second: 59, of: note.timestamp)!
-        return start...end
-    }
-
-    var body: some View {
-        Group {
-            if let ts = activityTimestamp {
-                // Activity layout: [pip spacer] [fixed-width time] [indicator slot] [text]
-                HStack(spacing: 8) {
-                    Color.clear.frame(width: 8, height: 8)
-                    Text(ts.formatted(date: .omitted, time: .shortened))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                        .frame(width: activityTimeColumnWidth, alignment: .trailing)
-                    Color.clear.frame(width: 14)
-                    noteTextContent
-                    Spacer()
-                }
-            } else {
-                VStack(alignment: .leading, spacing: 2) {
-                    noteTextContent
-                    Text(note.timestamp.formatted(date: .omitted, time: .shortened))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-        .padding(.vertical, 2)
-        .listRowBackground(isSelected ? Color.accentColor.opacity(0.2) : Color.clear)
-        .onChange(of: isEditing) { _, editing in
-            if editing {
-                editText = note.text ?? ""
-                editFieldFocused = true
-            }
-        }
-        .contextMenu {
-            Button("Adjust time\u{2026}") {
-                pendingTime = note.timestamp
-                showingAdjustTime = true
-            }
-            Button("Delete", role: .destructive) {
-                Task { try? await store.deleteNote(note, undoManager: undoManager) }
-            }
-        }
-        .sheet(isPresented: $showingAdjustTime) {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Adjust Note Time")
-                    .font(.headline)
-                DatePicker(
-                    "",
-                    selection: $pendingTime,
-                    in: adjustTimeDayRange,
-                    displayedComponents: .hourAndMinute
-                )
-                .labelsHidden()
-                HStack {
-                    Spacer()
-                    Button("Cancel") { showingAdjustTime = false }
-                        .keyboardShortcut(.cancelAction)
-                    Button("Set") {
-                        Task { try? await store.setNoteTimestamp(pendingTime, for: note, undoManager: undoManager) }
-                        showingAdjustTime = false
-                    }
-                    .keyboardShortcut(.defaultAction)
-                    .buttonStyle(.borderedProminent)
-                }
-            }
-            .padding()
-            .frame(width: 220)
-        }
-        .onChange(of: showingAdjustTime) { _, presented in
-            modalPresented?.wrappedValue = presented
-        }
-    }
-
-    @ViewBuilder
-    private var noteTextContent: some View {
-        if isEditing {
-            TextField("", text: $editText)
-                .focused($editFieldFocused)
-                .onSubmit { onCommitEdit(editText) }
-                .onKeyPress(.escape) { onCancelEdit(); return .handled }
-        } else {
-            Text(note.text!)
-        }
-    }
-}
-
 // MARK: - FocusAddTodo
 
 struct FocusAddTodoKey: FocusedValueKey {
@@ -1342,18 +1078,5 @@ extension FocusedValues {
     var focusAddTodo: Binding<Bool>? {
         get { self[FocusAddTodoKey.self] }
         set { self[FocusAddTodoKey.self] = newValue }
-    }
-}
-
-// MARK: - FocusAddNote
-
-struct FocusAddNoteKey: FocusedValueKey {
-    typealias Value = Binding<Bool>
-}
-
-extension FocusedValues {
-    var focusAddNote: Binding<Bool>? {
-        get { self[FocusAddNoteKey.self] }
-        set { self[FocusAddNoteKey.self] = newValue }
     }
 }

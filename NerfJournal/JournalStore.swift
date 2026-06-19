@@ -9,7 +9,6 @@ final class JournalStore: ObservableObject {
     @Published var selectedDate: Date? = nil
     @Published var selectedPage: JournalPage? = nil
     @Published var selectedTodos: [Todo] = []
-    @Published var selectedNotes: [Note] = []
 
     init(database: AppDatabase = .shared) {
         self.db = database
@@ -24,7 +23,6 @@ final class JournalStore: ObservableObject {
                 self.selectedDate = nil
                 self.selectedPage = nil
                 self.selectedTodos = []
-                self.selectedNotes = []
             }
         }
         NotificationCenter.default.addObserver(
@@ -57,21 +55,17 @@ final class JournalStore: ObservableObject {
         // Fetch everything in one read so all published properties can be
         // updated synchronously below — SwiftUI then coalesces them into a
         // single view pass instead of animating through intermediate states.
-        let (foundPage, allTodos, notes) = try await db.dbQueue.read { db in
+        let (foundPage, allTodos) = try await db.dbQueue.read { db in
             let page = try JournalPage
                 .filter(Column("date") == start)
                 .fetchOne(db)
-            guard let pageID = page?.id else {
-                return (page, [Todo](), [Note]())
+            guard page?.id != nil else {
+                return (page, [Todo]())
             }
             let t = try Todo
                 .filter(Column("start") <= start)
                 .fetchAll(db)
-            let n = try Note
-                .filter(Column("pageID") == pageID)
-                .order(Column("timestamp"))
-                .fetchAll(db)
-            return (page, t, n)
+            return (page, t)
         }
 
         selectedDate = start
@@ -84,6 +78,5 @@ final class JournalStore: ObservableObject {
                 return ending.date >= start
             }
             .sortedForDisplay()
-        selectedNotes = notes
     }
 }

@@ -4,7 +4,6 @@ import UniformTypeIdentifiers
 
 struct TodoCommands: Commands {
     @FocusedValue(\.focusAddTodo) var focusAddTodo: Binding<Bool>?
-    @FocusedValue(\.focusAddNote) var focusAddNote: Binding<Bool>?
     @FocusedObject var journalStore: JournalStore?
     @FocusedObject var pageStore: PageStore?
     @FocusedObject var categoryStore: CategoryStore?
@@ -16,9 +15,6 @@ struct TodoCommands: Commands {
             Button("Add Todo") { focusAddTodo?.wrappedValue = true }
                 .keyboardShortcut("n", modifiers: .command)
                 .disabled(focusAddTodo == nil)
-            Button("Add Note") { focusAddNote?.wrappedValue = true }
-                .keyboardShortcut("n", modifiers: [.command, .shift])
-                .disabled(focusAddNote == nil)
         }
         CommandGroup(after: .newItem) {
             Button("Go to Today") {
@@ -67,9 +63,8 @@ struct TodoCommands: Commands {
     private func saveAsHTML(memberIDs: Set<Int64?>?) {
         guard let page = journalStore?.selectedPage else { return }
         let todos = filteredTodos(memberIDs: memberIDs)
-        let notes = pageStore?.notes ?? []
         let categories = categoryStore?.categories ?? []
-        let html = exportPageHTML(date: page.date, todos: todos, notes: notes, categories: categories)
+        let html = exportPageHTML(date: page.date, todos: todos, categories: categories)
         let df = DateFormatter()
         df.dateFormat = "yyyy-MM-dd"
         let panel = NSSavePanel()

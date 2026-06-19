@@ -6,8 +6,9 @@
 #
 # Produces 14 journal pages spread across the last 30 days, ending today.
 # Each task is a single todo record with a "start" date and an optional
-# "ending" (done or abandoned with a timestamp). Each page gets 0–2 freeform
-# notes drawn from a pool, timestamped at random times during the workday.
+# "ending" (done or abandoned with a timestamp). Each page also gets 0–2
+# "born-done" todos drawn from a pool — unplanned things done that day,
+# recorded already complete, timestamped at random times during the workday.
 # Todos with no ending are still-pending at the close of the generated data.
 # Output is deterministic (fixed srand seed) so you get the same assignments
 # on every run.
@@ -59,8 +60,9 @@ my @POOL = (
     [ 'Set up new dev environment',    'Engineering', 1 ],
 );
 
-# Freeform note text pool. Each page gets 0–2 notes drawn from this list.
-my @NOTE_POOL = (
+# Pool of unplanned things-done. Each page gets 0–2 born-done todos titled
+# from this list.
+my @DONE_POOL = (
     'Build is broken on main — blocked until CI goes green.',
     'Way more scope than expected. Splitting into two tickets.',
     'Found the root cause: stale cache entry. Fixed.',
@@ -95,8 +97,8 @@ sub day_ts {
 
 # -- generation --------------------------------------------------------------
 
-my (@pages_out, @todos_out, @notes_out);
-my ($page_id, $todo_id, $note_id) = (1, 1, 1);
+my (@pages_out, @todos_out);
+my ($page_id, $todo_id) = (1, 1);
 
 # Active pool: todos still pending at end of each day.
 # Each entry: { id, migrate, added_ts }
@@ -122,13 +124,6 @@ for my $pi (0 .. $#DAYS) {
             $todos_out[ $t->{id} - 1 ]{ending} = {
                 date => iso8601($done_ts),
                 kind => 'done',
-            };
-            push @notes_out, {
-                id            => $note_id++,
-                pageID        => $cur_pid,
-                timestamp     => iso8601($done_ts),
-                text          => undef,
-                relatedTodoID => $t->{id},
             };
         }
     }
@@ -163,30 +158,23 @@ for my $pi (0 .. $#DAYS) {
             categoryID    => (defined $cat_name ? $CAT_ID{$cat_name} : undef),
             externalURL   => undef,
         };
-
-        if (defined($ending) && $ending->{kind} eq 'done') {
-            push @notes_out, {
-                id            => $note_id++,
-                pageID        => $cur_pid,
-                timestamp     => iso8601($page_ts + 3600),
-                text          => undef,
-                relatedTodoID => $cur_tid,
-            };
-        }
     }
 
-    # --- add freeform notes for this page -----------------------------------
-    # 0 notes ~40% of the time, 1 note ~40%, 2 notes ~20%.
-    my $note_count = (rand() < 0.40) ? 0 : (rand() < 0.67) ? 1 : 2;
-    for (1 .. $note_count) {
+    # --- add born-done todos for this page ----------------------------------
+    # Unplanned things done that day: 0 ~40% of the time, 1 ~40%, 2 ~20%. Each
+    # starts today and ends the same day, so it shows only in the Activity view.
+    my $done_count = (rand() < 0.40) ? 0 : (rand() < 0.67) ? 1 : 2;
+    for (1 .. $done_count) {
         # Random time during a notional 9am–5pm workday.
-        my $note_ts = $page_ts + 9 * 3600 + int(rand(8 * 3600));
-        push @notes_out, {
-            id            => $note_id++,
-            pageID        => $cur_pid,
-            timestamp     => iso8601($note_ts),
-            text          => $NOTE_POOL[ int(rand @NOTE_POOL) ],
-            relatedTodoID => undef,
+        my $done_ts = $page_ts + 9 * 3600 + int(rand(8 * 3600));
+        push @todos_out, {
+            id            => $todo_id++,
+            title         => $DONE_POOL[ int(rand @DONE_POOL) ],
+            shouldMigrate => JSON::PP::false,
+            start         => iso8601($page_ts),
+            ending        => { date => iso8601($done_ts), kind => 'done' },
+            categoryID    => undef,
+            externalURL   => undef,
         };
     }
 }
@@ -233,14 +221,13 @@ for my $b (@BUNDLES) {
 # -- output ------------------------------------------------------------------
 
 my %export = (
-    version      => 3,
+    version      => 7,
     exportedAt   => iso8601(time),
     categories   => \@CATEGORIES,
     taskBundles  => \@bundles_out,
     bundleTodos  => \@bundle_todos_out,
     journalPages => \@pages_out,
     todos        => \@todos_out,
-    notes        => \@notes_out,
 );
 
 print JSON::PP->new->utf8->pretty->canonical->encode(\%export), "\n";

@@ -30,7 +30,7 @@ func exportPageMrkdwn(todos: [Todo], categories: [Category]) -> String {
     return lines.isEmpty ? "" : lines.joined(separator: "\n") + "\n"
 }
 
-func exportPageHTML(date: Date, todos: [Todo], notes: [Note], categories: [Category]) -> String {
+func exportPageHTML(date: Date, todos: [Todo], categories: [Category]) -> String {
     let cal = Calendar.current
     let pageDay = cal.startOfDay(for: date)
 
@@ -46,37 +46,18 @@ func exportPageHTML(date: Date, todos: [Todo], notes: [Note], categories: [Categ
     let catByID = Dictionary(uniqueKeysWithValues: categories.compactMap { c in c.id.map { ($0, c) } })
 
     // ── Activity items ─────────────────────────────────────────────────────
-    // Todos resolved on this day, plus notes, merged chronologically.
-    // Mirrors JournalPageDetailView.activityItems sort (timestamp, then todo
-    // before note on ties, then by id within kind).
+    // Todos resolved on this day, ordered chronologically by ending time and
+    // tiebroken by id. Mirrors JournalPageDetailView.activityTodos.
 
-    enum ActivityItem {
-        case todo(Todo)
-        case note(Note)
-        var timestamp: Date {
-            switch self { case .todo(let t): t.ending!.date; case .note(let n): n.timestamp }
+    let activityTodos = todos
+        .filter { t in t.ending.map { cal.isDate($0.date, inSameDayAs: pageDay) } ?? false }
+        .sorted {
+            let d0 = $0.ending!.date, d1 = $1.ending!.date
+            return d0 == d1 ? $0.id! < $1.id! : d0 < d1
         }
-    }
-
-    let activityTodos = todos.filter { t in
-        t.ending.map { cal.isDate($0.date, inSameDayAs: pageDay) } ?? false
-    }
     let openTodos = todos.filter { t in
         t.ending.map { !cal.isDate($0.date, inSameDayAs: pageDay) } ?? true
     }
-    let visibleNotes = notes.filter { $0.text != nil }
-
-    let activityItems: [ActivityItem] = (activityTodos.map(ActivityItem.todo)
-                                       + visibleNotes.map(ActivityItem.note))
-        .sorted {
-            if $0.timestamp != $1.timestamp { return $0.timestamp < $1.timestamp }
-            switch ($0, $1) {
-            case (.todo(let a), .todo(let b)): return a.id! < b.id!
-            case (.note(let a), .note(let b)): return a.id! < b.id!
-            case (.todo, .note): return true
-            case (.note, .todo): return false
-            }
-        }
 
     // ── Open todos grouped by category ────────────────────────────────────
 
@@ -105,42 +86,30 @@ func exportPageHTML(date: Date, todos: [Todo], notes: [Note], categories: [Categ
 
     // Activity section — flex rows with fixed dot/time/indicator columns.
     // Only abandoned items are struck through; done items use the ✔ indicator.
-    if !activityItems.isEmpty {
+    if !activityTodos.isEmpty {
         body += "<section>\n<h2>Activity</h2>\n<ul class=\"rows\">\n"
-        for item in activityItems {
-            switch item {
-            case .todo(let todo):
-                let (_, cls, cap) = todoDisplayState(todo, pageDay: pageDay, cal: cal)
-                let dotColor = todo.categoryID.flatMap { catByID[$0]?.color.cssHex } ?? "#999"
-                let ts = esc(timeFormatter.string(from: todo.ending!.date))
-                let isAbandoned = cls == "abandoned"
-                var titleHTML = isAbandoned ? "<s>\(esc(todo.title))</s>" : esc(todo.title)
-                if let url = todo.externalURL, !url.isEmpty {
-                    titleHTML += " \(linkTag(for: url))"
-                }
-                let ind: String
-                switch cls {
-                case "done":      ind = "\u{2714}"
-                case "abandoned": ind = "\u{2717}"
-                default:          ind = ""
-                }
-                body += "<li class=\"row \(cls)\">"
-                body += "<span class=\"dot-slot\">\(dotSpan(color: dotColor))</span>"
-                body += "<span class=\"ts\">\(ts)</span>"
-                body += "<span class=\"ind\">\(ind)</span>"
-                body += "<span class=\"bd\">\(titleHTML)"
-                if let cap { body += "<div class=\"cap\">\(esc(cap))</div>" }
-                body += "</span></li>\n"
-
-            case .note(let note):
-                let ts = esc(timeFormatter.string(from: note.timestamp))
-                body += "<li class=\"row note-row\">"
-                body += "<span class=\"dot-slot\"></span>"
-                body += "<span class=\"ts\">\(ts)</span>"
-                body += "<span class=\"ind\"></span>"
-                body += "<span class=\"bd note-text\">\(esc(note.text!))</span>"
-                body += "</li>\n"
+        for todo in activityTodos {
+            let (_, cls, cap) = todoDisplayState(todo, pageDay: pageDay, cal: cal)
+            let dotColor = todo.categoryID.flatMap { catByID[$0]?.color.cssHex } ?? "#999"
+            let ts = esc(timeFormatter.string(from: todo.ending!.date))
+            let isAbandoned = cls == "abandoned"
+            var titleHTML = isAbandoned ? "<s>\(esc(todo.title))</s>" : esc(todo.title)
+            if let url = todo.externalURL, !url.isEmpty {
+                titleHTML += " \(linkTag(for: url))"
             }
+            let ind: String
+            switch cls {
+            case "done":      ind = "\u{2714}"
+            case "abandoned": ind = "\u{2717}"
+            default:          ind = ""
+            }
+            body += "<li class=\"row \(cls)\">"
+            body += "<span class=\"dot-slot\">\(dotSpan(color: dotColor))</span>"
+            body += "<span class=\"ts\">\(ts)</span>"
+            body += "<span class=\"ind\">\(ind)</span>"
+            body += "<span class=\"bd\">\(titleHTML)"
+            if let cap { body += "<div class=\"cap\">\(esc(cap))</div>" }
+            body += "</span></li>\n"
         }
         body += "</ul>\n</section>\n"
     }
@@ -195,7 +164,6 @@ func exportPageHTML(date: Date, todos: [Todo], notes: [Note], categories: [Categ
     .done{color:#57606a}
     .abandoned{color:#8c959f}
     .migrated{color:#8c959f}
-    .note-text{white-space:pre-wrap;color:#57606a}
     .cap{font-size:12px;color:#8c959f;margin-top:2px}
     a.exturl{font-size:12px;color:#8c959f;text-decoration:underline dashed;margin-left:4px}
     a.exturl:link,a.exturl:visited{color:#8c959f}

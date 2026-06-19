@@ -4,7 +4,7 @@ import GRDB
 @MainActor
 final class QuickNoteStore: ObservableObject {
     @Published var loaded = false
-    @Published var isTodo = false
+    @Published var isDone = false
     @Published var categories: [Category] = []
 
     func load() async {
@@ -15,35 +15,24 @@ final class QuickNoteStore: ObservableObject {
         loaded = true
     }
 
-    func addNote(text: String) async {
-        // A note belongs to a page, so create today's page if it doesn't exist
-        // yet. Todos have no such requirement, so addTodo doesn't do this.
-        // -- claude, 2026-06-14
-        try? await AppDatabase.shared.dbQueue.write { db in
-            let today = Calendar.current.startOfDay(for: Date())
-            let pageID: Int64
-            if let existing = try JournalPage.filter(Column("date") == today).fetchOne(db)?.id {
-                pageID = existing
-            } else {
-                var page = JournalPage(id: nil, date: today)
-                try page.insert(db)
-                pageID = page.id!
-            }
-            var note = Note(id: nil, pageID: pageID, timestamp: Date(), text: text)
-            try note.insert(db)
-        }
-        notify()
-    }
-
-    func addTodo(title: String, categoryID: Int64?, start: Date? = nil) async {
+    // When `done` is true the todo is born already complete (an unplanned thing
+    // that already happened): it starts and ends today, and `start`/`shouldMigrate`
+    // are forced accordingly. Logging a done thing also ensures today's page
+    // exists, so it's visible right away — pending todos need no page.
+    // -- claude, 2026-06-18
+    func addTodo(title: String, categoryID: Int64?, start: Date? = nil, done: Bool = false) async {
         let today = Calendar.current.startOfDay(for: Date())
         try? await AppDatabase.shared.dbQueue.write { db in
+            if done, try JournalPage.filter(Column("date") == today).fetchOne(db) == nil {
+                var page = JournalPage(id: nil, date: today)
+                try page.insert(db)
+            }
             var todo = Todo(
                 id: nil,
                 title: title,
-                shouldMigrate: true,
-                start: start ?? today,
-                ending: nil,
+                shouldMigrate: done ? false : true,
+                start: done ? today : (start ?? today),
+                ending: done ? TodoEnding(date: Date(), kind: .done) : nil,
                 categoryID: categoryID,
                 externalURL: nil
             )
@@ -85,17 +74,17 @@ struct QuickNoteView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Button {
-                    store.isTodo.toggle()
+                    store.isDone.toggle()
                     focused = true
                 } label: {
-                    Image(systemName: store.isTodo ? "circle" : "bubble.left")
+                    Image(systemName: store.isDone ? "checkmark.circle" : "circle")
                         .foregroundStyle(.secondary)
                         .frame(width: 20)
                 }
                 .buttonStyle(.plain)
-                .help(store.isTodo ? "Switch to note" : "Switch to todo")
+                .help(store.isDone ? "Switch to a pending todo" : "Switch to logging a done thing")
 
-                TextField(store.isTodo ? "Add todo\u{2026}" : "Add note\u{2026}", text: $text)
+                TextField(store.isDone ? "Log a done thing\u{2026}" : "Add todo\u{2026}", text: $text)
                     .font(.system(size: 20))
                     .focused($focused)
                     .onSubmit { submit() }
@@ -121,24 +110,24 @@ struct QuickNoteView: View {
                     }
             }
 
-            if store.isTodo {
-                lowerRegion
-                    .padding(.leading, 28)
-            }
+            lowerRegion
+                .padding(.leading, 28)
         }
         .padding()
         .frame(width: 500)
         .task { await store.load() }
         .onAppear { focused = true }
-        .onChange(of: store.isTodo) { _, isTodo in
-            if !isTodo {
-                selectedCategoryID = nil
-                categoryPickerActive = false
-                categoryPickerQuery = ""
+        .onChange(of: store.isDone) { _, isDone in
+            // A done thing is always for today, so drop any chosen/typed start
+            // date when switching into done mode. Category carries over.
+            if isDone {
                 selectedStartDate = nil
                 datePickerActive = false
                 datePickerQuery = ""
                 parsedStartDate = nil
+                var words = text.components(separatedBy: " ")
+                words.removeAll { $0.hasPrefix("~") }
+                text = words.joined(separator: " ")
             }
         }
     }
@@ -160,6 +149,9 @@ struct QuickNoteView: View {
 
     private var statusRow: some View {
         HStack(spacing: 8) {
+            // Always shown, including in done mode (where it reads "Today" with
+            // no clear button), so toggling pending/done doesn't change the
+            // panel's height. -- claude, 2026-06-19
             dateChip
             if let catID = selectedCategoryID,
                let cat = store.categories.first(where: { $0.id == catID }) {
@@ -288,18 +280,14 @@ struct QuickNoteView: View {
         }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { dismiss(); return }
-        if store.isTodo {
-            let catID = selectedCategoryID
-            let start = selectedStartDate
-            Task { await store.addTodo(title: trimmed, categoryID: catID, start: start) }
-        } else {
-            Task { await store.addNote(text: trimmed) }
-        }
+        let catID = selectedCategoryID
+        let start = selectedStartDate
+        let done = store.isDone
+        Task { await store.addTodo(title: trimmed, categoryID: catID, start: start, done: done) }
         dismiss()
     }
 
     private func updateCategoryPicker(for text: String) {
-        guard store.isTodo else { categoryPickerActive = false; return }
         let words = text.components(separatedBy: " ")
         if let last = words.last, last.hasPrefix("#") {
             categoryPickerActive = true
@@ -331,7 +319,8 @@ struct QuickNoteView: View {
     }
 
     private func updateDatePicker(for text: String) {
-        guard store.isTodo else { datePickerActive = false; return }
+        // A done thing is always for today, so the ~date picker is pending-only.
+        guard !store.isDone else { datePickerActive = false; return }
         let words = text.components(separatedBy: " ")
         if let tilde = words.first(where: { $0.hasPrefix("~") }) {
             let query = String(tilde.dropFirst())

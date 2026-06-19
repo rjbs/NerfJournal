@@ -45,8 +45,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func showQuickNotePanel() {
         if let existing = panel, existing.isVisible {
-            // Second press while open toggles between note and todo mode.
-            quickNoteStore?.isTodo.toggle()
+            // Second press while open toggles between pending and done mode.
+            quickNoteStore?.isDone.toggle()
             existing.makeKeyAndOrderFront(nil)
             return
         }
