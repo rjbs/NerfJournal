@@ -22,10 +22,9 @@ struct DatabaseExport: Codable {
     let bundleTodos: [BundleTodo]
     let journalPages: [JournalPage]
     let todos: [Todo]
-    let notes: [Note]
 
     init(version: Int, exportedAt: Date, categories: [Category], taskBundles: [TaskBundle],
-         bundleTodos: [BundleTodo], journalPages: [JournalPage], todos: [Todo], notes: [Note]) {
+         bundleTodos: [BundleTodo], journalPages: [JournalPage], todos: [Todo]) {
         self.version      = version
         self.exportedAt   = exportedAt
         self.categories   = categories
@@ -33,11 +32,13 @@ struct DatabaseExport: Codable {
         self.bundleTodos  = bundleTodos
         self.journalPages = journalPages
         self.todos        = todos
-        self.notes        = notes
     }
 
     // Custom decoder so that imports of pre-v3 exports (lacking `categories`)
-    // succeed with an empty category list rather than a decode error.
+    // succeed with an empty category list rather than a decode error. Exports
+    // from before notes were removed (v7) carry a `notes` key, which the
+    // synthesized CodingKeys ignore — those notes are silently dropped on
+    // import. -- claude, 2026-06-18
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         version     = try c.decode(Int.self,           forKey: .version)
@@ -47,7 +48,6 @@ struct DatabaseExport: Codable {
         bundleTodos = try c.decode([BundleTodo].self,  forKey: .bundleTodos)
         journalPages = try c.decode([JournalPage].self, forKey: .journalPages)
         todos       = try c.decode([Todo].self,        forKey: .todos)
-        notes       = try c.decode([Note].self,        forKey: .notes)
     }
 }
 
@@ -242,20 +242,46 @@ struct AppDatabase {
             }
         }
 
+        migrator.registerMigration("v7") { db in
+            // Notes are gone. Each text-bearing note becomes a todo that was
+            // born already done: start = its page's date, ending = (its
+            // timestamp, .done). Notes with NULL text were never shown, so
+            // they're discarded. Reading rows as Date and inserting via GRDB
+            // lets Todo/TodoEnding encode both the start date and the ISO-8601
+            // ending JSON correctly — concatenating the raw timestamp column
+            // would emit the wrong date format. -- claude, 2026-06-18
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT p.date AS date, n.timestamp AS timestamp, n.text AS text
+                FROM note n JOIN journalPage p ON n.pageID = p.id
+                WHERE n.text IS NOT NULL
+                """)
+            for row in rows {
+                let date: Date = row["date"]
+                let timestamp: Date = row["timestamp"]
+                let text: String = row["text"]
+                var todo = Todo(
+                    id: nil, title: text, shouldMigrate: false,
+                    start: date, ending: TodoEnding(date: timestamp, kind: .done),
+                    categoryID: nil, externalURL: nil
+                )
+                try todo.insert(db)
+            }
+            try db.execute(sql: "DROP TABLE note")
+        }
+
         try migrator.migrate(db)
     }
 
     func exportData() async throws -> Data {
         let snapshot = try await dbQueue.read { db in
             DatabaseExport(
-                version: 5,
+                version: 7,
                 exportedAt: Date(),
                 categories: try Category.order(Column("sortOrder")).fetchAll(db),
                 taskBundles: try TaskBundle.order(Column("id")).fetchAll(db),
                 bundleTodos: try BundleTodo.order(Column("id")).fetchAll(db),
                 journalPages: try JournalPage.order(Column("date")).fetchAll(db),
-                todos: try Todo.order(Column("id")).fetchAll(db),
-                notes: try Note.order(Column("id")).fetchAll(db)
+                todos: try Todo.order(Column("id")).fetchAll(db)
             )
         }
         let encoder = JSONEncoder()
@@ -271,7 +297,6 @@ struct AppDatabase {
         decoder.dateDecodingStrategy = .iso8601
         let snapshot = try decoder.decode(DatabaseExport.self, from: data)
         try await dbQueue.write { db in
-            try Note.deleteAll(db)
             try Todo.deleteAll(db)
             try BundleTodo.deleteAll(db)
             try JournalPage.deleteAll(db)
@@ -282,13 +307,11 @@ struct AppDatabase {
             for var r in snapshot.bundleTodos  { try r.insert(db) }
             for var r in snapshot.journalPages { try r.insert(db) }
             for var r in snapshot.todos        { try r.insert(db) }
-            for var r in snapshot.notes        { try r.insert(db) }
         }
     }
 
     func factoryReset() async throws {
         try await dbQueue.write { db in
-            try Note.deleteAll(db)
             try Todo.deleteAll(db)
             try BundleTodo.deleteAll(db)
             try JournalPage.deleteAll(db)

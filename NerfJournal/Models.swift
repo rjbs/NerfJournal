@@ -162,19 +162,6 @@ extension Todo {
     }
 }
 
-struct Note: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
-    var id: Int64?
-    var pageID: Int64
-    var timestamp: Date
-    var text: String?
-
-    static let databaseTableName = "note"
-
-    mutating func didInsert(_ inserted: InsertionSuccess) {
-        id = inserted.rowID
-    }
-}
-
 struct ExportGroup: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
     var id: Int64?
     var name: String

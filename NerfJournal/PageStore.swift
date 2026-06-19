@@ -7,7 +7,6 @@ final class PageStore: ObservableObject {
 
     @Published var page: JournalPage?
     @Published var todos: [Todo] = []
-    @Published var notes: [Note] = []
     @Published var futureTodos: [Todo] = []
 
     init(database: AppDatabase = .shared) {
@@ -198,76 +197,23 @@ final class PageStore: ObservableObject {
         try await refreshContents()
     }
 
-    func addTodo(title: String, shouldMigrate: Bool, categoryID: Int64? = nil) async throws {
+    // When `done` is true the todo is born already complete (an unplanned thing
+    // that's already happened): it starts today and ends now. `shouldMigrate` is
+    // moot for a done todo, so it's forced false. -- claude, 2026-06-18
+    func addTodo(title: String, shouldMigrate: Bool, categoryID: Int64? = nil, done: Bool = false) async throws {
         guard page != nil else { return }
         let today = Self.startOfToday
         try await db.dbQueue.write { db in
             var todo = Todo(
                 id: nil,
                 title: title,
-                shouldMigrate: shouldMigrate,
+                shouldMigrate: done ? false : shouldMigrate,
                 start: today,
-                ending: nil,
+                ending: done ? TodoEnding(date: Date(), kind: .done) : nil,
                 categoryID: categoryID,
                 externalURL: nil
             )
             try todo.insert(db)
-        }
-        try await refreshContents()
-    }
-
-    func addNote(text: String) async throws {
-        guard let pageID = page?.id else { return }
-        try await db.dbQueue.write { db in
-            var note = Note(id: nil, pageID: pageID, timestamp: Date(), text: text)
-            try note.insert(db)
-        }
-        try await refreshContents()
-    }
-
-    func deleteNote(_ note: Note, undoManager: UndoManager? = nil) async throws {
-        try await db.dbQueue.write { db in
-            try Note.filter(Column("id") == note.id).deleteAll(db)
-            return
-        }
-        scheduleUndo(with: undoManager) { store in
-            try await store.restoreNote(note)
-        }
-        try await refreshContents()
-    }
-
-    private func restoreNote(_ note: Note) async throws {
-        try await db.dbQueue.write { db in
-            var restored = note
-            try restored.insert(db)
-        }
-        try await refreshContents()
-    }
-
-    func setNoteTimestamp(_ date: Date, for note: Note, undoManager: UndoManager? = nil) async throws {
-        let oldTimestamp = note.timestamp
-        try await db.dbQueue.write { db in
-            try Note
-                .filter(Column("id") == note.id)
-                .updateAll(db, [Column("timestamp").set(to: date)])
-            return
-        }
-        scheduleUndo(with: undoManager) { store in
-            try await store.setNoteTimestamp(oldTimestamp, for: note, undoManager: undoManager)
-        }
-        try await refreshContents()
-    }
-
-    func setNoteText(_ text: String, for note: Note, undoManager: UndoManager? = nil) async throws {
-        let oldText = note.text
-        try await db.dbQueue.write { db in
-            try Note
-                .filter(Column("id") == note.id)
-                .updateAll(db, [Column("text").set(to: text)])
-            return
-        }
-        scheduleUndo(with: undoManager) { store in
-            try await store.setNoteText(oldText ?? "", for: note, undoManager: undoManager)
         }
         try await refreshContents()
     }
@@ -473,9 +419,8 @@ final class PageStore: ObservableObject {
     }
 
     private func refreshContents() async throws {
-        guard page != nil, let pageID = page?.id else {
+        guard page != nil else {
             todos = []
-            notes = []
             futureTodos = []
             return
         }
@@ -483,20 +428,16 @@ final class PageStore: ObservableObject {
         // last page day remain visible when you haven't started today yet.
         // -- claude, 2026-03-03
         let pageDate = Calendar.current.startOfDay(for: page!.date)
-        let (allTodos, fetchedNotes, ft) = try await db.dbQueue.read { db in
+        let (allTodos, ft) = try await db.dbQueue.read { db in
             let t = try Todo
                 .filter(Column("start") <= pageDate)
-                .fetchAll(db)
-            let n = try Note
-                .filter(Column("pageID") == pageID)
-                .order(Column("timestamp"))
                 .fetchAll(db)
             let f = try Todo
                 .filter(Column("start") > pageDate)
                 .filter(Column("ending") == nil)
                 .order(Column("start"), Column("id"))
                 .fetchAll(db)
-            return (t, n, f)
+            return (t, f)
         }
         todos = allTodos
             .filter { todo in
@@ -504,7 +445,6 @@ final class PageStore: ObservableObject {
                 return ending.date >= pageDate
             }
             .sortedForDisplay()
-        notes = fetchedNotes
         futureTodos = ft
         NotificationCenter.default.post(name: .nerfJournalTodosDidChange, object: nil)
     }
