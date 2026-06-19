@@ -268,7 +268,7 @@ try migrator.migrate(db)
 The key property: **migrations are append-only and run exactly once per
 database.** You never edit a migration that has shipped — a file that already ran
 v3 will never run it again, so editing v3 would change history only for fresh
-databases and silently diverge from existing ones. You add v7. This is the same
+databases and silently diverge from existing ones. You add v8. This is the same
 discipline as Rails/Ecto/diesel migrations.
 
 NerfJournal's migration list shows three distinct strategies, escalating in
@@ -341,11 +341,53 @@ place. No data lost.
 **Additive (v1, v6).** The cheapest kind — create new tables that didn't exist
 (`exportGroup` and `exportGroupMember` in v6). Nothing existing is touched.
 
+**Data-transforming in Swift (v7).** The most recent migration removed the
+`note` table entirely, but its rows were worth keeping: each text-bearing note
+became a todo *born already done* (start = its page's date, ending = its
+timestamp, `kind: .done`). What makes it notable is that the conversion runs in
+*Swift*, not SQL:
+
+```swift
+migrator.registerMigration("v7") { db in
+    let rows = try Row.fetchAll(db, sql: """
+        SELECT p.date AS date, n.timestamp AS timestamp, n.text AS text
+        FROM note n JOIN journalPage p ON n.pageID = p.id
+        WHERE n.text IS NOT NULL
+        """)
+    for row in rows {
+        let date: Date = row["date"]
+        let timestamp: Date = row["timestamp"]
+        let text: String = row["text"]
+        var todo = Todo(
+            id: nil, title: text, shouldMigrate: false,
+            start: date, ending: TodoEnding(date: timestamp, kind: .done),
+            categoryID: nil, externalURL: nil
+        )
+        try todo.insert(db)
+    }
+    try db.execute(sql: "DROP TABLE note")
+}
+```
+
+Why drop to Swift instead of a single `INSERT ... SELECT`? Because the source and
+destination *encode dates differently*. The `note.timestamp` column is GRDB's
+default `Date` text — `"yyyy-MM-dd HH:mm:ss.SSS"` — but a `Todo`'s `ending` is a
+`TodoEnding` stored as JSON whose date wants ISO-8601 with a `Z`. Splicing the
+raw timestamp string into that JSON in SQL would write a malformed ending.
+Reading each row's `timestamp` *as a `Date`* and letting GRDB re-encode the
+constructed `Todo` makes both the `start` date and the ISO-8601 ending JSON come
+out in exactly the formats the model expects. The lesson: when a migration
+crosses an encoding boundary, hand the values to the same code that owns the
+encoding rather than concatenating strings — the row-by-row Swift loop is the
+price of getting the formats right. (The same born-done shape is what the
+quick-entry panel's done toggle and `nerf did` now produce — Units 10 and 11.)
+
 Reading the migrations top to bottom is a compressed history of the app's data
 model: a v1 schema with `pageID`/`groupName`/`status` columns, a v2 redesign that
-made todos page-spanning, a v3 that introduced categories, and a v6 that added
-export groups. The schema you see in `Models.swift` today is the *sum* of all
-these migrations, not any single one.
+made todos page-spanning, a v3 that introduced categories, a v6 that added
+export groups, and a v7 that removed notes (folding them into done todos). The
+schema you see in `Models.swift` today is the *sum* of all these migrations, not
+any single one.
 
 ---
 
@@ -387,17 +429,16 @@ value semantics are what make the hand-off clean.)
 
 ### `refreshContents`: the two-set read
 
-The read that rebuilds the store's published state issues three queries in one
+The read that rebuilds the store's published state issues two queries in one
 `read` block, then post-processes on the main actor:
 
 ```swift
-let (allTodos, fetchedNotes, ft) = try await db.dbQueue.read { db in
+let (allTodos, ft) = try await db.dbQueue.read { db in
     let t = try Todo.filter(Column("start") <= pageDate).fetchAll(db)
-    let n = try Note.filter(Column("pageID") == pageID).order(Column("timestamp")).fetchAll(db)
     let f = try Todo.filter(Column("start") > pageDate)
                     .filter(Column("ending") == nil)
                     .order(Column("start"), Column("id")).fetchAll(db)
-    return (t, n, f)
+    return (t, f)
 }
 ```
 
