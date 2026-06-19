@@ -11,8 +11,8 @@ Every unit so far has lived inside SwiftUI's world: views are values, state flow
 through property wrappers, the framework owns the run loop. That world has edges.
 SwiftUI has no API for a system-wide hot key, no `NSPanel`, no floating utility
 window that appears even when the app isn't frontmost. NerfJournal's quick-entry
-panel — Cmd-Shift-J from anywhere, type a todo or note, hit Return — needs all
-three, so it drops down a layer to AppKit (and below AppKit, to Carbon) and then
+panel — Cmd-Shift-J from anywhere, type a todo (pending, or one already done), hit
+Return — needs all three, so it drops down a layer to AppKit (and below AppKit, to Carbon) and then
 climbs back up to host a SwiftUI view inside the panel it built by hand.
 
 This unit is therefore less about a single framework than about the **seams**
@@ -398,52 +398,68 @@ the bookkeeping SwiftUI was quietly doing all along.
 
 ---
 
-## Modeling ownership: why only notes need a page
+## Modeling ownership: why only a done thing needs a page
 
 A short but instructive detail, because it's a *data-model* decision showing through
-the panel's behavior. The quick-entry panel can create either a note or a todo. The
-two are not symmetric:
+the panel's behavior. The panel's toggle picks between two kinds of todo: a **pending**
+one (the default) and one **born already done** — an unplanned thing that already
+happened, captured after the fact. Both write through the same method, but not
+symmetrically:
 
 ```swift
-func addNote(text: String) async {
-    // A note belongs to a page, so create today's page if it doesn't exist
-    // yet. Todos have no such requirement, so addTodo doesn't do this.
+func addTodo(title: String, categoryID: Int64?, start: Date? = nil, done: Bool = false) async {
+    let today = Calendar.current.startOfDay(for: Date())
     try? await AppDatabase.shared.dbQueue.write { db in
-        let today = Calendar.current.startOfDay(for: Date())
-        let pageID: Int64
-        if let existing = try JournalPage.filter(Column("date") == today).fetchOne(db)?.id {
-            pageID = existing
-        } else {
+        if done, try JournalPage.filter(Column("date") == today).fetchOne(db) == nil {
             var page = JournalPage(id: nil, date: today)
             try page.insert(db)
-            pageID = page.id!
         }
-        var note = Note(id: nil, pageID: pageID, timestamp: Date(), text: text)
-        try note.insert(db)
+        var todo = Todo(
+            id: nil, title: title, shouldMigrate: done ? false : true,
+            start: done ? today : (start ?? today),
+            ending: done ? TodoEnding(date: Date(), kind: .done) : nil,
+            categoryID: categoryID, externalURL: nil
+        )
+        try todo.insert(db)
     }
     notify()
 }
 ```
 
-A `Note` carries a non-optional `pageID` — it is *owned by* a page (Unit 7's data
-model). So to add a note you must have a page; if today's doesn't exist yet,
-`addNote` lazily creates it. A `Todo`, by contrast, has no `pageID` at all — the page
-views find todos by querying on `start` date, not by ownership — so `addTodo` writes
-the row and is done, no page required. A future-dated todo bound for the Future Log
-may never touch today's page.
+Notice what `done` toggles. A done todo's `start` and `ending` are both pinned to
+*today* — it began and finished now — and `shouldMigrate` is false, because a finished
+thing has nowhere to migrate. A pending todo keeps its caller-chosen `start` (possibly
+a future date bound for the Future Log) and migrates by default. That much is the
+`Todo` model (Unit 7) doing its job: one row type expresses both "to do" and "already
+did," distinguished only by which of its date fields are filled.
 
-This asymmetry is why the panel was recently changed to open and focus its field
-*unconditionally*, instead of refusing when today's page didn't exist: the old code
-gated the whole panel on a page that only one of its two modes actually needs. The
-fix pushed page-creation down to the one operation (`addNote`) that genuinely depends
-on it. The lesson generalizes: let the data model's ownership rules — who has a
-mandatory foreign key to whom — decide where a prerequisite must be enforced, and
-don't impose it any earlier or more broadly than the model demands.
+The asymmetry worth dwelling on is the *page*. A `Todo` carries no `pageID` at all —
+the page views find todos by querying on `start` date, not by ownership — so writing a
+pending todo never has to touch a journal page; it's a row, and that's it. But the
+*done* branch first ensures today's page exists, creating it if it doesn't. Why the
+difference, when neither mode has a foreign key forcing it?
+
+Because the two modes *mean* different things. Logging a done thing is recording that
+today happened a certain way; it should anchor a real journal page for today, so the
+entry shows up there immediately rather than floating in a day the journal doesn't yet
+know exists. A pending todo is forward-looking: a future-dated one belongs to the
+Future Log and may never touch today's page, and a today-dated one will surface the
+moment today's page is opened through the normal flow. So page-creation is pushed down
+to the single operation whose *meaning* requires a concrete page, and imposed nowhere
+else. (This is also why the panel opens and focuses its field unconditionally instead
+of refusing when today's page is missing: only one branch of one operation needs the
+page, so gating the whole panel on it enforced the prerequisite far too early.)
+
+The lesson generalizes, and it's a subtler one than a foreign key would hand you. The
+data model here doesn't *force* the page to exist — nothing breaks if it's absent — so
+the compiler can't point to where it must be created. Intent has to: work out which
+operation's semantics actually depend on the artifact, enforce the prerequisite there,
+and impose it nowhere broader.
 
 The lazy creation also deliberately *skips* the "start-of-day abandonment ceremony"
 that opening a fresh journal page through the main UI performs (migrating yesterday's
-unfinished todos forward). A note jotted from the quick panel shouldn't trigger a
-day's worth of bookkeeping as a side effect — another case of doing exactly what the
+unfinished todos forward). Logging a done thing from the quick panel shouldn't trigger
+a day's worth of bookkeeping as a side effect — another case of doing exactly what the
 operation needs and no more.
 
 ---
@@ -604,7 +620,7 @@ Read the comment on *why* the panel is built with an explicit `styleMask:` carry
 later `styleMask.insert`), then read each Combine operator and find the
 `.store(in: &cancellables)` that keeps it alive.
 
-### `QuickNoteView.swift` lines 78–132: render synchronously, load lazily
+### `QuickNoteView.swift` lines 67–145: render synchronously, load lazily
 
 The view body and its `.task`/`.onAppear`. Note that nothing gates the body on
 `store.loaded`: the field draws and focuses on the first synchronous pass, and
@@ -612,10 +628,12 @@ The view body and its `.task`/`.onAppear`. Note that nothing gates the body on
 the panel being summoned while the app is in the background, where SwiftUI won't drive
 the `.task` until activation.
 
-### `QuickNoteView.swift` lines 18–53: the note/todo asymmetry
+### `QuickNoteView.swift` lines 23–42: the pending/done asymmetry
 
-`addNote` (lazily creates today's page) versus `addTodo` (needs no page). Tie the
-difference back to `Note.pageID` being non-optional while `Todo` has no `pageID` at all.
+`addTodo`'s single write path. Note what the `done` flag pins (`start`, `ending`,
+`shouldMigrate`) and the one extra thing it does — ensure today's page exists — that
+the pending path skips. Tie the difference not to a foreign key (a `Todo` has no
+`pageID` at all) but to what each mode *means*.
 
 ### `DateParser.swift` lines 13–83: framework-free Swift
 
@@ -646,10 +664,10 @@ the panel, and why? (Trace the lifetime of the `AnyCancellable` `sink` returns.)
 were a `struct` instead? Construct the specific misuse the caseless `enum` makes
 impossible — and decide whether you think it's worth the idiom.
 
-**5.** `addNote` lazily creates today's page but deliberately skips the start-of-day
-migration ceremony. Argue both sides: when might a user be surprised that a note added
-from the quick panel *didn't* migrate yesterday's unfinished todos forward — and why
-is doing the migration here nonetheless the wrong call?
+**5.** The done branch of `addTodo` lazily creates today's page but deliberately skips
+the start-of-day migration ceremony. Argue both sides: when might a user be surprised
+that logging a done thing from the quick panel *didn't* migrate yesterday's unfinished
+todos forward — and why is doing the migration here nonetheless the wrong call?
 
 **6.** `preferredContentSize` is observed via `publisher(for:)` because it's a KVO
 property on an AppKit object. Contrast this with how a SwiftUI view observes a
