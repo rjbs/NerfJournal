@@ -701,9 +701,9 @@ wrong, and is it a leak or a crash? Now suppose you left registration as
 the retain count at each step.)
 
 **2.** The hot-key handler closure captures nothing, and the compiler requires that.
-Try, in your head, to make it capture `self` directly instead of round-tripping
-through `userData`. What's the exact compiler objection, and what does it tell you
-about how a Swift closure differs from a C function pointer?
+Edit it to capture `self` directly instead of round-tripping through `userData`, and
+read the error the compiler gives you. What's its exact objection, and what does it
+tell you about how a Swift closure differs from a C function pointer?
 
 **3.** Delete the `.store(in: &cancellables)` line from the panel-resize pipeline.
 The code still compiles. What happens at runtime when the user types enough to expand
