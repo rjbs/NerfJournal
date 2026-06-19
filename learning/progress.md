@@ -17,6 +17,6 @@ nav_order: 3
 | 8 | Undo, Transactions, and Correctness | written |
 | 9 | Swift Concurrency | written |
 | 10 | AppKit Interoperability and the Quick-Entry Panel | written |
-| 11 | The Command-Line Tool: swift-argument-parser | not started |
+| 11 | The Command-Line Tool: swift-argument-parser | written |
 
 ## Notes
