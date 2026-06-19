@@ -176,7 +176,7 @@ a distinct type.
 
 ```
 NerfJournalApp (@StateObject)
-├── PageStore        — current page's todos, notes, future todos; all mutations
+├── PageStore        — current page's todos and future todos; all mutations
 ├── JournalStore     — read-only index of pages; drives calendar highlighted dates
 ├── BundleStore      — task bundles and their todos
 ├── CategoryStore    — categories (name, color, sort order)
@@ -396,10 +396,10 @@ would that be a problem even if GRDB's result is correct?
 they were `@ObservedObject` instead? (Hint: when does `NerfJournalApp.body`
 run, and what does `@ObservedObject` do on each run?)
 
-**3.** `PageStore.refreshContents` assigns to `todos`, `notes`, and
-`futureTodos`. Each assignment fires `objectWillChange` separately. Does that
-mean SwiftUI re-renders three times? Look up SwiftUI's change coalescing
-behavior — the answer is more nuanced than it first appears.
+**3.** `PageStore.refreshContents` assigns to `todos` and `futureTodos`. Each
+assignment fires `objectWillChange` separately. Does that mean SwiftUI
+re-renders twice? Look up SwiftUI's change coalescing behavior — the answer is
+more nuanced than it first appears.
 
 **4.** `JournalStore` observes `.nerfJournalTodosDidChange` but not
 `.nerfJournalDatabaseDidChange`. `CategoryStore` observes

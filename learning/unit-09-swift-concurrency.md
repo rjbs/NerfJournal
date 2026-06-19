@@ -221,7 +221,7 @@ Two `Sendable` constraints carry the entire safety argument:
   capture here — `ending` and `todo.id` — are value types, hence `Sendable`, hence
   fine to copy across.
 - **The return type is `Sendable`.** Whatever the closure hands back has to be safe
-  to ship to the main actor when the `await` resumes. `[Todo]`, `[Note]`, `Set<Date>`
+  to ship to the main actor when the `await` resumes. `[Todo]`, `[Category]`, `Set<Date>`
   — NerfJournal's records are structs of value types, so they're implicitly
   `Sendable`, and they cross back as independent copies. This is the concrete
   meaning of Unit 7's "value semantics are what make the hand-off clean": there is
@@ -234,8 +234,9 @@ shape the type system permits. The `await` is where the main actor lets go; the
 `Sendable` checks police what may travel in each direction.
 
 `JournalStore.selectDate` makes the "assign back on the main actor" half vivid: it
-fetches a page, its todos, and its notes in *one* `read`, then assigns all three
-`@Published` properties in a row after the `await`. The comment explains the payoff
+fetches a page and its todos in *one* `read`, then assigns its three `@Published`
+properties (`selectedDate`, `selectedPage`, `selectedTodos`) in a row after the
+`await`. The comment explains the payoff
 — doing it synchronously after a single suspension lets SwiftUI coalesce the change
 into one view pass instead of animating through intermediate states. The single
 `await` is also the single moment the UI could observe a half-updated store; doing
@@ -433,7 +434,7 @@ again after. Confirm nothing inside the `write` touches `self`.
 
 ### `JournalStore.swift` lines 47–89: one read, then synchronous assignment
 
-`loadIndex` and `selectDate`. Note `selectDate` fetches page + todos + notes in a
+`loadIndex` and `selectDate`. Note `selectDate` fetches page + todos in a
 single `read` and assigns all the `@Published` properties together after the lone
 `await`. Read the comment about coalescing into one view pass.
 

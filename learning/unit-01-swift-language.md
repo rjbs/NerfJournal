@@ -54,7 +54,7 @@ print(x.value)  // 99 — same object
 ```
 
 NerfJournal uses **structs for almost everything**: `Todo`, `Category`,
-`TaskBundle`, `Note`, `TodoEnding`, `JournalPage`. The stores (`PageStore`,
+`TaskBundle`, `TodoEnding`, `JournalPage`. The stores (`PageStore`,
 `CategoryStore`, etc.) are classes, because they need to be shared objects with
 identity that multiple views observe.
 

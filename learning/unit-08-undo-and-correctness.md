@@ -40,8 +40,8 @@ SwiftUI hands one down through the environment, and views pull it out with
 @Environment(\.undoManager) private var undoManager
 ```
 
-This appears in each view that initiates mutations — the todo row, the note row,
-the page detail view. The value is the `UndoManager` belonging to the view's
+This appears in each view that initiates mutations — the todo row and the page
+detail view. The value is the `UndoManager` belonging to the view's
 *window*, which is also the one the standard Edit menu's Undo/Redo items and
 Cmd-Z are wired to. Register an action with it and Cmd-Z just works; no menu
 plumbing required (a payoff of the standard-menus decision from Unit 5).

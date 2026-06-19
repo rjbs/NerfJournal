@@ -220,8 +220,6 @@ are named constants on
 CommandGroup(replacing: .newItem) {
     Button("Add Todo") { focusAddTodo?.wrappedValue = true }
         .keyboardShortcut("n", modifiers: .command)
-    Button("Add Note") { focusAddNote?.wrappedValue = true }
-        .keyboardShortcut("n", modifiers: [.command, .shift])
 }
 
 // Insert after "New Item" — adds to the File menu without replacing anything:

@@ -195,10 +195,10 @@ publish a `Binding<Bool>` into the focus environment:
 
 ```swift
 .focusedValue(\.focusAddTodo, readOnly ? nil : Binding<Bool>(
-    get: { addFieldFocused && !entryIsNote },
+    get: { addFieldFocused && !entryIsDone },
     set: { newValue in
         if newValue {
-            entryIsNote = false; showAddField = true
+            entryIsDone = false; showAddField = true
             scrollToFieldRequest += 1
         }
         addFieldFocused = newValue
@@ -377,15 +377,15 @@ the full chain.
 
 ### `JournalView.swift` lines 594–613: `.focusedValue` publishing
 
-The two `.focusedValue` calls at the bottom of `JournalPageDetailView.body`.
+The `.focusedValue` call at the bottom of `JournalPageDetailView.body`.
 Note `readOnly ? nil : Binding<Bool>(...)` — the conditional nil is deliberate.
 Then look up in the file to find the `readOnly` computed property to understand
 when nil is published.
 
-### `JournalView.swift` lines 1308–1330: `FocusAddTodoKey` and `FocusAddNoteKey`
+### `JournalView.swift` lines 1308–1330: `FocusAddTodoKey`
 
-The two `FocusedValueKey` conformances and their `FocusedValues` extensions.
-Four lines each. This is the complete boilerplate for a custom focused value.
+The `FocusedValueKey` conformance and its `FocusedValues` extension. Four lines.
+This is the complete boilerplate for a custom focused value.
 
 ### `PageStore.swift` lines 463–473: `importDatabase` and `factoryReset`
 

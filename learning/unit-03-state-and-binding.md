@@ -325,12 +325,17 @@ Two more wrappers you'll see in NerfJournal, briefly:
 
 **[`@AppStorage`](https://developer.apple.com/documentation/swiftui/appstorage)**
 — like `@State`, but persisted to `UserDefaults`. Changes still trigger
-re-renders. `JournalPageDetailView` uses it for the `resolvedWithNotes`
+re-renders. `JournalPageDetailView` uses it for the Activity-section
 display preference:
 
 ```swift
-@AppStorage("resolvedWithNotes") private var resolvedWithNotes = false
+@AppStorage("resolvedWithNotes") private var showActivitySection = false
 ```
+
+The string argument is the `UserDefaults` key, not the property name — the two
+are decoupled. Here the key kept its original spelling (`"resolvedWithNotes"`)
+so an existing user's saved preference still applies, even though the Swift
+property it backs was later renamed to `showActivitySection`.
 
 **[`@Environment`](https://developer.apple.com/documentation/swiftui/environment)**
 — reads values SwiftUI injects into the environment (not the same as
