@@ -12,6 +12,48 @@ These may eventually be synthesized back into the unit text.
 
 ## Unit 10: AppKit Interoperability and the Quick-Entry Panel
 
+### What is Combine? Is it just "the pub/sub mechanism for Swift"?
+
+That's the right skeleton but it undersells the framework. Combine (2019) is
+Apple's **declarative reactive-streams** framework. Pub/sub is the structure — a
+[`Publisher`](https://developer.apple.com/documentation/combine/publisher) emits
+values over time and a `Subscriber` receives them — but the value is the composable
+**operator chain** in between (`map`, `filter`, `debounce`, `removeDuplicates`,
+`dropFirst`, `combineLatest`). So: lazy, composable pipelines over asynchronous
+sequences of values, not merely a notification bus. If you know RxSwift / ReactiveX,
+it's Apple's house version of that.
+
+The pieces:
+- **`Publisher`** — produces values plus one completion (finished or failure).
+- **`Subscriber`** — consumes them; `sink { }` is the everyday one.
+- **`Subscription`** — the live connection, demand-driven (backpressure): the
+  subscriber signals how many values it wants, so it's a *pull* model underneath.
+- **[`AnyCancellable`](https://developer.apple.com/documentation/combine/anycancellable)**
+  — an RAII drop-guard; when the token deallocates, the subscription is torn down.
+  This is exactly why Unit 10's pipeline ends in `.store(in: &cancellables)`.
+
+Rust mapping (clean): `Publisher` ≈ `Stream`; the operators ≈ `StreamExt`
+combinators; `.sink {}` ≈ `.for_each`; `AnyCancellable`'s drop-cancels behavior ≈ a
+drop-guard / `JoinHandle` whose `Drop` aborts; the demand-driven `Subscription` ≈
+the `poll_next` pull model.
+
+**Why the curriculum covers it thinly (on purpose):** there's no standalone Combine
+unit. It appears implicitly in Unit 4 — `@Published` *is* a publisher and
+`ObservableObject` emits through `objectWillChange`, both Combine types — and
+explicitly in Unit 10's panel-resize pipeline, which states the point directly:
+"Combine is not a new framework here, it's the one you already met." You've been
+using Combine since Unit 4 without it being named.
+
+**Worth knowing — Combine is in quiet maintenance.** Essentially no new surface
+since 2019. Apple steered its use cases toward async/await + `AsyncSequence` (for
+one-shot and streaming async work) and the **Observation** framework
+([`@Observable`](https://developer.apple.com/documentation/observation), macOS 14+)
+as the modern replacement for `ObservableObject`/`@Published`. NerfJournal targets
+macOS 14+ but still uses the `ObservableObject` style — a conservative, fine choice.
+Starting fresh today you'd reach for `@Observable` first and treat Combine as the
+drop-to-it tool for genuine event-stream plumbing — like the KVO `publisher(for:)`
+bridge in Unit 10, which has no async/await equivalent.
+
 ### What *is* an AppDelegate? The text talks about it in Units 5, 9, and 10 but never defines it.
 
 Correct — it's assumed, not explained. The units cover the SwiftUI bridge
