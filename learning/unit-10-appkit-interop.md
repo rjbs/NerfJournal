@@ -42,6 +42,30 @@ longer check, and confine the danger to as small a region as possible.
 
 ## SwiftUI → AppKit: `@NSApplicationDelegateAdaptor`
 
+First, the term, since this unit (and Units 5 and 9) has leaned on it without
+defining it. **Delegation** is Cocoa's standard alternative to subclassing: rather
+than subclass a framework class to customize it, you hand the framework a separate
+object — its *delegate* — and it calls well-known methods on that object at
+interesting moments. The framework owns *what-happens-when*; the delegate supplies
+*what-to-do*. A Rust reader can read this as handing a library a trait object:
+[`NSApplicationDelegate`](https://developer.apple.com/documentation/appkit/nsapplicationdelegate)
+is the trait (its methods nearly all optional, like trait methods with default
+impls), your class is the concrete type, and the framework holds it as
+`dyn NSApplicationDelegate` and calls back into it. It is not a Swift or a Carbon
+idea — it's a NeXTSTEP/Objective-C convention that predates both.
+
+The **application delegate** is the headline use of that pattern. Every app has
+exactly one `NSApplication` (`UIApplication` on iOS) standing in for the running
+process, and its delegate is where the app *lifecycle* lands —
+`applicationDidFinishLaunching`, `applicationWillTerminate`, "reopen a window when
+the dock icon is clicked," "a file was dropped on the app." Before SwiftUI this
+object was the root of every Mac and iOS program: the nearest thing Cocoa had to a
+`main()`, and where the old tutorials told you to put your startup code. SwiftUI's
+[`App`](https://developer.apple.com/documentation/swiftui/app) protocol took over
+that entry-point role and folded most of the lifecycle into scenes and property
+wrappers — which is why a SwiftUI app can omit an app delegate entirely. "Most,"
+though, is not "all."
+
 A SwiftUI `App` has no `applicationDidFinishLaunching`, no delegate, no obvious
 hook for "run this AppKit code once, at startup." The bridge is a property wrapper
 on the `App` struct:
@@ -359,6 +383,19 @@ hosting.publisher(for: \.preferredContentSize)
     .store(in: &cancellables)
 ```
 
+Before reading the pipeline, a word on what Combine *is*, since the earlier units
+used it without naming it. Combine is Apple's
+[declarative reactive-streams](https://developer.apple.com/documentation/combine)
+framework: a [`Publisher`](https://developer.apple.com/documentation/combine/publisher)
+emits a sequence of values over time, a subscriber consumes them, and between the two
+you compose *operators* (`map`, `filter`, `dropFirst`, …) into a pipeline. "Pub/sub"
+is the right skeleton, but the value is that operator chain — lazy, composable
+transforms over an asynchronous sequence of values, demand-driven underneath. A Rust
+reader can read a `Publisher` as a `Stream` and its operators as `StreamExt`
+combinators; `.sink` is roughly `for_each`, and (below) `AnyCancellable` is a
+drop-guard whose `Drop` cancels the subscription. If you know RxSwift / ReactiveX,
+Combine is Apple's house version of that idea.
+
 `sizingOptions = .preferredContentSize` told the hosting controller to keep its
 `preferredContentSize` property updated to match the SwiftUI content's ideal size.
 This Combine pipeline observes that property and resizes the panel to follow. Read
@@ -395,6 +432,18 @@ the subscriptions for you. This is the same machinery used *explicitly*, by hand
 because the consumer is an AppKit window rather than a SwiftUI view, and AppKit won't
 manage the subscription for you. The `store(in:)` you never had to write in a view is
 the bookkeeping SwiftUI was quietly doing all along.
+
+One caveat to carry forward: Combine has been essentially frozen since its 2019
+debut. Apple has since steered its use cases toward two newer tools — `async`/`await`
+with [`AsyncSequence`](https://developer.apple.com/documentation/swift/asyncsequence)
+for one-shot and streaming async work, and the
+[Observation](https://developer.apple.com/documentation/observation) framework
+(`@Observable`, macOS 14+) as the modern replacement for
+`ObservableObject`/`@Published`. NerfJournal targets macOS 14+ and still uses the
+older `ObservableObject` style — a fine, conservative choice for an app that already
+works. But starting fresh today you would reach for `@Observable` first and keep
+Combine for genuine event-stream plumbing like this KVO bridge, which has no
+`async`/`await` equivalent.
 
 ---
 
