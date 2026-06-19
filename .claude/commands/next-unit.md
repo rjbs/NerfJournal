@@ -1,10 +1,15 @@
 Write the next unit of NerfLearning.
 
-First, rebase this branch on `main`.
+First, sync this branch with `main` by **merging** `main` into it — do not
+rebase. `swift-learning` is a published "Editions" branch: each sync is a merge
+commit that marks the edition boundary (the `main` commit this edition of the
+text was reconciled against). Note the branch tip first (`git rev-parse HEAD`)
+so you can review what the merge pulled in.
 
-Review the changes between the state of this branch before rebasing and after.
-If changes to the project suggest that `learning/SYLLABUS.md` should be updated
-for future chapters, make those changes and commit it.
+Review the changes `main` brought in with that merge (`git diff <old-tip>..HEAD`,
+or the merge's second-parent diff). If changes to the project suggest that
+`learning/SYLLABUS.md` should be updated for future chapters, make those changes
+and commit it.
 
 Then review the file `learning/questions.md`, which reflects questions from the
 reader during the last unit.  Merge the material from the questions into the
