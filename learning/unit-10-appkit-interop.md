@@ -366,7 +366,7 @@ it operator by operator:
 
 - **`hosting.publisher(for: \.preferredContentSize)`** — `preferredContentSize` is a
   Key-Value-Observing-compliant `NSViewController` property, and Combine can wrap any
-  KVO property as a [`publisher(for:)`](https://developer.apple.com/documentation/combine/kvo)
+  KVO property as a [`publisher(for:)`](https://developer.apple.com/documentation/combine/performing-key-value-observing-with-combine)
   that emits a new value every time it changes. The `\.preferredContentSize` is a Swift
   *key path*, the type-safe handle to a property that KVO needs.
 - **`.dropFirst()`** — skip the initial value KVO emits immediately on subscription;
@@ -582,7 +582,7 @@ logic into a Perl module that both a web app and a cron script can `use`.
   — the activation call Sequoia's cooperative activation refuses for a background app
 - [`Unmanaged`](https://developer.apple.com/documentation/swift/unmanaged)
   — stepping outside ARC at a C boundary; retained vs. unretained
-- [KVO with Combine: `publisher(for:)`](https://developer.apple.com/documentation/combine/kvo)
+- [KVO with Combine: `publisher(for:)`](https://developer.apple.com/documentation/combine/performing-key-value-observing-with-combine)
   — wrapping a Key-Value-Observing property as a publisher
 - [`AnyCancellable`](https://developer.apple.com/documentation/combine/anycancellable)
   — the token whose lifetime *is* the subscription's lifetime
