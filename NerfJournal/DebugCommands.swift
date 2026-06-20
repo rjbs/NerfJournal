@@ -68,7 +68,7 @@ struct DebugCommands: Commands {
         let alert = NSAlert()
         alert.messageText = "Factory Reset"
         alert.informativeText = """
-            This will permanently delete all journal pages, todos, notes, \
+            This will permanently delete all journal pages, todos, \
             task bundles, and categories. This cannot be undone.
             """
         alert.alertStyle = .critical

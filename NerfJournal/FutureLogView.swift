@@ -16,7 +16,6 @@ private let futureLogDateColumnWidth: CGFloat = {
 
 struct FutureLogView: View {
     @EnvironmentObject private var pageStore: PageStore
-    @EnvironmentObject private var categoryStore: CategoryStore
     @Environment(\.undoManager) private var undoManager
 
     @State private var selectedIDs: Set<Int64> = []
@@ -292,7 +291,6 @@ struct FutureLogRow: View {
 // embedding in the calendar detail pane for pages that don't exist yet.
 struct FutureLogForDateView: View {
     @EnvironmentObject private var pageStore: PageStore
-    @EnvironmentObject private var categoryStore: CategoryStore
     @Environment(\.undoManager) private var undoManager
 
     let date: Date
