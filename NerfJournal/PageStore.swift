@@ -427,13 +427,20 @@ final class PageStore: ObservableObject {
         // Use the last page's date, not today, so that todos completed on the
         // last page day remain visible when you haven't started today yet.
         // -- claude, 2026-03-03
-        let pageDate = Calendar.current.startOfDay(for: page!.date)
+        // Match by calendar day using a half-open [pageDate, nextDay) range: todo
+        // `start` values are day anchors stored as the writing zone's midnight, so
+        // comparing them against the current zone's midnight instant drops the
+        // page's own todos once you view the data from another time zone.
+        // -- claude, 2026-07-24
+        let cal = Calendar.current
+        let pageDate = cal.startOfDay(for: page!.date)
+        let nextDay = cal.date(byAdding: .day, value: 1, to: pageDate)!
         let (allTodos, ft) = try await db.dbQueue.read { db in
             let t = try Todo
-                .filter(Column("start") <= pageDate)
+                .filter(Column("start") < nextDay)
                 .fetchAll(db)
             let f = try Todo
-                .filter(Column("start") > pageDate)
+                .filter(Column("start") >= nextDay)
                 .filter(Column("ending") == nil)
                 .order(Column("start"), Column("id"))
                 .fetchAll(db)
