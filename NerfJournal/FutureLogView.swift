@@ -289,18 +289,31 @@ struct FutureLogRow: View {
 // Shows all pending future-log todos for a single date, without a date
 // column (redundant when all rows share the same day). Intended for
 // embedding in the calendar detail pane for pages that don't exist yet.
+//
+// With `includeEarlier`, also shows todos whose day is before `date` — the
+// carried-forward work a page created on `date` would inherit. This is used
+// for today, so the preview matches what Start Today actually loads onto the
+// page (every todo with start <= today), not just today's brand-new items.
+// -- claude, 2026-07-24
 struct FutureLogForDateView: View {
     @EnvironmentObject private var pageStore: PageStore
     @Environment(\.undoManager) private var undoManager
 
     let date: Date
+    var includeEarlier: Bool = false
 
     @State private var selectedIDs: Set<Int64> = []
     @State private var editingTodoID: Int64? = nil
     @State private var rowModalPresented = false
 
     private var filteredTodos: [Todo] {
-        pageStore.futureTodos.filter { Calendar.current.isDate($0.start, inSameDayAs: date) }
+        let cal = Calendar.current
+        let nextDay = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: date))!
+        return pageStore.futureTodos.filter { todo in
+            includeEarlier
+                ? todo.start < nextDay
+                : cal.isDate(todo.start, inSameDayAs: date)
+        }
     }
 
     var body: some View {

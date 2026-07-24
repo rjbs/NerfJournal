@@ -94,9 +94,14 @@ struct JournalView: View {
     @ViewBuilder
     private var noPageDetail: some View {
         let selectedDate = journalStore.selectedDate!
-        let isToday = Calendar.current.isDateInToday(selectedDate)
-        let futureForDate = pageStore.futureTodos.filter {
-            Calendar.current.isDate($0.start, inSameDayAs: selectedDate)
+        let cal = Calendar.current
+        let isToday = cal.isDateInToday(selectedDate)
+        // On today, preview everything a fresh page would inherit (start <= today);
+        // on other unstarted dates, only work newly scheduled to begin that day.
+        // -- claude, 2026-07-24
+        let nextDay = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: selectedDate))!
+        let futureForDate = pageStore.futureTodos.filter { todo in
+            isToday ? todo.start < nextDay : cal.isDate(todo.start, inSameDayAs: selectedDate)
         }
 
         VStack(alignment: .leading, spacing: 0) {
@@ -129,7 +134,7 @@ struct JournalView: View {
                     .padding()
                     Divider()
                 }
-                FutureLogForDateView(date: selectedDate)
+                FutureLogForDateView(date: selectedDate, includeEarlier: isToday)
             }
         }
     }
