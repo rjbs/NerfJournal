@@ -38,7 +38,9 @@ struct JournalView: View {
                     .popover(isPresented: $calendarPopoverVisible) {
                         MonthCalendarView(
                             selectedDate: journalStore.selectedDate,
-                            highlightedDates: journalStore.pageDates,
+                            highlightedDates: Set(journalStore.pageDates.map {
+                                Calendar.current.startOfDay(for: $0)
+                            }),
                             futureDates: Set(pageStore.futureTodos.map {
                                 Calendar.current.startOfDay(for: $0.start)
                             }),
