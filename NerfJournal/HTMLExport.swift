@@ -30,33 +30,30 @@ func exportPageMrkdwn(todos: [Todo], categories: [Category]) -> String {
     return lines.isEmpty ? "" : lines.joined(separator: "\n") + "\n"
 }
 
-func exportPageHTML(date: Date, todos: [Todo], categories: [Category]) -> String {
-    let cal = Calendar.current
-    let pageDay = cal.startOfDay(for: date)
+func exportPageHTML(date: CivilDate, todos: [Todo], categories: [Category]) -> String {
+    let pageDay = date
 
     let dateFormatter = DateFormatter()
     dateFormatter.dateStyle = .full
     dateFormatter.timeStyle = .none
-    let pageTitle = dateFormatter.string(from: date)
-
-    let timeFormatter = DateFormatter()
-    timeFormatter.dateStyle = .none
-    timeFormatter.timeStyle = .short
+    let pageTitle = dateFormatter.string(from: date.date())
 
     let catByID = Dictionary(uniqueKeysWithValues: categories.compactMap { c in c.id.map { ($0, c) } })
 
     // ── Activity items ─────────────────────────────────────────────────────
     // Todos resolved on this day, ordered chronologically by ending time and
-    // tiebroken by id. Mirrors JournalPageDetailView.activityTodos.
+    // tiebroken by id. Day-only endings (no known time) sort first. Mirrors
+    // JournalPageDetailView.activityTodos.
 
     let activityTodos = todos
-        .filter { t in t.ending.map { cal.isDate($0.date, inSameDayAs: pageDay) } ?? false }
+        .filter { t in t.ending.map { $0.day == pageDay } ?? false }
         .sorted {
-            let d0 = $0.ending!.date, d1 = $1.ending!.date
+            let d0 = $0.ending!.time?.instant ?? .distantPast
+            let d1 = $1.ending!.time?.instant ?? .distantPast
             return d0 == d1 ? $0.id! < $1.id! : d0 < d1
         }
     let openTodos = todos.filter { t in
-        t.ending.map { !cal.isDate($0.date, inSameDayAs: pageDay) } ?? true
+        t.ending.map { $0.day != pageDay } ?? true
     }
 
     // ── Open todos grouped by category ────────────────────────────────────
@@ -80,6 +77,17 @@ func exportPageHTML(date: Date, todos: [Todo], categories: [Category]) -> String
         "<span class=\"dot\" style=\"background:\(color)\"></span>"
     }
 
+    // The ending's wall-clock time, rendered in the offset where it happened;
+    // empty for a day-only ending (time unknown).
+    func activityTime(_ ending: TodoEnding) -> String {
+        guard let m = ending.time else { return "" }
+        let f = DateFormatter()
+        f.dateStyle = .none
+        f.timeStyle = .short
+        f.timeZone = m.zone
+        return f.string(from: m.instant)
+    }
+
     // ── Build body ─────────────────────────────────────────────────────────
 
     var body = ""
@@ -89,9 +97,9 @@ func exportPageHTML(date: Date, todos: [Todo], categories: [Category]) -> String
     if !activityTodos.isEmpty {
         body += "<section>\n<h2>Activity</h2>\n<ul class=\"rows\">\n"
         for todo in activityTodos {
-            let (_, cls, cap) = todoDisplayState(todo, pageDay: pageDay, cal: cal)
+            let (_, cls, cap) = todoDisplayState(todo, pageDay: pageDay)
             let dotColor = todo.categoryID.flatMap { catByID[$0]?.color.cssHex } ?? "#999"
-            let ts = esc(timeFormatter.string(from: todo.ending!.date))
+            let ts = esc(activityTime(todo.ending!))
             let isAbandoned = cls == "abandoned"
             var titleHTML = isAbandoned ? "<s>\(esc(todo.title))</s>" : esc(todo.title)
             if let url = todo.externalURL, !url.isEmpty {
@@ -120,7 +128,7 @@ func exportPageHTML(date: Date, todos: [Todo], categories: [Category]) -> String
         let dot = dotSpan(color: category?.color.cssHex ?? "#999")
         body += "<section>\n<h2>\(dot)\(esc(category?.name ?? "Other"))</h2>\n<ul class=\"rows\">\n"
         for todo in groupTodos {
-            let (sym, cls, cap) = todoDisplayState(todo, pageDay: pageDay, cal: cal)
+            let (sym, cls, cap) = todoDisplayState(todo, pageDay: pageDay)
             let isStruck = cls == "done" || cls == "abandoned"
             var titleHTML = isStruck ? "<s>\(esc(todo.title))</s>" : esc(todo.title)
             if let url = todo.externalURL, !url.isEmpty {
@@ -179,22 +187,22 @@ func exportPageHTML(date: Date, todos: [Todo], categories: [Category]) -> String
 }
 
 private func todoDisplayState(
-    _ todo: Todo, pageDay: Date, cal: Calendar
+    _ todo: Todo, pageDay: CivilDate
 ) -> (symbol: String, cssClass: String, caption: String?) {
-    let addedDay = cal.startOfDay(for: todo.start)
+    let addedDay = todo.start
     let carried: String? = addedDay < pageDay ? {
-        let n = cal.dateComponents([.day], from: addedDay, to: pageDay).day ?? 0
+        let n = pageDay.daysSince(addedDay)
         return "Carried over \u{b7} \(n) day\(n == 1 ? "" : "s") ago"
     }() : nil
 
     guard let ending = todo.ending else {
         return ("○", "pending", carried)
     }
-    let endDay = cal.startOfDay(for: ending.date)
+    let endDay = ending.day
     guard endDay > pageDay else {
         return ending.kind == .done ? ("✓", "done", carried) : ("✗", "abandoned", nil)
     }
-    let n = cal.dateComponents([.day], from: pageDay, to: endDay).day ?? 0
+    let n = endDay.daysSince(pageDay)
     let cap = ending.kind == .done
         ? "Done \(n) day\(n == 1 ? "" : "s") later"
         : "Abandoned \(n) day\(n == 1 ? "" : "s") later"

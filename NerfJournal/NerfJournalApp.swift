@@ -18,8 +18,7 @@ struct TodoCommands: Commands {
         }
         CommandGroup(after: .newItem) {
             Button("Go to Today") {
-                let today = Calendar.current.startOfDay(for: Date())
-                Task { try? await journalStore?.selectDate(today) }
+                Task { try? await journalStore?.selectDate(.today) }
             }
             .keyboardShortcut("t", modifiers: .command)
             .disabled(journalStore == nil)
@@ -65,10 +64,8 @@ struct TodoCommands: Commands {
         let todos = filteredTodos(memberIDs: memberIDs)
         let categories = categoryStore?.categories ?? []
         let html = exportPageHTML(date: page.date, todos: todos, categories: categories)
-        let df = DateFormatter()
-        df.dateFormat = "yyyy-MM-dd"
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = df.string(from: page.date) + ".html"
+        panel.nameFieldStringValue = page.date.iso + ".html"
         panel.allowedContentTypes = [.html]
         guard panel.runModal() == .OK, let url = panel.url else { return }
         try? html.write(to: url, atomically: true, encoding: .utf8)

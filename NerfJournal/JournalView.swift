@@ -38,12 +38,8 @@ struct JournalView: View {
                     .popover(isPresented: $calendarPopoverVisible) {
                         MonthCalendarView(
                             selectedDate: journalStore.selectedDate,
-                            highlightedDates: Set(journalStore.pageDates.map {
-                                Calendar.current.startOfDay(for: $0)
-                            }),
-                            futureDates: Set(pageStore.futureTodos.map {
-                                Calendar.current.startOfDay(for: $0.start)
-                            }),
+                            highlightedDates: journalStore.pageDates,
+                            futureDates: Set(pageStore.futureTodos.map(\.start)),
                             onSelect: { date in Task { try? await journalStore.selectDate(date) } }
                         )
                         .padding()
@@ -94,18 +90,16 @@ struct JournalView: View {
     @ViewBuilder
     private var noPageDetail: some View {
         let selectedDate = journalStore.selectedDate!
-        let cal = Calendar.current
-        let isToday = cal.isDateInToday(selectedDate)
+        let isToday = selectedDate == CivilDate.today
         // On today, preview everything a fresh page would inherit (start <= today);
         // on other unstarted dates, only work newly scheduled to begin that day.
         // -- claude, 2026-07-24
-        let nextDay = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: selectedDate))!
         let futureForDate = pageStore.futureTodos.filter { todo in
-            isToday ? todo.start < nextDay : cal.isDate(todo.start, inSameDayAs: selectedDate)
+            isToday ? todo.start <= selectedDate : todo.start == selectedDate
         }
 
         VStack(alignment: .leading, spacing: 0) {
-            Text(selectedDate.formatted(date: .long, time: .omitted))
+            Text(selectedDate.date().formatted(date: .long, time: .omitted))
                 .font(.title2).bold()
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
@@ -144,8 +138,7 @@ struct JournalView: View {
             try? await pageStore.startToday()
             try? await categoryStore.load()
             try? await journalStore.loadIndex()
-            let today = Calendar.current.startOfDay(for: Date())
-            try? await journalStore.selectDate(today)
+            try? await journalStore.selectDate(.today)
         }
     }
 }
@@ -153,10 +146,10 @@ struct JournalView: View {
 // MARK: - MonthCalendarView
 
 struct MonthCalendarView: View {
-    let selectedDate: Date?
-    let highlightedDates: Set<Date>
-    var futureDates: Set<Date> = []
-    let onSelect: (Date) -> Void
+    let selectedDate: CivilDate?
+    let highlightedDates: Set<CivilDate>
+    var futureDates: Set<CivilDate> = []
+    let onSelect: (CivilDate) -> Void
 
     @State private var displayMonth: Date = {
         let cal = Calendar.current
@@ -217,13 +210,14 @@ struct MonthCalendarView: View {
                 Color.clear.frame(height: 34)
             }
             ForEach(daysInMonth, id: \.self) { date in
+                let civil = cellCivilDate(date)
                 DayCell(
                     date: date,
-                    isSelected: isSameDay(date, selectedDate),
-                    hasEntry: hasEntry(date),
-                    hasFutureItems: futureDates.contains(calendar.startOfDay(for: date)),
+                    isSelected: civil == selectedDate,
+                    hasEntry: highlightedDates.contains(civil),
+                    hasFutureItems: futureDates.contains(civil),
                     isToday: calendar.isDateInToday(date),
-                    onTap: { onSelect(date) }
+                    onTap: { onSelect(civil) }
                 )
             }
         }
@@ -244,13 +238,10 @@ struct MonthCalendarView: View {
         return (0..<count).compactMap { calendar.date(byAdding: .day, value: $0, to: interval.start) }
     }
 
-    private func isSameDay(_ a: Date, _ b: Date?) -> Bool {
-        guard let b else { return false }
-        return calendar.isDate(a, inSameDayAs: b)
-    }
-
-    private func hasEntry(_ date: Date) -> Bool {
-        highlightedDates.contains(calendar.startOfDay(for: date))
+    // The civil date a grid cell represents, read in the current zone (the grid
+    // cells are local midnights).
+    private func cellCivilDate(_ date: Date) -> CivilDate {
+        CivilDate(instant: date, in: calendar.timeZone)
     }
 
     private func shiftMonth(by n: Int) {
@@ -306,7 +297,7 @@ struct JournalPageDetailView: View {
     @EnvironmentObject private var categoryStore: CategoryStore
     @Environment(\.openWindow) private var openWindow
 
-    let date: Date
+    let date: CivilDate
     let todos: [Todo]
     var readOnly: Bool = true
 
@@ -339,7 +330,7 @@ struct JournalPageDetailView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(date.formatted(date: .long, time: .omitted))
+            Text(date.date().formatted(date: .long, time: .omitted))
                 .font(.title2).bold()
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
@@ -562,10 +553,12 @@ struct JournalPageDetailView: View {
         todos
             .filter { todo in
                 guard let ending = todo.ending else { return false }
-                return Calendar.current.isDate(ending.date, inSameDayAs: date)
+                return ending.day == date
             }
             .sorted {
-                let d0 = $0.ending!.date, d1 = $1.ending!.date
+                // Day-only endings (no known time) sort first, then by time, then id.
+                let d0 = $0.ending!.time?.instant ?? .distantPast
+                let d1 = $1.ending!.time?.instant ?? .distantPast
                 return d0 == d1 ? $0.id! < $1.id! : d0 < d1
             }
     }
@@ -574,7 +567,7 @@ struct JournalPageDetailView: View {
     private var openTodos: [Todo] {
         todos.filter { todo in
             guard let ending = todo.ending else { return true }
-            return !Calendar.current.isDate(ending.date, inSameDayAs: date)
+            return ending.day != date
         }
     }
 
@@ -593,7 +586,7 @@ struct JournalPageDetailView: View {
                     isEditing: editingTodoID == todo.id,
                     selectedIDs: selectedTodoIDs,
                     showCategoryDot: true,
-                    activityTimestamp: todo.ending?.date,
+                    isActivityRow: true,
                     modalPresented: $rowModalPresented,
                     onCommitEdit: { newTitle in
                         let trimmed = newTitle.trimmingCharacters(in: .whitespaces)
@@ -672,12 +665,12 @@ struct TodoRow: View {
     @EnvironmentObject private var categoryStore: CategoryStore
     @Environment(\.undoManager) private var undoManager
     let todo: Todo
-    var pageDate: Date = Calendar.current.startOfDay(for: Date())
+    var pageDate: CivilDate = .today
     var readOnly: Bool = false
     var isEditing: Bool = false
     var selectedIDs: Set<Int64> = []
     var showCategoryDot: Bool = false
-    var activityTimestamp: Date? = nil
+    var isActivityRow: Bool = false
     var modalPresented: Binding<Bool>? = nil
     var onCommitEdit: (String) -> Void = { _ in }
     var onCancelEdit: () -> Void = {}
@@ -700,8 +693,8 @@ struct TodoRow: View {
         case pending                                 // open on today's page
         case doneToday                               // completed on pageDate
         case abandonedToday                          // abandoned on pageDate
-        case migratedOpen                            // still pending today (past page)
-        case migratedResolved(TodoEnding.Kind, Date) // ended after pageDate (past page)
+        case migratedOpen                                 // still pending today (past page)
+        case migratedResolved(TodoEnding.Kind, CivilDate) // ended after pageDate (past page)
     }
 
     private var anyModalPresented: Bool {
@@ -711,13 +704,13 @@ struct TodoRow: View {
 
     private var rowState: RowState {
         if let ending = todo.ending {
-            if Calendar.current.isDate(ending.date, inSameDayAs: pageDate) {
+            if ending.day == pageDate {
                 return ending.kind == .done ? .doneToday : .abandonedToday
             } else {
-                return .migratedResolved(ending.kind, ending.date)
+                return .migratedResolved(ending.kind, ending.day)
             }
         } else {
-            return Calendar.current.isDateInToday(pageDate) ? .pending : .migratedOpen
+            return pageDate == CivilDate.today ? .pending : .migratedOpen
         }
     }
 
@@ -745,8 +738,8 @@ struct TodoRow: View {
                 .disabled(todo.isAbandoned)
             }
 
-            if let ts = activityTimestamp {
-                Text(ts.formatted(date: .omitted, time: .shortened))
+            if isActivityRow {
+                Text(activityTimeText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
@@ -868,12 +861,10 @@ struct TodoRow: View {
                     showingSetURLAlert = true
                 }
 
-                if let endingDate = todo.ending?.date {
+                if todo.ending != nil {
                     Button("Adjust time\u{2026}") {
-                        let cal = Calendar.current
-                        pendingEndingTime = cal.isDate(endingDate, inSameDayAs: pageDate)
-                            ? endingDate
-                            : cal.date(bySettingHour: 12, minute: 0, second: 0, of: pageDate)!
+                        // Seed with the existing time if any, else noon of the day.
+                        pendingEndingTime = todo.ending?.time?.instant ?? pageDate.date()
                         showingAdjustEndingTime = true
                     }
                 }
@@ -971,8 +962,9 @@ struct TodoRow: View {
     private var adjustEndingTimeDayRange: ClosedRange<Date> {
         guard todo.ending != nil else { return Date()...Date() }
         let cal = Calendar.current
-        let start = cal.startOfDay(for: pageDate)
-        let end = cal.date(bySettingHour: 23, minute: 59, second: 59, of: pageDate)!
+        let noon = pageDate.date()
+        let start = cal.startOfDay(for: noon)
+        let end = cal.date(bySettingHour: 23, minute: 59, second: 59, of: noon)!
         return start...end
     }
 
@@ -1013,8 +1005,19 @@ struct TodoRow: View {
         }
     }
 
+    // The wall-clock time of a resolved todo's ending, in the offset where it
+    // happened; empty when the ending records only a day (time unknown).
+    private var activityTimeText: String {
+        guard let moment = todo.ending?.time else { return "" }
+        let f = DateFormatter()
+        f.dateStyle = .none
+        f.timeStyle = .short
+        f.timeZone = moment.zone
+        return f.string(from: moment.instant)
+    }
+
     private var shouldStrikethrough: Bool {
-        if activityTimestamp != nil {
+        if isActivityRow {
             // Activity log: abandoned is struck; done gets the ✔ indicator instead.
             switch rowState {
             case .abandonedToday, .migratedResolved(.abandoned, _): return true
@@ -1034,7 +1037,7 @@ struct TodoRow: View {
     // and the title: ✔ (U+2714) for done, ✗ (U+2717) for abandoned, empty
     // otherwise.  Always occupies the same width so titles stay aligned.
     private var activityIndicator: String {
-        guard activityTimestamp != nil else { return "" }
+        guard isActivityRow else { return "" }
         switch rowState {
         case .doneToday, .migratedResolved(.done, _):            return "\u{2714}"
         case .abandonedToday, .migratedResolved(.abandoned, _):  return "\u{2717}"
@@ -1050,22 +1053,14 @@ struct TodoRow: View {
     }
 
     private var captionText: String? {
-        let cal = Calendar.current
-        func daysCarried() -> Int {
-            let addedDay = cal.startOfDay(for: todo.start)
-            let pageDay  = cal.startOfDay(for: pageDate)
-            return cal.dateComponents([.day], from: addedDay, to: pageDay).day ?? 0
-        }
         switch rowState {
         case .pending, .doneToday:
-            let days = daysCarried()
+            let days = pageDate.daysSince(todo.start)
             return days > 0 ? "Carried over \u{b7} \(days) day\(days == 1 ? "" : "s") ago" : nil
         case .migratedOpen:
             return "Still open"
-        case .migratedResolved(let kind, let date):
-            let pageDay  = cal.startOfDay(for: pageDate)
-            let endedDay = cal.startOfDay(for: date)
-            let days = cal.dateComponents([.day], from: pageDay, to: endedDay).day ?? 0
+        case .migratedResolved(let kind, let endedDay):
+            let days = endedDay.daysSince(pageDate)
             let action = kind == .done ? "Done" : "Abandoned"
             return "\(action) \(days) day\(days == 1 ? "" : "s") later"
         default:

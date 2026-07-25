@@ -106,7 +106,7 @@ struct FutureLogRow: View {
                 .frame(width: 8, height: 8)
 
             if showDate {
-                Text(todo.start.formatted(.dateTime.month(.abbreviated).day()))
+                Text(todo.start.date().formatted(.dateTime.month(.abbreviated).day()))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
@@ -230,7 +230,7 @@ struct FutureLogRow: View {
             Text("Please enter a valid URL (e.g. https://example.com) or clear the field to remove the URL.")
         }
         .sheet(isPresented: $showingSendToDateSheet) {
-            let minDate = pageStore.page?.date ?? Calendar.current.startOfDay(for: Date())
+            let minDate = pageStore.page?.date.date() ?? Calendar.current.startOfDay(for: Date())
             VStack(spacing: 16) {
                 Text("Send to\u{2026}")
                     .font(.headline)
@@ -299,7 +299,7 @@ struct FutureLogForDateView: View {
     @EnvironmentObject private var pageStore: PageStore
     @Environment(\.undoManager) private var undoManager
 
-    let date: Date
+    let date: CivilDate
     var includeEarlier: Bool = false
 
     @State private var selectedIDs: Set<Int64> = []
@@ -307,12 +307,8 @@ struct FutureLogForDateView: View {
     @State private var rowModalPresented = false
 
     private var filteredTodos: [Todo] {
-        let cal = Calendar.current
-        let nextDay = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: date))!
-        return pageStore.futureTodos.filter { todo in
-            includeEarlier
-                ? todo.start < nextDay
-                : cal.isDate(todo.start, inSameDayAs: date)
+        pageStore.futureTodos.filter { todo in
+            includeEarlier ? todo.start <= date : todo.start == date
         }
     }
 

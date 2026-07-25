@@ -251,10 +251,13 @@ struct AppDatabase {
             // Notes are gone. Each text-bearing note becomes a todo that was
             // born already done: start = its page's date, ending = (its
             // timestamp, .done). Notes with NULL text were never shown, so
-            // they're discarded. Reading rows as Date and inserting via GRDB
-            // lets Todo/TodoEnding encode both the start date and the ISO-8601
-            // ending JSON correctly — concatenating the raw timestamp column
-            // would emit the wrong date format. -- claude, 2026-06-18
+            // they're discarded. This writes the *legacy* instant-based row
+            // format (datetime start, {date,kind} ending JSON) via raw SQL, so
+            // that v8's one-shot instant→civil-date conversion sees uniform data
+            // rather than a mix of old and new shapes. -- claude, 2026-07-25
+            struct LegacyEndingRow: Encodable { let date: Date; let kind: String }
+            let enc = JSONEncoder()
+            enc.dateEncodingStrategy = .iso8601
             let rows = try Row.fetchAll(db, sql: """
                 SELECT p.date AS date, n.timestamp AS timestamp, n.text AS text
                 FROM note n JOIN journalPage p ON n.pageID = p.id
@@ -264,14 +267,77 @@ struct AppDatabase {
                 let date: Date = row["date"]
                 let timestamp: Date = row["timestamp"]
                 let text: String = row["text"]
-                var todo = Todo(
-                    id: nil, title: text, shouldMigrate: false,
-                    start: date, ending: TodoEnding(date: timestamp, kind: .done),
-                    categoryID: nil, externalURL: nil
-                )
-                try todo.insert(db)
+                let endingData = try enc.encode(LegacyEndingRow(date: timestamp, kind: "done"))
+                let endingJSON = String(data: endingData, encoding: .utf8)!
+                try db.execute(sql: """
+                    INSERT INTO todo (title, shouldMigrate, start, ending)
+                    VALUES (?, ?, ?, ?)
+                    """, arguments: [text, false, date, endingJSON])
             }
             try db.execute(sql: "DROP TABLE note")
+        }
+
+        // Civil dates land. journalPage.date and todo.start were instants stored
+        // at the writing zone's local midnight; endings were a single instant.
+        // Interpreting everything in the only zone this data was ever written in —
+        // America/New_York — we rebuild both tables with TEXT day anchors and
+        // convert each ending to the day-or-moment shape (the noon / 23:59:59
+        // sentinels collapse to day-only; real completions keep their instant and
+        // offset — see LegacyEnding). -- claude, 2026-07-25
+        migrator.registerMigration("v8") { db in
+            let ny = TimeZone(identifier: "America/New_York")!
+
+            try db.create(table: "journalPage_new") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("date", .text).notNull().unique()
+            }
+            for row in try Row.fetchAll(db, sql: "SELECT id, date FROM journalPage") {
+                let id: Int64 = row["id"]
+                let instant: Date = row["date"]
+                try db.execute(
+                    sql: "INSERT INTO journalPage_new (id, date) VALUES (?, ?)",
+                    arguments: [id, CivilDate(instant: instant, in: ny)])
+            }
+            try db.execute(sql: "DROP TABLE journalPage")
+            try db.execute(sql: "ALTER TABLE journalPage_new RENAME TO journalPage")
+
+            try db.create(table: "todo_new") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("title", .text).notNull()
+                t.column("shouldMigrate", .boolean).notNull().defaults(to: true)
+                // Civil date "YYYY-MM-DD": the first day the todo appears.
+                t.column("start", .text).notNull()
+                // JSON-encoded TodoEnding (day + optional moment); NULL = pending.
+                t.column("ending", .text)
+                t.column("categoryID", .integer)
+                    .references("category", onDelete: .setNull)
+                t.column("externalURL", .text)
+            }
+            let todoRows = try Row.fetchAll(db, sql: """
+                SELECT id, title, shouldMigrate, start, ending, categoryID, externalURL FROM todo
+                """)
+            for row in todoRows {
+                let id: Int64 = row["id"]
+                let title: String = row["title"]
+                let shouldMigrate: Bool = row["shouldMigrate"]
+                let startInstant: Date = row["start"]
+                let categoryID: Int64? = row["categoryID"]
+                let externalURL: String? = row["externalURL"]
+                // The legacy ending JSON decodes straight into the new shape via
+                // TodoEnding's lenient decoder, which interprets its instant in
+                // New York; re-binding re-encodes it in the new form.
+                let ending: TodoEnding? = row["ending"]
+                try db.execute(sql: """
+                    INSERT INTO todo_new (id, title, shouldMigrate, start, ending, categoryID, externalURL)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, arguments: [
+                        id, title, shouldMigrate,
+                        CivilDate(instant: startInstant, in: ny),
+                        ending, categoryID, externalURL,
+                    ])
+            }
+            try db.execute(sql: "DROP TABLE todo")
+            try db.execute(sql: "ALTER TABLE todo_new RENAME TO todo")
         }
 
         try migrator.migrate(db)
@@ -280,7 +346,7 @@ struct AppDatabase {
     func exportData() async throws -> Data {
         let snapshot = try await dbQueue.read { db in
             DatabaseExport(
-                version: 7,
+                version: 8,
                 exportedAt: Date(),
                 categories: try Category.order(Column("sortOrder")).fetchAll(db),
                 taskBundles: try TaskBundle.order(Column("id")).fetchAll(db),

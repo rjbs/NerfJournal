@@ -70,22 +70,78 @@ struct BundleTodo: Identifiable, Codable, FetchableRecord, MutablePersistableRec
 
 struct JournalPage: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
     var id: Int64?
-    var date: Date
+    var date: CivilDate
 
     static let databaseTableName = "journalPage"
 
     mutating func didInsert(_ inserted: InsertionSuccess) {
         id = inserted.rowID
     }
+
+    init(id: Int64?, date: CivilDate) {
+        self.id = id
+        self.date = date
+    }
+
+    // Custom decode so pre-CivilDate exports (an ISO instant in `date`) still
+    // import; encode stays synthesized. -- claude, 2026-07-25
+    private enum CodingKeys: String, CodingKey { case id, date }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(Int64.self, forKey: .id)
+        date = try CivilDate.lenientlyDecode(c, forKey: .date)
+    }
 }
 
 // Completion or abandonment record. Stored as a JSON string in SQLite
 // (via DatabaseValueConvertible); encoded as a nested object in export JSON
 // (via Codable). These are distinct code paths with no conflict.
-struct TodoEnding: Codable, DatabaseValueConvertible {
+//
+// `day` (the civil day it ended) is always present — the ordering/membership
+// spine. `time` is the precise moment when we know it (a genuine completion),
+// and nil when we don't: resolving something on a past page, or the auto-abandon
+// sweep, both of which record only the day. -- claude, 2026-07-25
+struct TodoEnding: Codable, DatabaseValueConvertible, Hashable {
     enum Kind: String, Codable { case done, abandoned }
-    var date: Date
+    var day: CivilDate
+    var time: Moment?
     var kind: Kind
+
+    init(day: CivilDate, time: Moment? = nil, kind: Kind) {
+        self.day = day
+        self.time = time
+        self.kind = kind
+    }
+
+    // A moment-based ending keeps its civil day in sync with the moment.
+    init(moment: Moment, kind: Kind) {
+        self.init(day: moment.civilDate, time: moment, kind: kind)
+    }
+
+    // Encode stays synthesized from these three keys. Pre-CivilDate endings
+    // stored a single instant under `date`; we read that legacy shape in New York
+    // and split it into day + (real) time via the same sentinel logic the DB
+    // migration uses. -- claude, 2026-07-25
+    private enum CodingKeys: String, CodingKey { case day, time, kind }
+    private enum LegacyKeys: String, CodingKey { case date, kind }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        if let day = try c.decodeIfPresent(CivilDate.self, forKey: .day) {
+            self.day = day
+            self.time = try c.decodeIfPresent(Moment.self, forKey: .time)
+            self.kind = try c.decode(Kind.self, forKey: .kind)
+        } else {
+            let lc = try decoder.container(keyedBy: LegacyKeys.self)
+            let instant = try lc.decode(Date.self, forKey: .date)
+            let split = LegacyEnding.classify(
+                instant: instant, assuming: TimeZone(identifier: "America/New_York")!)
+            self.day = split.day
+            self.time = split.moment
+            self.kind = try lc.decode(Kind.self, forKey: .kind)
+        }
+    }
 
     var databaseValue: DatabaseValue {
         let enc = JSONEncoder()
@@ -110,7 +166,7 @@ struct Todo: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
     var id: Int64?
     var title: String
     var shouldMigrate: Bool
-    var start: Date     // start-of-day timestamp for the first day the todo appears
+    var start: CivilDate   // the first day the todo appears
     var ending: TodoEnding?
     var categoryID: Int64?
     var externalURL: String?
@@ -140,10 +196,10 @@ extension Todo {
         id            = try c.decodeIfPresent(Int64.self,      forKey: .id)
         title         = try c.decode(String.self,              forKey: .title)
         shouldMigrate = try c.decode(Bool.self,                forKey: .shouldMigrate)
-        if let s = try c.decodeIfPresent(Date.self, forKey: .start) {
-            start = s
+        if c.contains(.start) {
+            start = try CivilDate.lenientlyDecode(c, forKey: .start)
         } else {
-            start = try c.decode(Date.self,                    forKey: .added)
+            start = try CivilDate.lenientlyDecode(c, forKey: .added)
         }
         ending        = try c.decodeIfPresent(TodoEnding.self, forKey: .ending)
         categoryID    = try c.decodeIfPresent(Int64.self,      forKey: .categoryID)

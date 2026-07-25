@@ -33,22 +33,21 @@ final class PageStore: ObservableObject {
     // Create today's page. Pending non-migratable todos from before today are
     // abandoned; migratable ones carry forward naturally (no action needed).
     func startToday() async throws {
-        let today = Self.startOfToday
+        let today = CivilDate.today
 
         let newPage: JournalPage = try await db.dbQueue.write { db in
             var p = JournalPage(id: nil, date: today)
             try p.insert(db)
 
-            // Set the ending to 23:59:59 on the last journal page before today —
-            // the last day we considered doing these tasks. -- claude, 2026-03-02
-            let lastPageDate = try JournalPage
+            // Abandon them as of the last journal page before today — the last day
+            // we considered doing these tasks. The time-of-day is unknown, so this
+            // is a day-only ending. -- claude, 2026-03-02
+            let lastDay = try JournalPage
                 .filter(Column("date") < today)
                 .order(Column("date").desc)
                 .fetchOne(db)?
-                .date ?? Calendar.current.date(byAdding: .day, value: -1, to: today)!
-            let abandonmentDate = Calendar.current.date(
-                bySettingHour: 23, minute: 59, second: 59, of: lastPageDate)!
-            let abandonment = TodoEnding(date: abandonmentDate, kind: .abandoned)
+                .date ?? today.adding(days: -1)
+            let abandonment = TodoEnding(day: lastDay, kind: .abandoned)
             try Todo
                 .filter(Column("start") < today)
                 .filter(Column("shouldMigrate") == false)
@@ -62,17 +61,19 @@ final class PageStore: ObservableObject {
         try await refreshContents()
     }
 
-    // When acting on a past page, stamp noon of that day rather than now so
-    // the ending falls on the right calendar day. The user can then refine
-    // the exact time via "Adjust time". -- claude, 2026-03-06
-    private var defaultEndingDate: Date {
-        let cal = Calendar.current
-        guard let pageDate = page?.date, !cal.isDateInToday(pageDate) else { return Date() }
-        return cal.date(bySettingHour: 12, minute: 0, second: 0, of: pageDate)!
+    // The default ending for a resolution on the loaded page. On today's page the
+    // moment is real (now); on any earlier page we only know the day, so it's a
+    // day-only ending — the user can add a time via "Adjust time".
+    // -- claude, 2026-07-25
+    private func defaultEnding(kind: TodoEnding.Kind) -> TodoEnding {
+        if let page, page.date != CivilDate.today {
+            return TodoEnding(day: page.date, kind: kind)
+        }
+        return TodoEnding(moment: .now(), kind: kind)
     }
 
     func completeTodo(_ todo: Todo, undoManager: UndoManager? = nil) async throws {
-        let ending = TodoEnding(date: defaultEndingDate, kind: .done)
+        let ending = defaultEnding(kind: .done)
         try await db.dbQueue.write { db in
             try Todo
                 .filter(Column("id") == todo.id)
@@ -99,7 +100,7 @@ final class PageStore: ObservableObject {
     }
 
     func abandonTodo(_ todo: Todo) async throws {
-        let ending = TodoEnding(date: defaultEndingDate, kind: .abandoned)
+        let ending = defaultEnding(kind: .abandoned)
         try await db.dbQueue.write { db in
             try Todo
                 .filter(Column("id") == todo.id)
@@ -130,7 +131,7 @@ final class PageStore: ObservableObject {
 
     func bulkComplete(_ todos: [Todo], undoManager: UndoManager? = nil) async throws {
         let oldEndings: [(Int64, TodoEnding?)] = todos.map { ($0.id!, $0.ending) }
-        let ending = TodoEnding(date: defaultEndingDate, kind: .done)
+        let ending = defaultEnding(kind: .done)
         try await db.dbQueue.write { db in
             for todo in todos {
                 try Todo
@@ -185,7 +186,7 @@ final class PageStore: ObservableObject {
     }
 
     func bulkAbandon(_ todos: [Todo]) async throws {
-        let ending = TodoEnding(date: defaultEndingDate, kind: .abandoned)
+        let ending = defaultEnding(kind: .abandoned)
         try await db.dbQueue.write { db in
             for todo in todos {
                 try Todo
@@ -202,14 +203,14 @@ final class PageStore: ObservableObject {
     // moot for a done todo, so it's forced false. -- claude, 2026-06-18
     func addTodo(title: String, shouldMigrate: Bool, categoryID: Int64? = nil, done: Bool = false) async throws {
         guard page != nil else { return }
-        let today = Self.startOfToday
+        let today = CivilDate.today
         try await db.dbQueue.write { db in
             var todo = Todo(
                 id: nil,
                 title: title,
                 shouldMigrate: done ? false : shouldMigrate,
                 start: today,
-                ending: done ? TodoEnding(date: Date(), kind: .done) : nil,
+                ending: done ? TodoEnding(moment: .now(), kind: .done) : nil,
                 categoryID: categoryID,
                 externalURL: nil
             )
@@ -293,8 +294,8 @@ final class PageStore: ObservableObject {
     // undo step. Restores each todo's prior start individually; no redo.
     // -- claude, 2026-03-03
     func sendToDate(_ todos: [Todo], date: Date, undoManager: UndoManager? = nil) async throws {
-        let oldStarts: [(Int64, Date)] = todos.map { ($0.id!, $0.start) }
-        let targetDate = Calendar.current.startOfDay(for: date)
+        let oldStarts: [(Int64, CivilDate)] = todos.map { ($0.id!, $0.start) }
+        let targetDate = CivilDate(instant: date, in: .current)
         try await db.dbQueue.write { db in
             for todo in todos {
                 try Todo
@@ -308,7 +309,7 @@ final class PageStore: ObservableObject {
         try await refreshContents()
     }
 
-    private func restoreBulkStartDates(_ dates: [(Int64, Date)]) async throws {
+    private func restoreBulkStartDates(_ dates: [(Int64, CivilDate)]) async throws {
         try await db.dbQueue.write { db in
             for (id, date) in dates {
                 try Todo
@@ -341,9 +342,14 @@ final class PageStore: ObservableObject {
         try await refreshContents()
     }
 
+    // Give an ending a specific time-of-day on its existing day. The chosen
+    // instant carries the current zone's offset, so it renders as the wall clock
+    // the user picked. Undo restores the prior ending wholesale, since it may have
+    // had no time at all. -- claude, 2026-07-25
     func setEndingTime(_ date: Date, for todo: Todo, undoManager: UndoManager? = nil) async throws {
         guard let oldEnding = todo.ending else { return }
-        let newEnding = TodoEnding(date: date, kind: oldEnding.kind)
+        let moment = Moment(instant: date, offsetSeconds: TimeZone.current.secondsFromGMT(for: date))
+        let newEnding = TodoEnding(day: oldEnding.day, time: moment, kind: oldEnding.kind)
         try await db.dbQueue.write { db in
             try Todo
                 .filter(Column("id") == todo.id)
@@ -351,7 +357,7 @@ final class PageStore: ObservableObject {
             return
         }
         scheduleUndo(with: undoManager) { store in
-            try await store.setEndingTime(oldEnding.date, for: todo, undoManager: undoManager)
+            try await store.restoreBulkEndings([(todo.id!, oldEnding)])
         }
         try await refreshContents()
     }
@@ -373,7 +379,7 @@ final class PageStore: ObservableObject {
                 .order(Column("sortOrder"))
                 .fetchAll(db)
         }
-        let today = Self.startOfToday
+        let today = CivilDate.today
         let insertedIDs: [Int64] = try await db.dbQueue.write { [bundleTodos] db in
             var ids: [Int64] = []
             for bundleTodo in bundleTodos {
@@ -427,20 +433,13 @@ final class PageStore: ObservableObject {
         // Use the last page's date, not today, so that todos completed on the
         // last page day remain visible when you haven't started today yet.
         // -- claude, 2026-03-03
-        // Match by calendar day using a half-open [pageDate, nextDay) range: todo
-        // `start` values are day anchors stored as the writing zone's midnight, so
-        // comparing them against the current zone's midnight instant drops the
-        // page's own todos once you view the data from another time zone.
-        // -- claude, 2026-07-24
-        let cal = Calendar.current
-        let pageDate = cal.startOfDay(for: page!.date)
-        let nextDay = cal.date(byAdding: .day, value: 1, to: pageDate)!
+        let pageDate = page!.date
         let (allTodos, ft) = try await db.dbQueue.read { db in
             let t = try Todo
-                .filter(Column("start") < nextDay)
+                .filter(Column("start") <= pageDate)
                 .fetchAll(db)
             let f = try Todo
-                .filter(Column("start") >= nextDay)
+                .filter(Column("start") > pageDate)
                 .filter(Column("ending") == nil)
                 .order(Column("start"), Column("id"))
                 .fetchAll(db)
@@ -449,7 +448,7 @@ final class PageStore: ObservableObject {
         todos = allTodos
             .filter { todo in
                 guard let ending = todo.ending else { return true }
-                return ending.date >= pageDate
+                return ending.day >= pageDate
             }
             .sortedForDisplay()
         futureTodos = ft
@@ -462,9 +461,5 @@ final class PageStore: ObservableObject {
         manager?.registerUndo(withTarget: self) { store in
             Task { @MainActor in try? await action(store) }
         }
-    }
-
-    private static var startOfToday: Date {
-        Calendar.current.startOfDay(for: Date())
     }
 }
