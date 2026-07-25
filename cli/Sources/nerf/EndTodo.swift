@@ -35,8 +35,7 @@ struct Abandon: ParsableCommand {
 // changed and concurrent writers can't slip a state change in between.
 private func endTodo(id: Int64, kind: TodoEnding.Kind, db: DatabaseOptions) throws {
     let dbQueue = try db.open()
-    let today = Calendar.current.startOfDay(for: Date())
-    let now = Date()
+    let today = CivilDate.today
 
     do {
         try dbQueue.write { database in
@@ -44,12 +43,12 @@ private func endTodo(id: Int64, kind: TodoEnding.Kind, db: DatabaseOptions) thro
                 throw CLIError("no todo with id \(id)")
             }
             if todo.start > today {
-                throw CLIError("todo \(id) hasn't started yet (starts \(dayString(todo.start)))")
+                throw CLIError("todo \(id) hasn't started yet (starts \(todo.start.iso))")
             }
             if let ending = todo.ending {
                 throw CLIError("todo \(id) is already \(ending.kind == .done ? "done" : "abandoned")")
             }
-            todo.ending = TodoEnding(date: now, kind: kind)
+            todo.ending = TodoEnding(moment: .now(), kind: kind)
             try todo.update(database)
         }
     } catch let error as CLIError {
@@ -59,10 +58,4 @@ private func endTodo(id: Int64, kind: TodoEnding.Kind, db: DatabaseOptions) thro
     }
 
     postExternalChangeNotification()
-}
-
-private func dayString(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-    return formatter.string(from: date)
 }

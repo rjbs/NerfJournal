@@ -38,16 +38,16 @@ struct AddTodo: ParsableCommand {
             throw ValidationError("todo title is required")
         }
 
-        let today = Calendar.current.startOfDay(for: Date())
+        let today = CivilDate.today
 
-        let startDate: Date
+        let startDay: CivilDate
         if let start = self.start {
             guard let parsed = DateParser.parse(start) else {
                 throw ValidationError("could not understand start date: \(start)")
             }
-            startDate = parsed
+            startDay = CivilDate(instant: parsed, in: .current)
         } else {
-            startDate = today
+            startDay = today
         }
 
         let dbQueue = try db.open()
@@ -55,7 +55,7 @@ struct AddTodo: ParsableCommand {
         // A todo starting today must land on today's page, which the CLI never
         // creates — so require it to exist.  A future-dated todo lives in the
         // Future Log instead, so it needs no page and can be filed any day. -- claude, 2026-06-13
-        if startDate <= today {
+        if startDay <= today {
             let todayPage = try fetchTodayPage(dbQueue, date: today)
             guard todayPage != nil else {
                 throw CLIError("no journal page for today — start one in NerfJournal first")
@@ -75,7 +75,7 @@ struct AddTodo: ParsableCommand {
                     id: nil,
                     title: title,
                     shouldMigrate: !noMigrate,
-                    start: startDate,
+                    start: startDay,
                     ending: nil,
                     categoryID: categoryID,
                     externalURL: url

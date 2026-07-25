@@ -6,7 +6,7 @@ import GRDB
 
 // A todo starting today must land on today's page, which the CLI never
 // creates — so callers require it to exist. Returns the page if present.
-func fetchTodayPage(_ dbQueue: DatabaseQueue, date: Date) throws -> JournalPage? {
+func fetchTodayPage(_ dbQueue: DatabaseQueue, date: CivilDate) throws -> JournalPage? {
     do {
         return try dbQueue.read { database in
             try JournalPage

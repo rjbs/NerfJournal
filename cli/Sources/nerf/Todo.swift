@@ -18,7 +18,7 @@ struct TodoCommand: ParsableCommand {
 
     func run() throws {
         let dbQueue = try db.open()
-        let today = Calendar.current.startOfDay(for: Date())
+        let today = CivilDate.today
 
         // "Remaining" = still open (ending IS NULL); "today's" = start on or before
         // today, which keeps carried-forward work and excludes Future Log items.
@@ -72,7 +72,7 @@ struct TodoCommand: ParsableCommand {
             var id: Int64?
             var title: String
             var category: String?
-            var start: Date
+            var start: CivilDate
             var url: String?
 
             // Manual encode (not the synthesized one) so nil category/url emit

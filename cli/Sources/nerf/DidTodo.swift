@@ -30,8 +30,7 @@ struct Did: ParsableCommand {
             throw ValidationError("todo title is required")
         }
 
-        let today = Calendar.current.startOfDay(for: Date())
-        let now = Date()
+        let today = CivilDate.today
 
         let dbQueue = try db.open()
 
@@ -55,7 +54,7 @@ struct Did: ParsableCommand {
                     title: title,
                     shouldMigrate: false,
                     start: today,
-                    ending: TodoEnding(date: now, kind: .done),
+                    ending: TodoEnding(moment: .now(), kind: .done),
                     categoryID: categoryID,
                     externalURL: url
                 )

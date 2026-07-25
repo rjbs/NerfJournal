@@ -6,21 +6,53 @@ import GRDB
 
 struct JournalPage: FetchableRecord, TableRecord, Decodable {
     var id: Int64?
-    var date: Date
+    var date: CivilDate
 
     static let databaseTableName = "journalPage"
 }
 
-// TodoEnding is stored as a JSON string in SQLite (matching the app exactly).
-struct TodoEnding: DatabaseValueConvertible {
+// TodoEnding is stored as a JSON string in SQLite (matching the app's Models.swift
+// byte-for-byte). `day` is always present; `time` is a real moment when known.
+struct TodoEnding: Codable, DatabaseValueConvertible, Hashable {
     enum Kind: String, Codable { case done, abandoned }
-    var date: Date
+    var day: CivilDate
+    var time: Moment?
     var kind: Kind
+
+    init(day: CivilDate, time: Moment? = nil, kind: Kind) {
+        self.day = day
+        self.time = time
+        self.kind = kind
+    }
+
+    init(moment: Moment, kind: Kind) {
+        self.init(day: moment.civilDate, time: moment, kind: kind)
+    }
+
+    private enum CodingKeys: String, CodingKey { case day, time, kind }
+    private enum LegacyKeys: String, CodingKey { case date, kind }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        if let day = try c.decodeIfPresent(CivilDate.self, forKey: .day) {
+            self.day = day
+            self.time = try c.decodeIfPresent(Moment.self, forKey: .time)
+            self.kind = try c.decode(Kind.self, forKey: .kind)
+        } else {
+            let lc = try decoder.container(keyedBy: LegacyKeys.self)
+            let instant = try lc.decode(Date.self, forKey: .date)
+            let split = LegacyEnding.classify(
+                instant: instant, assuming: TimeZone(identifier: "America/New_York")!)
+            self.day = split.day
+            self.time = split.moment
+            self.kind = try lc.decode(Kind.self, forKey: .kind)
+        }
+    }
 
     var databaseValue: DatabaseValue {
         let enc = JSONEncoder()
         enc.dateEncodingStrategy = .iso8601
-        let data = try! enc.encode(Coded(date: date, kind: kind))
+        let data = try! enc.encode(self)
         return String(data: data, encoding: .utf8)!.databaseValue
     }
 
@@ -29,13 +61,7 @@ struct TodoEnding: DatabaseValueConvertible {
               let d = s.data(using: .utf8) else { return nil }
         let dec = JSONDecoder()
         dec.dateDecodingStrategy = .iso8601
-        guard let coded = try? dec.decode(Coded.self, from: d) else { return nil }
-        return TodoEnding(date: coded.date, kind: coded.kind)
-    }
-
-    private struct Coded: Codable {
-        var date: Date
-        var kind: Kind
+        return try? dec.decode(TodoEnding.self, from: d)
     }
 }
 
@@ -45,7 +71,7 @@ struct Todo: MutablePersistableRecord {
     var id: Int64?
     var title: String
     var shouldMigrate: Bool
-    var start: Date
+    var start: CivilDate
     var ending: TodoEnding?
     var categoryID: Int64?
     var externalURL: String?

@@ -58,6 +58,16 @@ struct CivilDate: Hashable, Comparable, Sendable {
         return CivilDate(instant: moved, in: cal.timeZone)
     }
 
+    // Whole days from `other` to self (positive when self is later); computed in
+    // UTC, where every day is 24h.
+    func daysSince(_ other: CivilDate) -> Int {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+        let a = cal.date(from: DateComponents(year: other.year, month: other.month, day: other.day))!
+        let b = cal.date(from: DateComponents(year: year, month: month, day: day))!
+        return cal.dateComponents([.day], from: a, to: b).day ?? 0
+    }
+
     // Noon in `zone`, a safe anchor for date-only display formatting — far from
     // any midnight/DST edge that could round onto an adjacent day.
     func date(in zone: TimeZone = .current) -> Date {
@@ -93,6 +103,19 @@ extension CivilDate: DatabaseValueConvertible {
     static func fromDatabaseValue(_ dbValue: DatabaseValue) -> CivilDate? {
         guard let s = String.fromDatabaseValue(dbValue) else { return nil }
         return CivilDate(iso: s)
+    }
+}
+
+extension CivilDate {
+    // Decodes a day that newer JSON stores as "YYYY-MM-DD" but older exports
+    // stored as an ISO-8601 instant at the writing zone's midnight — read back as
+    // its New York civil date so pre-CivilDate backups still import.
+    // -- claude, 2026-07-25
+    static func lenientlyDecode<K>(_ container: KeyedDecodingContainer<K>,
+                                   forKey key: K) throws -> CivilDate {
+        if let cd = try? container.decode(CivilDate.self, forKey: key) { return cd }
+        let legacyInstant = try container.decode(Date.self, forKey: key)
+        return CivilDate(instant: legacyInstant, in: TimeZone(identifier: "America/New_York")!)
     }
 }
 
