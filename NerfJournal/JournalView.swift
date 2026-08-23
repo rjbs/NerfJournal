@@ -18,6 +18,7 @@ private let activityTimeColumnWidth: CGFloat = {
 // MARK: - JournalView
 
 struct JournalView: View {
+    @EnvironmentObject private var dayClock: DayClock
     @EnvironmentObject private var journalStore: JournalStore
     @EnvironmentObject private var pageStore: PageStore
     @EnvironmentObject private var bundleStore: BundleStore
@@ -37,6 +38,7 @@ struct JournalView: View {
                     }
                     .popover(isPresented: $calendarPopoverVisible) {
                         MonthCalendarView(
+                            today: dayClock.today,
                             selectedDate: journalStore.selectedDate,
                             highlightedDates: journalStore.pageDates,
                             futureDates: Set(pageStore.futureTodos.map(\.start)),
@@ -90,7 +92,7 @@ struct JournalView: View {
     @ViewBuilder
     private var noPageDetail: some View {
         let selectedDate = journalStore.selectedDate!
-        let isToday = selectedDate == CivilDate.today
+        let isToday = selectedDate == dayClock.today
         // On today, preview everything a fresh page would inherit (start <= today);
         // on other unstarted dates, only work newly scheduled to begin that day.
         // -- claude, 2026-07-24
@@ -146,6 +148,7 @@ struct JournalView: View {
 // MARK: - MonthCalendarView
 
 struct MonthCalendarView: View {
+    let today: CivilDate
     let selectedDate: CivilDate?
     let highlightedDates: Set<CivilDate>
     var futureDates: Set<CivilDate> = []
@@ -216,7 +219,7 @@ struct MonthCalendarView: View {
                     isSelected: civil == selectedDate,
                     hasEntry: highlightedDates.contains(civil),
                     hasFutureItems: futureDates.contains(civil),
-                    isToday: calendar.isDateInToday(date),
+                    isToday: civil == today,
                     onTap: { onSelect(civil) }
                 )
             }
@@ -661,11 +664,12 @@ struct JournalPageDetailView: View {
 // MARK: - TodoRow
 
 struct TodoRow: View {
+    @EnvironmentObject private var dayClock: DayClock
     @EnvironmentObject private var store: PageStore
     @EnvironmentObject private var categoryStore: CategoryStore
     @Environment(\.undoManager) private var undoManager
     let todo: Todo
-    var pageDate: CivilDate = .today
+    let pageDate: CivilDate
     var readOnly: Bool = false
     var isEditing: Bool = false
     var selectedIDs: Set<Int64> = []
@@ -710,7 +714,7 @@ struct TodoRow: View {
                 return .migratedResolved(ending.kind, ending.day)
             }
         } else {
-            return pageDate == CivilDate.today ? .pending : .migratedOpen
+            return pageDate == dayClock.today ? .pending : .migratedOpen
         }
     }
 

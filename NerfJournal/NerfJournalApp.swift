@@ -89,6 +89,7 @@ struct TodoCommands: Commands {
 @main
 struct NerfJournalApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @StateObject private var dayClock = DayClock()
     @StateObject private var pageStore = PageStore()
     @StateObject private var journalStore = JournalStore()
     @StateObject private var bundleStore = BundleStore()
@@ -98,6 +99,7 @@ struct NerfJournalApp: App {
     var body: some Scene {
         Window("Journal", id: "journal") {
             JournalView()
+                .environmentObject(dayClock)
                 .environmentObject(journalStore)
                 .environmentObject(pageStore)
                 .environmentObject(bundleStore)
