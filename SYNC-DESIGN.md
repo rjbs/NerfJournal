@@ -58,8 +58,8 @@ Consequences of computing the patch late rather than at edit time:
     writer (see below).
 
 Per-type sync metadata lives in a `syncState` table: the server URL,
-account id, the Task state string, and a push lock (see "Two
-processes").
+account id, and the Task state string.  Log entries carry a claim (see
+"Concurrent pushers").
 
 ## The write path
 
@@ -78,17 +78,21 @@ The writer is shared by the app and the CLI.
 
 ## Push
 
-One push in flight at a time, across both processes.
+One push in flight per process.  Several processes may push at once;
+see "Concurrent pushers" for why that is safe.
 
-1.  Take the push lock.  Read the log in `seq` order and snapshot, in
-    memory, each row's current local value and server snapshot.
+1.  Claim the unclaimed log entries, in one transaction, by stamping
+    them with this process.s id and the time.  Read the claimed entries
+    in `seq` order and snapshot, in memory, each row.s current local
+    value and server snapshot.
 2.  Build one Task/set.  Creates send the full encoding, keyed by
     creation id equal to the row's `uid`.  Updates send a PatchObject
     diffed from server snapshot to current encoding (see "Patches").
     Updates whose diff is empty are dropped from the request and their
     log entries deleted.  Destroys send `remoteID`.
 3.  Send.  On a transport failure or `serverUnavailable`, release the
-    lock, leave the log untouched, and retry later with backoff.  The
+    claims, leave the log otherwise untouched, and retry later with
+    backoff.  The
     identical batch is rebuilt next time.
 4.  Apply the response in one transaction:
     *   `created`: set `remoteID`, set server snapshot to what was sent
@@ -101,11 +105,13 @@ One push in flight at a time, across both processes.
     *   `newState`: advance the Task state if `oldState` equals the
         stored state; otherwise mark that a pull is needed.
     *   Delete the log entries that were sent, in this same transaction.
+        An entry that was re-added at a later `seq` by an edit made
+        during the request belongs to the next push and is left alone.
     If the row was edited again while the request was in flight, the
     new server snapshot still reflects what was sent, so the next diff
     contains exactly the later edits.  Nothing is lost and nothing is
     sent twice.
-5.  Release the lock.  If the log is non-empty, push again.
+5.  If unclaimed entries remain, push again.
 
 Fastmail's proxy holds an exclusive database lock for the whole round
 trip.  We cannot, with two processes, so step 1 snapshots and step 4
@@ -225,15 +231,35 @@ so both are safe to replay.
     flight; it checks the flag when the push finishes.
 *   Debounce push notifications.  Pull once after a short quiet period.
 
-## Two processes
+## Concurrent pushers
 
-The app and the CLI share the SQLite file, and either may write.
+The app and the CLI share the SQLite file, either may write, and both
+may push at the same time.  In practice the CLI mostly creates, and
+nearly every update is a progress change, so two processes rarely touch
+the same property.  Updates are therefore last-writer-wins at the
+property level, and `ifInState` is never sent.  This is a deliberate
+choice (2026-10-04), not an oversight.
 
-*   The writer uses short transactions.  GRDB in WAL mode is sufficient.
-*   The push lock is a row in `syncState` holding a holder id and a
-    timestamp, taken and released in their own transactions, with a
-    staleness timeout so a crashed pusher does not wedge the other
-    process.
+What makes concurrent pushing safe without a global lock:
+
+*   **Claims, not a lock.**  A log entry is claimed by the process that
+    will send it, so no entry is sent twice.  A claim older than a
+    staleness timeout is treated as unclaimed, so a crashed pusher
+    does not strand its entries.
+*   **Every send is safe to repeat anyway.**  Creates are rejected by
+    uid (see "Idempotency"), update patches are absolute, and a destroy
+    of a missing task counts as destroyed.  A stale claim that is
+    re-sent after all costs a round trip, not correctness.
+*   **State advances only when contiguous.**  When two processes push
+    back to back, the second to apply its response sees an `oldState`
+    that does not match and sets the pull-needed flag.  The pull then
+    fetches tasks that are already local with matching `remoteID` and
+    no pending change, and simply refreshes their snapshots.
+*   **Rebase on pull is unaffected.**  It reconciles local pending
+    edits against fetched data, which has nothing to do with who
+    pushed.
+
+The writer uses short transactions.  GRDB in WAL mode is sufficient.
 *   Only the app holds the EventSource connection.  The CLI pushes once
     after each write if it can reach the server, and otherwise leaves
     the log for the app.
@@ -258,10 +284,6 @@ rejecting duplicate uids rather than silently accepting them.
 *   Run-loop batching, multi-tab jitter, `canFetchAll` and lazy
     OBSOLETE refetching, the calendar's date-range-as-sync-unit.  We
     hold the full set locally and always fetch changed records inline.
-*   Skipping `ifInState`.  With one pusher at a time and the contiguous
-    state rule it is unnecessary; if both processes ever push
-    concurrently, send `ifInState` and treat `stateMismatch` as pull,
-    rebase, retry.
 *   Store keys as creation ids; we use `uid`.
 *   Showing only the first error as a toast.  Per-row error state in
     SQLite so both processes can show it.
