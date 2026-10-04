@@ -209,8 +209,8 @@ every Task a client-generated `uid`:
 *   The creation id in Task/set is the `uid`.
 *   Before re-sending a create after an ambiguous failure, pull first.
     A fetched Task with a matching `uid` adopts the row (Pull step 3).
-*   If the server rejects duplicate uids with `alreadyExists`, handle it
-    as above.  Whether the prototype does this is untested.
+*   The server rejects duplicate uids; see "Probed on the prototype"
+    for the exact shape, which is not `alreadyExists`.
 
 Updates are absolute patches and destroys treat `notFound` as success,
 so both are safe to replay.
@@ -266,13 +266,24 @@ rejecting duplicate uids rather than silently accepting them.
 *   Showing only the first error as a toast.  Per-row error state in
     SQLite so both processes can show it.
 
-## To probe on the prototype before implementing
+## Probed on the prototype, 2026-10-04
 
-*   Does Task/query accept a `uid` filter?
-*   Does a create with a duplicate `uid` in the same list fail with
-    `alreadyExists` and `existingId`, or succeed?
-*   What does Task/changes return for a state string the server has
-    never issued?
+*   **Task/query accepts a `uid` filter** and returns the matching id.
+    So "pull first, then adopt by uid" has a cheaper form: query by
+    uid before re-sending a create.
+*   **A duplicate `uid` is rejected**, but as `invalidProperties` with
+    `properties: ["uid"]` and the description "a task with this uid and
+    recurrenceId already exists", not as `alreadyExists` with an
+    `existingId`.  The engine must therefore treat `invalidProperties`
+    naming `uid` on a create as "already exists": query by uid, adopt
+    the id, and clear the pending create.  Handle `alreadyExists` too,
+    in case the server is changed to return it, which would be the
+    friendlier behavior.
+*   **Task/changes with any unknown state** returns
+    `cannotCalculateChanges`.  Tested with a garbage string, a number
+    beyond the current state, and the empty string.  There is no
+    separate error for "never issued", so the resync path is the only
+    path, which is fine.
 
 ## Effect on the migration plan
 
