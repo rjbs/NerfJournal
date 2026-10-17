@@ -1,118 +1,12 @@
 import ArgumentParser
 import Foundation
 import GRDB
+import NerfCore
 
-// MARK: - Model types (mirroring the app's Models.swift)
-
-struct JournalPage: FetchableRecord, TableRecord, Decodable {
-    var id: Int64?
-    var date: CivilDate
-
-    static let databaseTableName = "journalPage"
-}
-
-// TodoEnding is stored as a JSON string in SQLite (matching the app's Models.swift
-// byte-for-byte). `day` is always present; `time` is a real moment when known.
-struct TodoEnding: Codable, DatabaseValueConvertible, Hashable {
-    enum Kind: String, Codable { case done, abandoned }
-    var day: CivilDate
-    var time: Moment?
-    var kind: Kind
-
-    init(day: CivilDate, time: Moment? = nil, kind: Kind) {
-        self.day = day
-        self.time = time
-        self.kind = kind
-    }
-
-    init(moment: Moment, kind: Kind) {
-        self.init(day: moment.civilDate, time: moment, kind: kind)
-    }
-
-    private enum CodingKeys: String, CodingKey { case day, time, kind }
-    private enum LegacyKeys: String, CodingKey { case date, kind }
-
-    init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        if let day = try c.decodeIfPresent(CivilDate.self, forKey: .day) {
-            self.day = day
-            self.time = try c.decodeIfPresent(Moment.self, forKey: .time)
-            self.kind = try c.decode(Kind.self, forKey: .kind)
-        } else {
-            let lc = try decoder.container(keyedBy: LegacyKeys.self)
-            let instant = try lc.decode(Date.self, forKey: .date)
-            let split = LegacyEnding.classify(
-                instant: instant, assuming: TimeZone(identifier: "America/New_York")!)
-            self.day = split.day
-            self.time = split.moment
-            self.kind = try lc.decode(Kind.self, forKey: .kind)
-        }
-    }
-
-    var databaseValue: DatabaseValue {
-        let enc = JSONEncoder()
-        enc.dateEncodingStrategy = .iso8601
-        let data = try! enc.encode(self)
-        return String(data: data, encoding: .utf8)!.databaseValue
-    }
-
-    static func fromDatabaseValue(_ dbValue: DatabaseValue) -> TodoEnding? {
-        guard let s = String.fromDatabaseValue(dbValue),
-              let d = s.data(using: .utf8) else { return nil }
-        let dec = JSONDecoder()
-        dec.dateDecodingStrategy = .iso8601
-        return try? dec.decode(TodoEnding.self, from: d)
-    }
-}
-
-// GRDB's MutablePersistableRecord requires EncodableRecord, so encode(to:) is
-// provided manually; FetchableRecord (below) adds the read side for `nerf todo`.
-struct Todo: MutablePersistableRecord {
-    var id: Int64?
-    var title: String
-    var shouldMigrate: Bool
-    var start: CivilDate
-    var ending: TodoEnding?
-    var categoryID: Int64?
-    var externalURL: String?
-
-    static let databaseTableName = "todo"
-
-    mutating func didInsert(_ inserted: InsertionSuccess) {
-        id = inserted.rowID
-    }
-
-    func encode(to container: inout PersistenceContainer) throws {
-        container["id"]            = id
-        container["title"]         = title
-        container["shouldMigrate"] = shouldMigrate
-        container["start"]         = start
-        container["ending"]        = ending
-        container["categoryID"]    = categoryID
-        container["externalURL"]   = externalURL
-    }
-}
-
-extension Todo: FetchableRecord {
-    init(row: Row) {
-        id            = row["id"]
-        title         = row["title"]
-        shouldMigrate = row["shouldMigrate"]
-        start         = row["start"]
-        ending        = row["ending"]
-        categoryID    = row["categoryID"]
-        externalURL   = row["externalURL"]
-    }
-}
-
-struct Category: FetchableRecord, TableRecord, Decodable {
-    var id: Int64?
-    var name: String
-    var color: String
-    var sortOrder: Int
-
-    static let databaseTableName = "category"
-}
+// Category moved into NerfCore, where it no longer shadows a same-named type in
+// another imported module, so the bare name became ambiguous. The alias restores
+// it for the CLI sources. -- claude, 2026-10-17
+typealias Category = NerfCore.Category
 
 // MARK: - Errors
 

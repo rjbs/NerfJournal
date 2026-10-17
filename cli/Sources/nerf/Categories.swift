@@ -1,6 +1,7 @@
 import ArgumentParser
 import Foundation
 import GRDB
+import NerfCore
 
 struct Categories: ParsableCommand {
     static let configuration = CommandConfiguration(
@@ -40,9 +41,9 @@ struct Categories: ParsableCommand {
 
         let nameWidth = categories.map(\.name.count).max() ?? 0
         for category in categories {
-            let swatch = Palette.swatch(named: category.color)
+            let swatch = Palette.swatch(named: category.color.rawValue)
             let name = category.name.padding(toLength: nameWidth, withPad: " ", startingAt: 0)
-            print("\(swatch) \(name)  \(category.color)")
+            print("\(swatch) \(name)  \(category.color.rawValue)")
         }
     }
 
@@ -52,7 +53,7 @@ struct Categories: ParsableCommand {
             var color: String
         }
         let entries = categories.map {
-            Entry(name: $0.name, color: Palette.hex(named: $0.color))
+            Entry(name: $0.name, color: Palette.hex(named: $0.color.rawValue))
         }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]

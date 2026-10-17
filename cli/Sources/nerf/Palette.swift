@@ -1,4 +1,5 @@
 import SwiftUI
+import NerfCore
 
 // The CLI mirrors the app's CategoryColor.swatch palette by resolving the very
 // same SwiftUI system colors the app draws with, so `nerf categories` reports the

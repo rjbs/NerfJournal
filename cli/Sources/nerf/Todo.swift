@@ -1,6 +1,7 @@
 import ArgumentParser
 import Foundation
 import GRDB
+import NerfCore
 
 // The command is `TodoCommand`, not `Todo`, so it doesn't collide with the
 // `Todo` model type it queries.
@@ -37,7 +38,7 @@ struct TodoCommand: ParsableCommand {
             throw CLIError("could not query todos: \(error)")
         }
 
-        let groups = groupedByCategory(todos, categories: categories)
+        let groups = groupedByCategory(todos, categoryID: \.categoryID, categories: categories)
 
         if json {
             try printJSON(groups)
@@ -51,7 +52,7 @@ struct TodoCommand: ParsableCommand {
 
         for (index, group) in groups.enumerated() {
             if index > 0 { print("") }
-            let swatch = Palette.swatch(named: group.category?.color ?? "")
+            let swatch = Palette.swatch(named: group.category?.color.rawValue ?? "")
             print("\(swatch) \(group.category?.name ?? "Other")")
             for todo in group.items {
                 print("  \(titleCell(todo))")
@@ -66,6 +67,8 @@ struct TodoCommand: ParsableCommand {
         let esc = "\u{001B}"
         return "\(esc)]8;;\(url)\(esc)\\\(todo.title)\(esc)]8;;\(esc)\\"
     }
+
+    private typealias CategoryGroup = (id: String, category: Category?, items: [Todo])
 
     private func printJSON(_ groups: [CategoryGroup]) throws {
         struct Entry: Encodable {
@@ -104,29 +107,4 @@ struct TodoCommand: ParsableCommand {
         let data = try encoder.encode(entries)
         print(String(data: data, encoding: .utf8)!)
     }
-}
-
-private typealias CategoryGroup = (id: String, category: Category?, items: [Todo])
-
-// Groups todos by category, sorting named groups by sortOrder. Todos whose
-// categoryID is nil or no longer matches a known category collect into an
-// "Other" group appended at the end. Mirrors the app's groupedByCategory so the
-// CLI lists work in the same order as the journal page view.
-private func groupedByCategory(_ todos: [Todo], categories: [Category]) -> [CategoryGroup] {
-    let grouped = Dictionary(grouping: todos, by: \.categoryID)
-    var named: [CategoryGroup] = []
-    var other: [Todo] = grouped[nil] ?? []
-    for (catID, group) in grouped {
-        guard let catID else { continue }
-        if let cat = categories.first(where: { $0.id == catID }) {
-            named.append((id: "\(catID)", category: cat, items: group))
-        } else {
-            other.append(contentsOf: group)
-        }
-    }
-    named.sort { $0.category!.sortOrder < $1.category!.sortOrder }
-    if !other.isEmpty {
-        named.append((id: "other", category: nil, items: other.sorted { ($0.id ?? 0) < ($1.id ?? 0) }))
-    }
-    return named
 }

@@ -1,4 +1,5 @@
 import ArgumentParser
+import NerfCore
 
 @main
 struct Nerf: ParsableCommand {

@@ -1,6 +1,7 @@
 import ArgumentParser
 import Foundation
 import GRDB
+import NerfCore
 
 struct Did: ParsableCommand {
     static let configuration = CommandConfiguration(
