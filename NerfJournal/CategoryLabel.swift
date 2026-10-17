@@ -1,4 +1,5 @@
 import SwiftUI
+import NerfCore
 
 struct CategoryLabel: View {
     let category: Category?

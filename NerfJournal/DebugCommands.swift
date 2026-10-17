@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
+import NerfCore
 
 struct DebugCommands: Commands {
     @FocusedObject var store: PageStore?

@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import NerfCore
 
 // The width of the timestamp column in the Activity section. Probed once at
 // launch using the reference time 10:00, which is the widest two-digit hour

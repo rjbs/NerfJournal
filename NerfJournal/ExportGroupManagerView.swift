@@ -1,4 +1,5 @@
 import SwiftUI
+import NerfCore
 
 struct ExportGroupManagerView: View {
     @EnvironmentObject private var exportGroupStore: ExportGroupStore

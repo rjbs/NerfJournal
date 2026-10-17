@@ -1,4 +1,5 @@
 import SwiftUI
+import NerfCore
 
 // MARK: - BundleManagerView
 

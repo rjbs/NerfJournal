@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -11,12 +11,12 @@
 		83CBBA111A601CBA00E9B192 /* NerfJournalApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA071A601CBA00E9B192 /* NerfJournalApp.swift */; };
 		83CBBA141A601CBA00E9B192 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 83CBBA0C1A601CBA00E9B192 /* Assets.xcassets */; };
 		83CBBA161A601CBA00E9B192 /* AppDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA1E1A601CBA00E9B192 /* AppDatabase.swift */; };
-		83CBBA171A601CBA00E9B192 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA1F1A601CBA00E9B192 /* Models.swift */; };
+		83CBBA601A601CBA00E9B192 /* CategoryColor+Swatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA611A601CBA00E9B192 /* CategoryColor+Swatch.swift */; };
+		83CBBA641A601CBA00E9B192 /* NerfCore in Frameworks */ = {isa = PBXBuildFile; productRef = 83CBBA631A601CBA00E9B192 /* NerfCore */; };
 		83CBBA181A601CBA00E9B192 /* PageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA201A601CBA00E9B192 /* PageStore.swift */; };
 		83CBBA191A601CBA00E9B192 /* JournalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA211A601CBA00E9B192 /* JournalStore.swift */; };
 		83CBBA1A1A601CBA00E9B192 /* JournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA221A601CBA00E9B192 /* JournalView.swift */; };
 		83CBBA2E1A601CBA00E9B192 /* FutureLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA2F1A601CBA00E9B192 /* FutureLogView.swift */; };
-		83CBBA401A601CBA00E9B192 /* CivilDate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA411A601CBA00E9B192 /* CivilDate.swift */; };
 		83CBBA501A601CBA00E9B192 /* DayClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA511A601CBA00E9B192 /* DayClock.swift */; };
 		83CBBA1B1A601CBA00E9B192 /* DebugCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA231A601CBA00E9B192 /* DebugCommands.swift */; };
 		83CBBA1C1A601CBA00E9B192 /* BundleStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA241A601CBA00E9B192 /* BundleStore.swift */; };
@@ -25,7 +25,6 @@
 		83CC1A001B601CBA00E9B201 /* CategoryLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CC1A011B601CBA00E9B201 /* CategoryLabel.swift */; };
 		83CBBA281A601CBA00E9B192 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA291A601CBA00E9B192 /* AppDelegate.swift */; };
 		83CBBA2A1A601CBA00E9B192 /* QuickNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA2B1A601CBA00E9B192 /* QuickNoteView.swift */; };
-		83CBBA341A601CBA00E9B192 /* DateParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA351A601CBA00E9B192 /* DateParser.swift */; };
 		83CBBA2C1A601CBA00E9B192 /* HTMLExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA2D1A601CBA00E9B192 /* HTMLExport.swift */; };
 		83CBBA301A601CBA00E9B192 /* ExportGroupStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA311A601CBA00E9B192 /* ExportGroupStore.swift */; };
 		83CBBA321A601CBA00E9B192 /* ExportGroupManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA331A601CBA00E9B192 /* ExportGroupManagerView.swift */; };
@@ -37,12 +36,11 @@
 		83CBBA0C1A601CBA00E9B192 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		83CBBA0D1A601CBA00E9B192 /* NerfJournal.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NerfJournal.entitlements; sourceTree = "<group>"; };
 		83CBBA1E1A601CBA00E9B192 /* AppDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDatabase.swift; sourceTree = "<group>"; };
-		83CBBA1F1A601CBA00E9B192 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		83CBBA611A601CBA00E9B192 /* CategoryColor+Swatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CategoryColor+Swatch.swift"; sourceTree = "<group>"; };
 		83CBBA201A601CBA00E9B192 /* PageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageStore.swift; sourceTree = "<group>"; };
 		83CBBA211A601CBA00E9B192 /* JournalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalStore.swift; sourceTree = "<group>"; };
 		83CBBA221A601CBA00E9B192 /* JournalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalView.swift; sourceTree = "<group>"; };
 		83CBBA2F1A601CBA00E9B192 /* FutureLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FutureLogView.swift; sourceTree = "<group>"; };
-		83CBBA411A601CBA00E9B192 /* CivilDate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CivilDate.swift; sourceTree = "<group>"; };
 		83CBBA511A601CBA00E9B192 /* DayClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayClock.swift; sourceTree = "<group>"; };
 		83CBBA231A601CBA00E9B192 /* DebugCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugCommands.swift; sourceTree = "<group>"; };
 		83CBBA241A601CBA00E9B192 /* BundleStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleStore.swift; sourceTree = "<group>"; };
@@ -51,7 +49,6 @@
 		83CC1A011B601CBA00E9B201 /* CategoryLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryLabel.swift; sourceTree = "<group>"; };
 		83CBBA291A601CBA00E9B192 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		83CBBA2B1A601CBA00E9B192 /* QuickNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNoteView.swift; sourceTree = "<group>"; };
-		83CBBA351A601CBA00E9B192 /* DateParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateParser.swift; sourceTree = "<group>"; };
 		83CBBA2D1A601CBA00E9B192 /* HTMLExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLExport.swift; sourceTree = "<group>"; };
 		83CBBA311A601CBA00E9B192 /* ExportGroupStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportGroupStore.swift; sourceTree = "<group>"; };
 		83CBBA331A601CBA00E9B192 /* ExportGroupManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportGroupManagerView.swift; sourceTree = "<group>"; };
@@ -63,6 +60,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3DA15FB52F537A45004D38F5 /* GRDB in Frameworks */,
+				83CBBA641A601CBA00E9B192 /* NerfCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -82,12 +80,11 @@
 			children = (
 				83CBBA071A601CBA00E9B192 /* NerfJournalApp.swift */,
 				83CBBA1E1A601CBA00E9B192 /* AppDatabase.swift */,
-				83CBBA1F1A601CBA00E9B192 /* Models.swift */,
+				83CBBA611A601CBA00E9B192 /* CategoryColor+Swatch.swift */,
 				83CBBA201A601CBA00E9B192 /* PageStore.swift */,
 				83CBBA211A601CBA00E9B192 /* JournalStore.swift */,
 				83CBBA221A601CBA00E9B192 /* JournalView.swift */,
 				83CBBA2F1A601CBA00E9B192 /* FutureLogView.swift */,
-				83CBBA411A601CBA00E9B192 /* CivilDate.swift */,
 				83CBBA511A601CBA00E9B192 /* DayClock.swift */,
 				83CBBA231A601CBA00E9B192 /* DebugCommands.swift */,
 				83CBBA241A601CBA00E9B192 /* BundleStore.swift */,
@@ -96,7 +93,6 @@
 				83CC1A011B601CBA00E9B201 /* CategoryLabel.swift */,
 				83CBBA291A601CBA00E9B192 /* AppDelegate.swift */,
 				83CBBA2B1A601CBA00E9B192 /* QuickNoteView.swift */,
-				83CBBA351A601CBA00E9B192 /* DateParser.swift */,
 				83CBBA2D1A601CBA00E9B192 /* HTMLExport.swift */,
 				83CBBA311A601CBA00E9B192 /* ExportGroupStore.swift */,
 				83CBBA331A601CBA00E9B192 /* ExportGroupManagerView.swift */,
@@ -150,7 +146,7 @@
 				};
 			};
 			buildConfigurationList = 83CBB9F91A601CBA00E9B192 /* Build configuration list for PBXProject "NerfJournal" */;
-			compatibilityVersion = "Xcode 14.0";
+			compatibilityVersion = "Xcode 15.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -159,6 +155,7 @@
 			);
 			mainGroup = 83CBB9F81A601CBA00E9B192;
 			packageReferences = (
+				83CBBA621A601CBA00E9B192 /* XCLocalSwiftPackageReference "NerfCore" */,
 				3DA15FB32F537A45004D38F5 /* XCRemoteSwiftPackageReference "GRDB" */,
 			);
 			productRefGroup = 83CBBA0B1A601CBA00E9B192 /* Products */;
@@ -188,12 +185,11 @@
 			files = (
 				83CBBA111A601CBA00E9B192 /* NerfJournalApp.swift in Sources */,
 				83CBBA161A601CBA00E9B192 /* AppDatabase.swift in Sources */,
-				83CBBA171A601CBA00E9B192 /* Models.swift in Sources */,
+				83CBBA601A601CBA00E9B192 /* CategoryColor+Swatch.swift in Sources */,
 				83CBBA181A601CBA00E9B192 /* PageStore.swift in Sources */,
 				83CBBA191A601CBA00E9B192 /* JournalStore.swift in Sources */,
 				83CBBA1A1A601CBA00E9B192 /* JournalView.swift in Sources */,
 				83CBBA2E1A601CBA00E9B192 /* FutureLogView.swift in Sources */,
-				83CBBA401A601CBA00E9B192 /* CivilDate.swift in Sources */,
 				83CBBA501A601CBA00E9B192 /* DayClock.swift in Sources */,
 				83CBBA1B1A601CBA00E9B192 /* DebugCommands.swift in Sources */,
 				83CBBA1C1A601CBA00E9B192 /* BundleStore.swift in Sources */,
@@ -202,7 +198,6 @@
 				83CC1A001B601CBA00E9B201 /* CategoryLabel.swift in Sources */,
 				83CBBA281A601CBA00E9B192 /* AppDelegate.swift in Sources */,
 				83CBBA2A1A601CBA00E9B192 /* QuickNoteView.swift in Sources */,
-				83CBBA341A601CBA00E9B192 /* DateParser.swift in Sources */,
 				83CBBA2C1A601CBA00E9B192 /* HTMLExport.swift in Sources */,
 				83CBBA301A601CBA00E9B192 /* ExportGroupStore.swift in Sources */,
 				83CBBA321A601CBA00E9B192 /* ExportGroupManagerView.swift in Sources */,
@@ -428,6 +423,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		83CBBA621A601CBA00E9B192 /* XCLocalSwiftPackageReference "NerfCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = NerfCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		3DA15FB32F537A45004D38F5 /* XCRemoteSwiftPackageReference "GRDB" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -440,6 +442,10 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		83CBBA631A601CBA00E9B192 /* NerfCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = NerfCore;
+		};
 		3DA15FB42F537A45004D38F5 /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 3DA15FB32F537A45004D38F5 /* XCRemoteSwiftPackageReference "GRDB" */;

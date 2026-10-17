@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import NerfCore
 
 // Width of the date column: probed at launch using "Sep 29" — widest typical
 // abbreviated-month + two-digit-day. -- claude, 2026-03-03

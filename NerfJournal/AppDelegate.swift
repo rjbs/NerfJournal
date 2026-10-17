@@ -1,4 +1,5 @@
 import AppKit
+import NerfCore
 import Carbon.HIToolbox
 import Combine
 import SwiftUI

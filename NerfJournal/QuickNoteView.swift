@@ -1,5 +1,6 @@
 import SwiftUI
 import GRDB
+import NerfCore
 
 @MainActor
 final class QuickNoteStore: ObservableObject {
