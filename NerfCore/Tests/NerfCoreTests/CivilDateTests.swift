@@ -1,5 +1,5 @@
 import XCTest
-@testable import nerf
+import NerfCore
 
 private func instant(_ iso: String) -> Date {
     let f = ISO8601DateFormatter()
