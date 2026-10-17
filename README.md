@@ -102,10 +102,19 @@ applied.
 
 Storage is local SQLite only. No iCloud sync or server component.
 
+## Shared Package
+
+`NerfCore/` is a Swift package holding everything the app and the CLI
+both need and nothing that is UI: `CivilDate` and `Moment`, the record
+types, the schema migrations (`NerfSchema`), the export snapshot type,
+and the quick-entry date parser. The app links it as a local package
+dependency; the CLI depends on it by path. Its tests run with
+`cd NerfCore && swift test`.
+
 ## CLI Tool
 
-`cli/` contains a standalone Swift Package, `nerf`, that talks to the
-journal database directly via SQLite and notifies the running app to
+`cli/` contains a Swift Package, `nerf`, that talks to the journal
+database directly via SQLite using the `NerfCore` types and notifies the running app to
 refresh immediately. It is built with
 [swift-argument-parser](https://github.com/apple/swift-argument-parser)
 and dispatches to subcommands, so it grows as new chores come up. Useful
