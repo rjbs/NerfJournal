@@ -1,4 +1,4 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.2
 import PackageDescription
 
 let package = Package(
@@ -16,6 +16,12 @@ let package = Package(
                 .product(name: "NerfCore", package: "NerfCore"),
                 .product(name: "GRDB", package: "GRDB.swift"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
+            ],
+            // Swift 6 mode. Unlike the app, no main-actor default: ArgumentParser
+            // runs each command synchronously and nothing here is shared state.
+            swiftSettings: [
+                .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
+                .enableUpcomingFeature("InferIsolatedConformances"),
             ]
         ),
     ]
