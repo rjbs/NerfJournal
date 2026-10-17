@@ -41,7 +41,9 @@ final class DayClock: ObservableObject {
         scheduleRollover()
     }
 
-    deinit {
+    // The timer is main-actor state, so the deinit runs there too (SE-0371,
+    // available from macOS 26). -- claude, 2026-10-17
+    isolated deinit {
         rolloverTimer?.invalidate()
     }
 
