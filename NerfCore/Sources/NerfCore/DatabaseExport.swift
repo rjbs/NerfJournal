@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 
 // Snapshot of the entire database, used for export and import.
-public struct DatabaseExport: Codable {
+public struct DatabaseExport: Codable, Sendable {
     // version mirrors the DB schema version at export time. Not currently
     // consumed on import, but retained so future code can gate on it if
     // schema versions diverge. -- claude, 2026-03-02

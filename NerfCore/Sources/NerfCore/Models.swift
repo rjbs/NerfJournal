@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-public enum CategoryColor: String, CaseIterable, Codable, DatabaseValueConvertible {
+public enum CategoryColor: String, CaseIterable, Codable, DatabaseValueConvertible, Sendable {
     case blue, red, green, orange, purple, pink, teal, yellow
 
     public var databaseValue: DatabaseValue { rawValue.databaseValue }
@@ -12,7 +12,7 @@ public enum CategoryColor: String, CaseIterable, Codable, DatabaseValueConvertib
     }
 }
 
-public struct Category: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
+public struct Category: Identifiable, Codable, FetchableRecord, MutablePersistableRecord, Sendable {
     public var id: Int64?
     public var name: String
     public var color: CategoryColor
@@ -33,7 +33,7 @@ public struct Category: Identifiable, Codable, FetchableRecord, MutablePersistab
 }
 
 // NOTE: Named TaskBundle rather than Bundle to avoid shadowing Foundation.Bundle.
-public struct TaskBundle: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
+public struct TaskBundle: Identifiable, Codable, FetchableRecord, MutablePersistableRecord, Sendable {
     public var id: Int64?
     public var name: String
     public var sortOrder: Int
@@ -53,7 +53,7 @@ public struct TaskBundle: Identifiable, Codable, FetchableRecord, MutablePersist
     }
 }
 
-public struct BundleTodo: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
+public struct BundleTodo: Identifiable, Codable, FetchableRecord, MutablePersistableRecord, Sendable {
     public var id: Int64?
     public var bundleID: Int64
     public var title: String
@@ -78,7 +78,7 @@ public struct BundleTodo: Identifiable, Codable, FetchableRecord, MutablePersist
     }
 }
 
-public struct JournalPage: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
+public struct JournalPage: Identifiable, Codable, FetchableRecord, MutablePersistableRecord, Sendable {
     public var id: Int64?
     public var date: CivilDate
 
@@ -112,8 +112,8 @@ public struct JournalPage: Identifiable, Codable, FetchableRecord, MutablePersis
 // spine. `time` is the precise moment when we know it (a genuine completion),
 // and nil when we don't: resolving something on a past page, or the auto-abandon
 // sweep, both of which record only the day. -- claude, 2026-07-25
-public struct TodoEnding: Codable, DatabaseValueConvertible, Hashable {
-    public enum Kind: String, Codable { case done, abandoned }
+public struct TodoEnding: Codable, DatabaseValueConvertible, Hashable, Sendable {
+    public enum Kind: String, Codable, Sendable { case done, abandoned }
     public var day: CivilDate
     public var time: Moment?
     public var kind: Kind
@@ -172,7 +172,7 @@ public struct TodoEnding: Codable, DatabaseValueConvertible, Hashable {
 // A todo spans journal pages naturally: it is visible on any day from its
 // `start` date until the day it ends. No per-page duplication; "migration"
 // is an emergent display property, not a status value.
-public struct Todo: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
+public struct Todo: Identifiable, Codable, FetchableRecord, MutablePersistableRecord, Sendable {
     public var id: Int64?
     public var title: String
     public var shouldMigrate: Bool
@@ -239,7 +239,7 @@ extension Todo {
     }
 }
 
-public struct ExportGroup: Identifiable, Codable, FetchableRecord, MutablePersistableRecord {
+public struct ExportGroup: Identifiable, Codable, FetchableRecord, MutablePersistableRecord, Sendable {
     public var id: Int64?
     public var name: String
     public var sortOrder: Int
@@ -259,7 +259,7 @@ public struct ExportGroup: Identifiable, Codable, FetchableRecord, MutablePersis
 
 // Junction record linking an ExportGroup to a category it contains.
 // categoryID == nil represents the "Other" bucket (uncategorized todos).
-public struct ExportGroupMember: Codable, FetchableRecord, TableRecord {
+public struct ExportGroupMember: Codable, FetchableRecord, TableRecord, Sendable {
     public var groupID: Int64
     public var categoryID: Int64?
 
