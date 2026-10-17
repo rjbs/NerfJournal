@@ -6,7 +6,63 @@ should work, distilled from a study (2026-10-04) of Fastmail's web
 client: the public Overture datastore and jmap-js connection layer, and
 the internal client's JMAP api layer and its offline caching proxy.
 
-Status: design notes, not yet implemented.
+Status: design notes.  Revised 2026-10-17: the engine and the Task store
+are now provided by the Jinx library (/Users/rjbs/code/hub/Jinx, plan in
+doc/plan.md), which adopted this design.  See "Division of labor with
+Jinx" for what NerfJournal still owns.
+
+## Division of labor with Jinx
+
+The sections from "The core model" through "Concurrent pushers" describe
+behavior that Jinx implements.  They stay here as the record of what
+NerfJournal requires and why, and as the reference for checking Jinx
+against.  Jinx owns:
+
+*   The Task store itself.  Tasks live in `jinx_`-prefixed tables in
+    NerfJournal.s SQLite file, registered as a migration on the app.s
+    GRDB migrator.  Each row holds the local value and the server
+    snapshot as JSON, a stable Int64 local key that never changes, the
+    JMAP id once assigned, pending state, and the last sync error.
+*   The to-send log with per-entry claims, late diffing, rebase on
+    pull, resync, error classification, state handling, backoff, and
+    the JMAP client and EventSource.
+*   Cross-process change signaling.  Each commit appends its change set
+    to a `jinx_` journal table and posts a Darwin notification named for
+    the database file.  An engine in another process wakes, reads the
+    unseen journal rows, and emits them on its own change stream.  The
+    app and the CLI therefore see identical change sets, and
+    NerfJournal.s DistributedNotification is no longer needed for todo
+    changes.
+
+NerfJournal owns:
+
+*   **The codec and the owned-property set.**  Jinx.s type descriptor
+    for Task declares exactly the properties JMAP-SPEC.md lists.  A
+    replacement-encoding update merges only those keys into the current
+    local JSON, so a fresh encoding from `Todo` can never null a
+    property it does not know about.  The diff recurses into objects
+    and patches maps such as `keywords` and `links` per entry.
+*   **`Todo` as a decoded view.**  `Todo.id` is the Jinx local key.
+    Every read decodes the local JSON through the lenient rules in
+    JMAP-SPEC.md.  Nothing in the app queries Task columns with SQL;
+    the page and future-log queries load all Tasks and filter in
+    memory, which is what the app already does over the todo table.
+*   **All writes through the Jinx engine**, from PageStore, the
+    quick-entry panel, bundle application, import, and the CLI.  Bulk
+    operations (the sweep, bulk complete, abandon, delete, category,
+    send-to-date, apply bundle) use Jinx.s transaction so each is one
+    log batch and one Task/set.
+*   **Client-only tables**: category (color and sort order), journalPage,
+    taskBundle, bundleTodo, exportGroup.  None references a Task; the
+    category link is the keyword, by name.
+*   **Categories by keyword**, including auto-creating a local Category
+    for an unknown keyword found on any Task.
+*   **Import and factory reset** via Jinx.s adopt (existing objects
+    become pending creates) and wipe entry points.  The one-time
+    migration of the existing todo table is an adopt; keeping the old
+    Int64 ids as local keys is nice-to-have, since nothing references
+    them.
+*   **Undo**, as compensating edits through the same writes.
 
 ## What was studied, and which part matters
 
@@ -309,13 +365,26 @@ rejecting duplicate uids rather than silently accepting them.
 
 ## Effect on the migration plan
 
-*   Chunk 4 (cache schema) becomes: `remoteID`, `uid`, `serverTask`
-    JSON, and `lastSyncError` on `todo`; `pendingChange(seq, todoID,
-    op)`; `syncState(key, value)`.  No stored patches.
-*   Chunk 2 (codec) gains three pure functions besides encode and
-    decode: `diff(oldTask, newTask) -> PatchObject`, `apply(task,
-    patch) -> Task`, and the rebase that composes them.  All are
-    unit-testable with the spec's worked examples.
-*   Chunk 6 (engine) is the push, pull, and resync procedures above,
-    plus the lock and the backoff.  Its design risk is now mostly
-    retired; what remains is careful implementation.
+Revised 2026-10-17 for the Jinx split.
+
+*   Chunk 1 (shared package) is unchanged: `CivilDate`, `Moment`,
+    `Todo`, `TodoEnding`, `Category`, and the client-only GRDB schema,
+    shared by the app and the CLI.
+*   Chunk 2 (codec) is `Todo` <-> Task encode and decode with the
+    lenient-read rules, plus the Task type descriptor for Jinx naming
+    the owned-property set.  Diff, apply, and rebase come from Jinx.
+*   Chunk 3 (JMAP client) moves to Jinx.
+*   Chunk 4 (schema) shrinks to: register Jinx.s migration; drop the
+    `todo` table after the one-time adopt; remove the todo -> category
+    foreign key.  No v9 columns on `todo`.
+*   Chunk 5 (one write path) becomes "every todo write goes through the
+    Jinx engine", covering PageStore, QuickNoteView, BundleStore.s
+    apply, AppDatabase import and reset, and the three CLI commands
+    that write today.  The CLI drops its mirrored model types for the
+    shared package.
+*   Chunk 6 (engine) moves to Jinx.
+*   Chunk 7 (import) is the adopt entry point behind a menu item and a
+    `nerf` subcommand.
+*   Chunks 8 through 10 (keyword categories, settings and status,
+    cutover semantics) are unchanged, with status read from Jinx.s
+    per-row pending state and last error.
