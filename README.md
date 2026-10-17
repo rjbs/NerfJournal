@@ -265,7 +265,7 @@ Known structural improvements that aren't urgent but are worth doing:
 
 ## Building
 
-Requires macOS 14+, Xcode 15+. Uses [GRDB](https://github.com/groue/GRDB.swift)
+Requires macOS 27+, Xcode 27+. Uses [GRDB](https://github.com/groue/GRDB.swift)
 for local persistence, added as a Swift Package dependency. No other
 external dependencies.
 
