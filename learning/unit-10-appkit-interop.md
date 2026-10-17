@@ -439,7 +439,7 @@ with [`AsyncSequence`](https://developer.apple.com/documentation/swift/asyncsequ
 for one-shot and streaming async work, and the
 [Observation](https://developer.apple.com/documentation/observation) framework
 (`@Observable`, macOS 14+) as the modern replacement for
-`ObservableObject`/`@Published`. NerfJournal targets macOS 14+ and still uses the
+`ObservableObject`/`@Published`. NerfJournal targets macOS 27 and still uses the
 older `ObservableObject` style — a fine, conservative choice for an app that already
 works. But starting fresh today you would reach for `@Observable` first and keep
 Combine for genuine event-stream plumbing like this KVO bridge, which has no
