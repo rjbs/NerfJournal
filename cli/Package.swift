@@ -6,7 +6,7 @@ let package = Package(
     platforms: [.macOS("27.0")],
     dependencies: [
         .package(path: "../NerfCore"),
-        .package(url: "https://github.com/groue/GRDB.swift", branch: "master"),
+        .package(url: "https://github.com/groue/GRDB.swift", from: "7.0.0"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.3.0"),
     ],
     targets: [

@@ -11,13 +11,25 @@ let package = Package(
         .library(name: "NerfCore", targets: ["NerfCore"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/groue/GRDB.swift", branch: "master"),
+        .package(url: "https://github.com/groue/GRDB.swift", from: "7.0.0"),
+        .package(path: "../../Jinx"),
     ],
     targets: [
         .target(
             name: "NerfCore",
-            dependencies: [.product(name: "GRDB", package: "GRDB.swift")]
+            dependencies: [
+                .product(name: "GRDB", package: "GRDB.swift"),
+                .product(name: "JinxJSON", package: "Jinx"),
+                .product(name: "JinxPatch", package: "Jinx"),
+                .product(name: "JinxWire", package: "Jinx"),
+                .product(name: "JinxStore", package: "Jinx"),
+                .product(name: "Jinx", package: "Jinx"),
+                .product(name: "JinxTypes", package: "Jinx"),
+            ]
         ),
-        .testTarget(name: "NerfCoreTests", dependencies: ["NerfCore"]),
+        .testTarget(
+            name: "NerfCoreTests",
+            dependencies: ["NerfCore", .product(name: "JinxScriptedServer", package: "Jinx")]
+        ),
     ]
 )
