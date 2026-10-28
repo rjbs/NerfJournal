@@ -164,7 +164,14 @@ the server.
 *   After this chunk the dev build shows the adopted data from Jinx
     tables.  The `todo` table is already gone (chunk 4).
 
-## Chunk 6: writes through Jinx
+## Chunk 6: writes through Jinx (done 2026-10-28, branch jmap-backend)
+
+Verified against the dev database: `nerf add-todo` created a Task with
+category and link, a second identical add was refused as a duplicate,
+`nerf done` pushed a moment ending, and a second `done` was refused.
+With the dev build running, a todo added by the CLI appeared on its
+page with no notification from the CLI: the engine tailed the journal
+on the Darwin signal.  Nothing pending afterward.
 
 Every todo mutation becomes an engine call, using `replace(_:with:)`
 with a fresh encoding for single edits and `write { }` for anything
