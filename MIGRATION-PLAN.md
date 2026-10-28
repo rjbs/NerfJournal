@@ -88,7 +88,7 @@ In NerfCore, pure functions over `JSONValue`:
     encodings, and each lenient-read rule against a hand-built foreign
     Task.
 
-## Chunk 3: engine wiring
+## Chunk 3: engine wiring (done 2026-10-28)
 
 In NerfCore, so the app and the CLI share it:
 

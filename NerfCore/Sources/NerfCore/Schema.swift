@@ -1,5 +1,6 @@
 import Foundation
 import GRDB
+import JinxStore
 
 // The journal's SQLite schema, as the ordered list of GRDB migrations that
 // produce it. The app runs these at launch; the CLI assumes they have run.
@@ -273,6 +274,12 @@ public enum NerfSchema {
             try db.execute(sql: "DROP TABLE todo")
             try db.execute(sql: "ALTER TABLE todo_new RENAME TO todo")
         }
+
+        // The sync engine's own tables (jinx_object, jinx_pending, ...) live
+        // in the same file as the journal, so one migrator owns both. Jinx's
+        // migrations go last so that any later journal migration can still be
+        // slotted in before them. -- claude, 2026-10-28
+        GRDBSyncStore.registerMigrations(in: &migrator)
 
         try migrator.migrate(db)
     }
