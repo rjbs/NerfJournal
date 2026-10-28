@@ -9,9 +9,7 @@ final class QuickNoteStore: ObservableObject {
     @Published var categories: [Category] = []
 
     func load() async {
-        let cats = try? await AppDatabase.shared.dbQueue.read { db in
-            try Category.order(Column("sortOrder")).fetchAll(db)
-        }
+        let cats = try? await AppDatabase.shared.sync.categories()
         categories = cats ?? []
         loaded = true
     }

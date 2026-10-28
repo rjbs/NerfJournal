@@ -25,11 +25,14 @@ final class PageStore: ObservableObject {
         // Every committed change to a Task, whether made here, synced in from
         // the server, or written by another process on this database (the
         // engine tails their journal), reloads the page. This replaces the
-        // distributed notification the CLI used to post. -- claude, 2026-10-28
+        // distributed notification the CLI used to post. A change to a
+        // TaskList reloads too, since which list is the default decides how
+        // every Task's category decodes. -- claude, 2026-10-28
         changeTask = Task { [weak self] in
             let changes = await database.sync.engine.changes()
             for await change in changes {
-                guard change.types[JournalSync.taskType.name] != nil else { continue }
+                guard change.types[JournalSync.taskType.name] != nil
+                        || change.types[JournalSync.listType.name] != nil else { continue }
                 try? await self?.refreshContents()
             }
         }
