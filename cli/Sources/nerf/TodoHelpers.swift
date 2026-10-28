@@ -1,6 +1,7 @@
 import ArgumentParser
 import Foundation
 import GRDB
+import JinxWire
 import NerfCore
 
 // Shared helpers for the todo-creating subcommands (add-todo, did).
@@ -74,6 +75,15 @@ func pushAfterWrite(_ sync: JournalSync) async {
     do {
         try await sync.engine.sync()
     } catch {
-        fputs("warning: wrote the todo locally but could not sync it to the server: \(error)\n", stderr)
+        fputs("warning: wrote the todo locally but could not sync it to the server: \(describeSyncError(error))\n", stderr)
     }
+}
+
+// A sync failure in one line. A transport failure arrives as a whole
+// NSError tree; its localized description is the part a person wants.
+func describeSyncError(_ error: any Error) -> String {
+    if case JMAPError.transport(let underlying) = error {
+        return underlying.localizedDescription
+    }
+    return String(describing: error)
 }

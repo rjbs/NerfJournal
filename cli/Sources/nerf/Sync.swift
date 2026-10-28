@@ -16,7 +16,7 @@ struct SyncCommand: AsyncParsableCommand {
         do {
             try await sync.engine.sync()
         } catch {
-            throw CLIError("sync failed: \(error)")
+            throw CLIError("sync failed: \(describeSyncError(error))")
         }
         let status = try await sync.status()
         print(statusLines(status, settings: sync.settings).joined(separator: "\n"))
