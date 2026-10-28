@@ -35,9 +35,14 @@ usable state (builds, 156 tests pass, API as agreed).
     `run()` is a nonisolated synchronous requirement).
 *   macOS 27 floor.
 
-## Chunk 0: groundwork
+## Chunk 0: groundwork (done 2026-10-28)
 
-Small, independent changes that every later chunk assumes.
+Small, independent changes that every later chunk assumes.  All landed:
+GRDB resolves to 7.11.1 everywhere, NerfCore depends on Jinx (its test
+target on the scripted server too), the CLI honors `NERF_DATABASE`, the
+sandbox allows outgoing connections, and the `NerfJournal Dev` shared
+scheme builds the `Dev` configuration.  The dev build was launched
+beside the installed app and created its own container.
 
 *   **GRDB requirement.**  NerfCore, the CLI, and the app all depend on
     GRDB by `branch: master`; Jinx depends on it `from: "7.0.0"`.  One

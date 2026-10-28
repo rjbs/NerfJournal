@@ -283,3 +283,14 @@ external dependencies.
 
 The app is sandboxed. Set your Development Team in Xcode's Signing &
 Capabilities tab before building.
+
+There are two shared schemes. `NerfJournal` builds the app you install
+(Debug or Release, bundle id `org.rjbs.nerfjournal`). `NerfJournal Dev`
+builds the `Dev` configuration: bundle id `org.rjbs.nerfjournal.dev`,
+displayed as "NerfJournal Dev", compiled with the `DEV` condition. The
+sandbox gives it its own container, so its database is
+`~/Library/Containers/org.rjbs.nerfjournal.dev/Data/Library/Application Support/NerfJournal/journal.sqlite`
+and it can run beside the installed app without touching its data. Under
+`DEV` the app does not register the global quick-entry hot key, which
+only one process can own. Point the CLI at the dev database with
+`NERF_DATABASE`.

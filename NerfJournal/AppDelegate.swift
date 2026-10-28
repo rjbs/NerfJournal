@@ -13,7 +13,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // The dev build (bundle id org.rjbs.nerfjournal.dev) runs beside the
+        // installed app, and only one process can own a global hot key, so it
+        // leaves Cmd-Shift-J to the installed app. -- claude, 2026-10-28
+        #if !DEV
         registerGlobalHotKey()
+        #endif
     }
 
     private func registerGlobalHotKey() {
