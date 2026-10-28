@@ -172,7 +172,7 @@ public struct TodoEnding: Codable, DatabaseValueConvertible, Hashable, Sendable 
 // A todo spans journal pages naturally: it is visible on any day from its
 // `start` date until the day it ends. No per-page duplication; "migration"
 // is an emergent display property, not a status value.
-public struct Todo: Identifiable, Codable, FetchableRecord, MutablePersistableRecord, Sendable {
+public struct Todo: Identifiable, Codable, FetchableRecord, MutablePersistableRecord, Equatable, Sendable {
     public var id: Int64?
     public var title: String
     public var shouldMigrate: Bool

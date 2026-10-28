@@ -66,7 +66,7 @@ beside the installed app and created its own container.
     them transitively.  Confirm the whole graph resolves and all three
     build.
 
-## Chunk 2: codec
+## Chunk 2: codec (done 2026-10-28)
 
 In NerfCore, pure functions over `JSONValue`:
 
