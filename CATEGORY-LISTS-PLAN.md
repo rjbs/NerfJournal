@@ -69,7 +69,7 @@ these syncs can go.
 All on branch `tasklist-categories`; main stays what the installed app
 runs until the cutover.
 
-### A. Codec and list index
+### A. Codec and list index (done 2026-10-28)
 
 *   `TaskListIndex` in NerfCore: built from the engine's TaskList
     objects; knows each list's key, server id, name, color, sortOrder,
@@ -87,7 +87,7 @@ runs until the cutover.
     `defaultListId()` replacing `taskListId()` (closes thread
     2026-10-28-um3kxr).
 
-### B. Reader and writers
+### B. Reader and writers (done 2026-10-28)
 
 *   `TaskReader` decodes against the index; the unknown-keyword adoption
     goes.
@@ -96,7 +96,7 @@ runs until the cutover.
     `rename`, `setColor`, `reorder`, `delete` (move Tasks, sync,
     destroy).  `CategorySync.swift` is removed.
 
-### C. Schema v10 and the legacy step
+### C. Schema v10 and the legacy step (done 2026-10-28)
 
 *   v10: `category` becomes `category_legacy` with a `listKey` column;
     `bundleTodo` and `exportGroupMember` are rebuilt without their
@@ -114,7 +114,7 @@ runs until the cutover.
 *   `adoptLegacyTodos()` then files staged todos by their rewritten
     `categoryID`.
 
-### D. Export, import, reset
+### D. Export, import, reset (done 2026-10-28)
 
 *   Export: categories come from the index.
 *   Import: for each exported category, find a list by name or create
@@ -123,7 +123,7 @@ runs until the cutover.
     now.  Lists the file does not mention are left alone.
 *   Reset is unchanged: client tables plus `engine.wipe()`.
 
-### E. The app
+### E. The app (done 2026-10-28)
 
 *   `CategoryStore` goes through `CategoryWriter` and reloads on the
     engine's TaskList change sets; the `nerfCategoriesDidChange`
@@ -134,17 +134,24 @@ runs until the cutover.
     `adoptLegacyTodos`.
 *   Factory Reset's alert text says what it resets now.
 
-### F. The CLI
+### F. The CLI (done 2026-10-28)
 
 `nerf categories`, `nerf add --category` and `nerf did --category` read
 categories through `JournalSync`.
 
-### G. Documents
+### G. Documents (done 2026-10-28)
 
 JMAP-SPEC.md (categories, `taskListIds`, the property table, the
 worked examples), README.md, memory notes.
 
 ### H. Cutover
+
+Step 1 done 2026-10-28: the Dev build over copies of both databases
+created eight lists with the right names, colors and order, moved every
+Task (1175 / 416 / 323 / 239 / 175 / 54 / 54 / 5 per category, 157 left
+in the default list, 2598 in all) with no keyword left and none in two
+lists, and every bundle todo and export group member still named the
+same category. Zero pending afterward.
 
 1.  Rehearse: a second TaskMaster on port 8081 over a copy of
     `taskmaster.sqlite`, the Dev build over a copy of the installed
