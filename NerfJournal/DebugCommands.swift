@@ -69,11 +69,13 @@ struct DebugCommands: Commands {
         let alert = NSAlert()
         alert.messageText = "Factory Reset"
         alert.informativeText = """
-            This will permanently delete all journal pages, todos, \
-            task bundles, and categories. This cannot be undone.
+            This will delete every journal page, task bundle, and category \
+            on this Mac, and forget every todo this Mac has synced, including \
+            changes not yet sent. The server keeps its tasks; the next sync \
+            fetches them again.
             """
         alert.alertStyle = .critical
-        alert.addButton(withTitle: "Delete Everything")
+        alert.addButton(withTitle: "Reset This Mac")
         alert.addButton(withTitle: "Cancel")
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         do {

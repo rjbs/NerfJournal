@@ -6,7 +6,7 @@ import JinxStore
 // produce it. The app runs these at launch; the CLI assumes they have run.
 public enum NerfSchema {
     // The schema version an export file records. Bump alongside a new migration.
-    public static let currentVersion = 8
+    public static let currentVersion = 9
 
     public static func migrate(_ db: DatabaseQueue) throws {
         try migrate(db, upTo: nil)

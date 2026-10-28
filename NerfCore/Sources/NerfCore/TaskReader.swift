@@ -9,6 +9,9 @@ import JinxWire
 public struct SyncedTodo: Sendable, Equatable, Identifiable {
     public var key: LocalKey
     public var todo: Todo
+    // The Task's uid, chosen at creation; nil only for a Task another
+    // client created without one.
+    public var uid: String?
     // The JMAP id, once the server has assigned one.
     public var serverId: String?
     public var pending: PendingOperation?
@@ -40,6 +43,7 @@ public struct TaskReader: Sendable {
             return SyncedTodo(
                 key: object.key,
                 todo: TaskCodec.decode(object.value, id: object.key.rawValue, categories: categories, zone: zone),
+                uid: object.value["uid"]?.stringValue,
                 serverId: object.id,
                 pending: object.pending,
                 lastError: object.lastError

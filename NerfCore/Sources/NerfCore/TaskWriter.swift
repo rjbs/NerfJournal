@@ -37,6 +37,21 @@ public struct TaskWriter: Sendable {
         }
     }
 
+    // Creates Tasks for todos that already have uids, from an import. The
+    // caller has checked the uids are not present; a present one would be
+    // refused by the server as a duplicate and sit as a failed create.
+    public func adopt(_ todos: [(uid: String, todo: Todo)], now: Date = Date()) async throws {
+        guard !todos.isEmpty else { return }
+        let categories = try await sync.categories()
+        let listId = try await sync.taskListId()
+        let encodings = todos.map {
+            TaskCodec.encodeNew($0.todo, categories: categories, uid: $0.uid, taskListId: listId, now: now)
+        }
+        try await sync.engine.write { writer in
+            _ = try writer.adopt(JournalSync.taskType.name, encodings)
+        }
+    }
+
     // MARK: - Changing
 
     public func update(_ key: LocalKey, now: Date = Date(), _ change: @Sendable (inout Todo) -> Void) async throws {
