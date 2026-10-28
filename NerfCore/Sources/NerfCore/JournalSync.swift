@@ -76,6 +76,7 @@ public actor JournalSync {
 
     public nonisolated let engine: Engine
     public nonisolated let settings: SyncSettings
+    private nonisolated let writer: any DatabaseWriter
     private var cachedTaskListId: String?
 
     // The production wiring: an HTTP client against `settings`, signalled
@@ -93,6 +94,7 @@ public actor JournalSync {
     // server. A nil signal name disables cross-process notification.
     public init(writer: any DatabaseWriter, settings: SyncSettings, transport: any JMAPTransport, signalName: String?) throws {
         self.settings = settings
+        self.writer = writer
         let configuration = SyncConfiguration(
             accountId: settings.accountId,
             types: Self.types,
@@ -126,6 +128,70 @@ public actor JournalSync {
 
     private func storedTaskListId() async throws -> String? {
         try await engine.objects(type: TaskTypes.taskList.name).compactMap(\.id).first
+    }
+
+    // MARK: - Legacy adoption
+
+    public struct AdoptionReport: Sendable, Hashable {
+        // Rows turned into pending creates on this run.
+        public var adopted: Int
+        // Rows a previous run had already adopted, found by uid.
+        public var alreadyPresent: Int
+
+        public init(adopted: Int, alreadyPresent: Int) {
+            self.adopted = adopted
+            self.alreadyPresent = alreadyPresent
+        }
+    }
+
+    private struct LegacyRow: Sendable {
+        var uid: String
+        var todo: Todo
+    }
+
+    // Moves the todos migration v9 staged in todo_legacy into the engine as
+    // pending creates, then drops the table. Returns nil when there is no
+    // table, which is every launch after the first successful one. Safe to
+    // run again after a crash at any point: rows already adopted are
+    // recognized by uid and skipped. The creates reach the server through
+    // the engine's ordinary sync-out. -- claude, 2026-10-28
+    public func adoptLegacyTodos() async throws -> AdoptionReport? {
+        let staged = try await writer.read { db -> (rows: [LegacyRow], categories: [Category])? in
+            guard try db.tableExists("todo_legacy") else { return nil }
+            let categories = try Category.fetchAll(db)
+            let rows = try Row.fetchAll(db, sql: "SELECT * FROM todo_legacy ORDER BY id").map { row in
+                LegacyRow(
+                    uid: row["uid"],
+                    todo: Todo(
+                        id: row["id"],
+                        title: row["title"],
+                        shouldMigrate: row["shouldMigrate"],
+                        start: row["start"],
+                        ending: row["ending"],
+                        categoryID: row["categoryID"],
+                        externalURL: row["externalURL"]
+                    )
+                )
+            }
+            return (rows, categories)
+        }
+        guard let staged else { return nil }
+
+        let listId = try await taskListId()
+        let present = Set(try await tasks().compactMap { $0.value["uid"]?.stringValue })
+        let fresh = staged.rows.filter { !present.contains($0.uid) }
+        if !fresh.isEmpty {
+            let encodings = fresh.map {
+                TaskCodec.encodeNew($0.todo, categories: staged.categories, uid: $0.uid, taskListId: listId, now: nil)
+            }
+            try await engine.write { writer in
+                _ = try writer.adopt(Self.taskType.name, encodings)
+            }
+        }
+        try await writer.write { db in
+            try db.execute(sql: "DROP TABLE todo_legacy")
+        }
+        return AdoptionReport(adopted: fresh.count, alreadyPresent: staged.rows.count - fresh.count)
     }
 
     // MARK: - Convenience

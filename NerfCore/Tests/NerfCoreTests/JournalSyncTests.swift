@@ -41,7 +41,9 @@ final class JournalSyncTests: XCTestCase {
         let tables = try db.read { db in
             try String.fetchAll(db, sql: "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
         }
-        XCTAssertTrue(tables.contains("todo"))
+        XCTAssertFalse(tables.contains("todo"), "v9 staged the todos as todo_legacy")
+        XCTAssertTrue(tables.contains("todo_legacy"))
+        XCTAssertTrue(tables.contains("category"))
         XCTAssertTrue(tables.contains("jinx_object"))
         XCTAssertTrue(tables.contains("jinx_pending"))
     }

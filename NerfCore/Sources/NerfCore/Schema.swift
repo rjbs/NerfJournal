@@ -9,6 +9,12 @@ public enum NerfSchema {
     public static let currentVersion = 8
 
     public static func migrate(_ db: DatabaseQueue) throws {
+        try migrate(db, upTo: nil)
+    }
+
+    // Stops after the named migration, for tests that need a database in an
+    // older shape. -- claude, 2026-10-28
+    public static func migrate(_ db: DatabaseQueue, upTo lastIdentifier: String?) throws {
         var migrator = DatabaseMigrator()
 
         migrator.registerMigration("v1") { db in
@@ -275,12 +281,42 @@ public enum NerfSchema {
             try db.execute(sql: "ALTER TABLE todo_new RENAME TO todo")
         }
 
+        // Todos move to the JMAP server, by way of the sync engine's tables.
+        // This migration only stages them: each row gets the uid it will
+        // carry as a Task, and the table steps aside as todo_legacy so that
+        // nothing reads it as live data. JournalSync.adoptLegacyTodos then
+        // turns the rows into pending creates and drops the table, keyed by
+        // uid so a launch that dies partway is harmless. -- claude, 2026-10-28
+        migrator.registerMigration("v9") { db in
+            try db.create(table: "todo_legacy") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("title", .text).notNull()
+                t.column("shouldMigrate", .boolean).notNull().defaults(to: true)
+                t.column("start", .text).notNull()
+                t.column("ending", .text)
+                t.column("categoryID", .integer)
+                t.column("externalURL", .text)
+                t.column("uid", .text).notNull().unique()
+            }
+            for id in try Int64.fetchAll(db, sql: "SELECT id FROM todo ORDER BY id") {
+                try db.execute(sql: """
+                    INSERT INTO todo_legacy (id, title, shouldMigrate, start, ending, categoryID, externalURL, uid)
+                    SELECT id, title, shouldMigrate, start, ending, categoryID, externalURL, ? FROM todo WHERE id = ?
+                    """, arguments: [UUID().uuidString.lowercased(), id])
+            }
+            try db.execute(sql: "DROP TABLE todo")
+        }
+
         // The sync engine's own tables (jinx_object, jinx_pending, ...) live
         // in the same file as the journal, so one migrator owns both. Jinx's
         // migrations go last so that any later journal migration can still be
         // slotted in before them. -- claude, 2026-10-28
         GRDBSyncStore.registerMigrations(in: &migrator)
 
-        try migrator.migrate(db)
+        if let lastIdentifier {
+            try migrator.migrate(db, upTo: lastIdentifier)
+        } else {
+            try migrator.migrate(db)
+        }
     }
 }

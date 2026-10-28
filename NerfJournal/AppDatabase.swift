@@ -11,6 +11,10 @@ extension Notification.Name {
 
 struct AppDatabase {
     let dbQueue: DatabaseQueue
+    // The journal's sync engine, sharing the database file. Built here so
+    // that it exists exactly once per process; AppDelegate starts it
+    // running at launch. -- claude, 2026-10-28
+    let sync: JournalSync
 
     static let shared: AppDatabase = {
         let fm = FileManager.default
@@ -28,11 +32,8 @@ struct AppDatabase {
 
     init(path: String) throws {
         dbQueue = try DatabaseQueue(path: path)
-        try migrate(dbQueue)
-    }
-
-    private func migrate(_ db: DatabaseQueue) throws {
-        try NerfSchema.migrate(db)
+        try NerfSchema.migrate(dbQueue)
+        sync = try JournalSync(writer: dbQueue, databasePath: path, settings: SyncSettings.from(.standard))
     }
 
     func exportData() async throws -> Data {

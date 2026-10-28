@@ -2,6 +2,7 @@ import AppKit
 import NerfCore
 import Carbon.HIToolbox
 import Combine
+import os
 import SwiftUI
 
 @MainActor
@@ -11,14 +12,36 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var panel: NSPanel?
     private var quickNoteStore: QuickNoteStore?
     private var cancellables = Set<AnyCancellable>()
+    private var syncTask: Task<Void, Never>?
+    private let syncLog = Logger(subsystem: "org.rjbs.nerfjournal", category: "sync")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        startSync()
         // The dev build (bundle id org.rjbs.nerfjournal.dev) runs beside the
         // installed app, and only one process can own a global hot key, so it
         // leaves Cmd-Shift-J to the installed app. -- claude, 2026-10-28
         #if !DEV
         registerGlobalHotKey()
         #endif
+    }
+
+    // Adopts any todos a schema migration staged for the server, then keeps
+    // the engine syncing for the life of the process. Adoption needs the
+    // server (for the task list), so a launch without it logs and moves on;
+    // the next launch tries again. -- claude, 2026-10-28
+    private func startSync() {
+        let sync = AppDatabase.shared.sync
+        let log = syncLog
+        syncTask = Task.detached {
+            do {
+                if let report = try await sync.adoptLegacyTodos() {
+                    log.notice("adopted \(report.adopted) legacy todos; \(report.alreadyPresent) already present")
+                }
+            } catch {
+                log.error("legacy adoption failed: \(String(describing: error))")
+            }
+            await sync.engine.run()
+        }
     }
 
     private func registerGlobalHotKey() {
