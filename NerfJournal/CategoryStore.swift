@@ -5,19 +5,23 @@ import NerfCore
 @MainActor
 final class CategoryStore: ObservableObject {
     private let db: AppDatabase
+    private let writer: TaskWriter
 
     @Published var categories: [Category] = []
 
     init(database: AppDatabase = .shared) {
         self.db = database
-        NotificationCenter.default.addObserver(
-            forName: .nerfJournalDatabaseDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                try? await self.load()
+        self.writer = TaskWriter(sync: database.sync)
+        for name: Notification.Name in [.nerfJournalDatabaseDidChange, .nerfCategoriesDidChange] {
+            NotificationCenter.default.addObserver(
+                forName: name,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    try? await self.load()
+                }
             }
         }
     }
@@ -37,7 +41,13 @@ final class CategoryStore: ObservableObject {
         try await load()
     }
 
+    // A category is known to the server only as the keyword on each Task,
+    // so deleting or renaming one rewrites those keywords, in one batch. The
+    // Tasks go first: if the local row changed first and the rewrite then
+    // failed, the next read would see an unknown keyword and recreate the
+    // old category. -- claude, 2026-10-28
     func deleteCategory(_ category: Category) async throws {
+        try await writer.removeCategoryKeyword(named: category.name)
         try await db.dbQueue.write { db in
             try Category.filter(Column("id") == category.id).deleteAll(db)
             return
@@ -46,6 +56,7 @@ final class CategoryStore: ObservableObject {
     }
 
     func renameCategory(_ category: Category, to name: String) async throws {
+        try await writer.renameCategoryKeyword(from: category.name, to: name)
         try await db.dbQueue.write { db in
             try Category
                 .filter(Column("id") == category.id)

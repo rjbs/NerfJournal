@@ -26,9 +26,11 @@ struct TodoCommand: AsyncParsableCommand {
         let todos: [Todo]
         let categories: [Category]
         do {
-            categories = try await sync.categories()
+            // Todos first: reading them may create categories for keywords
+            // this database has not seen, and the grouping needs those.
             todos = try await TaskReader(sync: sync).todos()
                 .filter { $0.start <= today && $0.ending == nil }
+            categories = try await sync.categories()
         } catch {
             throw CLIError("could not read todos: \(error)")
         }

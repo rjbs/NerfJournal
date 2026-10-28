@@ -30,6 +30,10 @@ public struct TaskReader: Sendable {
     }
 
     public func syncedTodos(zone: TimeZone = .current) async throws -> [SyncedTodo] {
+        // A keyword naming a category this client has never seen becomes a
+        // local Category first, so no Task reads as uncategorized merely
+        // because another client named the category.
+        try await sync.adoptUnknownCategories()
         let categories = try await sync.categories()
         return try await sync.tasks().compactMap { object in
             guard object.pending != .destroy else { return nil }

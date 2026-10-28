@@ -76,7 +76,7 @@ public actor JournalSync {
 
     public nonisolated let engine: Engine
     public nonisolated let settings: SyncSettings
-    private nonisolated let writer: any DatabaseWriter
+    nonisolated let writer: any DatabaseWriter
     private var cachedTaskListId: String?
 
     // The production wiring: an HTTP client against `settings`, signalled
