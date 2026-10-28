@@ -144,7 +144,15 @@ categories through `JournalSync`.
 JMAP-SPEC.md (categories, `taskListIds`, the property table, the
 worked examples), README.md, memory notes.
 
-### H. Cutover
+### H. Cutover (done 2026-10-28)
+
+Done as written: backups at `~/Desktop/nerfjournal-backup-pre-lists.sqlite`
+and `~/Desktop/taskmaster-backup-pre-lists.sqlite`, merge 29186ea,
+Release launched on the installed container, nine lists on the real
+server with the counts of the rehearsal, no keyword left, nothing
+pending, bundle and export-group references identical to the backup,
+`nerf` reinstalled. The dev container still holds the rehearsal data
+and its session URL still points at port 8081.
 
 Step 1 done 2026-10-28: the Dev build over copies of both databases
 created eight lists with the right names, colors and order, moved every
