@@ -12,6 +12,7 @@
 		83CBBA141A601CBA00E9B192 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 83CBBA0C1A601CBA00E9B192 /* Assets.xcassets */; };
 		83CBBA161A601CBA00E9B192 /* AppDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA1E1A601CBA00E9B192 /* AppDatabase.swift */; };
 		83CBBA601A601CBA00E9B192 /* CategoryColor+Swatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA611A601CBA00E9B192 /* CategoryColor+Swatch.swift */; };
+		83CBBA671A601CBA00E9B192 /* SyncSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA681A601CBA00E9B192 /* SyncSettingsView.swift */; };
 		83CBBA641A601CBA00E9B192 /* NerfCore in Frameworks */ = {isa = PBXBuildFile; productRef = 83CBBA631A601CBA00E9B192 /* NerfCore */; };
 		83CBBA181A601CBA00E9B192 /* PageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA201A601CBA00E9B192 /* PageStore.swift */; };
 		83CBBA191A601CBA00E9B192 /* JournalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA211A601CBA00E9B192 /* JournalStore.swift */; };
@@ -37,6 +38,7 @@
 		83CBBA0D1A601CBA00E9B192 /* NerfJournal.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NerfJournal.entitlements; sourceTree = "<group>"; };
 		83CBBA1E1A601CBA00E9B192 /* AppDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDatabase.swift; sourceTree = "<group>"; };
 		83CBBA611A601CBA00E9B192 /* CategoryColor+Swatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CategoryColor+Swatch.swift"; sourceTree = "<group>"; };
+		83CBBA681A601CBA00E9B192 /* SyncSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncSettingsView.swift; sourceTree = "<group>"; };
 		83CBBA201A601CBA00E9B192 /* PageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageStore.swift; sourceTree = "<group>"; };
 		83CBBA211A601CBA00E9B192 /* JournalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalStore.swift; sourceTree = "<group>"; };
 		83CBBA221A601CBA00E9B192 /* JournalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalView.swift; sourceTree = "<group>"; };
@@ -81,6 +83,7 @@
 				83CBBA071A601CBA00E9B192 /* NerfJournalApp.swift */,
 				83CBBA1E1A601CBA00E9B192 /* AppDatabase.swift */,
 				83CBBA611A601CBA00E9B192 /* CategoryColor+Swatch.swift */,
+				83CBBA681A601CBA00E9B192 /* SyncSettingsView.swift */,
 				83CBBA201A601CBA00E9B192 /* PageStore.swift */,
 				83CBBA211A601CBA00E9B192 /* JournalStore.swift */,
 				83CBBA221A601CBA00E9B192 /* JournalView.swift */,
@@ -186,6 +189,7 @@
 				83CBBA111A601CBA00E9B192 /* NerfJournalApp.swift in Sources */,
 				83CBBA161A601CBA00E9B192 /* AppDatabase.swift in Sources */,
 				83CBBA601A601CBA00E9B192 /* CategoryColor+Swatch.swift in Sources */,
+				83CBBA671A601CBA00E9B192 /* SyncSettingsView.swift in Sources */,
 				83CBBA181A601CBA00E9B192 /* PageStore.swift in Sources */,
 				83CBBA191A601CBA00E9B192 /* JournalStore.swift in Sources */,
 				83CBBA1A1A601CBA00E9B192 /* JournalView.swift in Sources */,

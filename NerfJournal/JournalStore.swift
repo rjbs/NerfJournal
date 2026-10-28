@@ -11,8 +11,11 @@ final class JournalStore: ObservableObject {
     @Published var selectedPage: JournalPage? = nil
     @Published var selectedTodos: [Todo] = []
 
+    private let reader: TaskReader
+
     init(database: AppDatabase = .shared) {
         self.db = database
+        self.reader = TaskReader(sync: database.sync)
         NotificationCenter.default.addObserver(
             forName: .nerfJournalDatabaseDidChange,
             object: nil,
@@ -56,18 +59,12 @@ final class JournalStore: ObservableObject {
         // in one read so all published properties can be updated synchronously
         // below — SwiftUI then coalesces them into a single view pass instead of
         // animating through intermediate states.
-        let (foundPage, allTodos) = try await db.dbQueue.read { db in
-            let page = try JournalPage
+        let foundPage = try await db.dbQueue.read { db in
+            try JournalPage
                 .filter(Column("date") == date)
                 .fetchOne(db)
-            guard page?.id != nil else {
-                return (page, [Todo]())
-            }
-            let t = try Todo
-                .filter(Column("start") <= date)
-                .fetchAll(db)
-            return (page, t)
         }
+        let allTodos = foundPage?.id != nil ? try await reader.todos() : []
 
         selectedDate = date
         selectedPage = foundPage
@@ -75,6 +72,7 @@ final class JournalStore: ObservableObject {
         // (or not yet ended).
         selectedTodos = allTodos
             .filter { todo in
+                guard todo.start <= date else { return false }
                 guard let ending = todo.ending else { return true }
                 return ending.day >= date
             }

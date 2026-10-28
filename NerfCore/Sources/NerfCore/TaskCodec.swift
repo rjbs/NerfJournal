@@ -34,12 +34,13 @@ public enum TaskCodec {
     // through, and `progressUpdated` is left alone unless the ending state
     // actually changed. `now` is the write instant recorded in
     // `progressUpdated` for a day-only ending, which has no instant of its
-    // own; it is a parameter so tests are deterministic.
+    // own; it is a parameter so tests are deterministic, and nil omits the
+    // property, which is what a one-time import of old records wants.
     public static func encode(
         _ todo: Todo,
         categories: [Category],
         existing: JSONValue? = nil,
-        now: Date = Date()
+        now: Date? = Date()
     ) -> JSONValue {
         var task: [String: JSONValue] = [
             "@type": "Task",
@@ -62,7 +63,7 @@ public enum TaskCodec {
                 task[endedAtProperty] = .string(ending.day.iso)
                 if existingProgress == progress, let kept = existing?["progressUpdated"] {
                     task["progressUpdated"] = kept
-                } else {
+                } else if let now {
                     task["progressUpdated"] = .string(utcDateTime(now))
                 }
             }
@@ -105,7 +106,7 @@ public enum TaskCodec {
         categories: [Category],
         uid: String,
         taskListId: String,
-        now: Date = Date()
+        now: Date? = Date()
     ) -> JSONValue {
         var task = encode(todo, categories: categories, now: now)
         task["uid"] = .string(uid)

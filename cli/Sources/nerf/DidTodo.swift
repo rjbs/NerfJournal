@@ -3,7 +3,7 @@ import Foundation
 import GRDB
 import NerfCore
 
-struct Did: ParsableCommand {
+struct Did: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "did",
         abstract: "Record an unplanned thing you already did as a done todo on today's page."
@@ -25,7 +25,7 @@ struct Did: ParsableCommand {
     @Argument(help: "The todo title (all words are joined into one title).")
     var title: [String]
 
-    func run() throws {
+    func run() async throws {
         let title = self.title.joined(separator: " ")
         guard !title.isEmpty else {
             throw ValidationError("todo title is required")
@@ -34,6 +34,7 @@ struct Did: ParsableCommand {
         let today = CivilDate.today
 
         let dbQueue = try db.open()
+        let sync = try db.openSync()
 
         // A done thing lands on today's page, which the CLI never creates — so
         // require it to exist, like add-todo. -- claude, 2026-06-19
@@ -43,28 +44,26 @@ struct Did: ParsableCommand {
 
         let categoryID = try resolveCategory(dbQueue, name: category, strict: strict)
 
-        if let dup = try findOpenDuplicate(dbQueue, title: title, url: url) {
+        if let dup = await findOpenDuplicate(sync, title: title, url: url) {
             print("Didn't create todo for duplicate \(dup.field): \(dup.value) — use `nerf done` to complete it")
             return
         }
 
+        let todo = Todo(
+            id: nil,
+            title: title,
+            shouldMigrate: false,
+            start: today,
+            ending: TodoEnding(moment: .now(), kind: .done),
+            categoryID: categoryID,
+            externalURL: url
+        )
         do {
-            try dbQueue.write { database in
-                var todo = Todo(
-                    id: nil,
-                    title: title,
-                    shouldMigrate: false,
-                    start: today,
-                    ending: TodoEnding(moment: .now(), kind: .done),
-                    categoryID: categoryID,
-                    externalURL: url
-                )
-                try todo.insert(database)
-            }
+            _ = try await TaskWriter(sync: sync).create(todo)
         } catch {
-            throw CLIError("could not insert todo: \(error)")
+            throw CLIError("could not create todo: \(error)")
         }
 
-        postExternalChangeNotification()
+        await pushAfterWrite(sync)
     }
 }

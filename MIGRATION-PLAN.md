@@ -108,7 +108,16 @@ In NerfCore, so the app and the CLI share it:
 *   Tests use `JinxScriptedServer` and `GRDBSyncStore.inMemory()`.  No
     network in tests.
 
-## Chunk 4: legacy data migration (schema v9 plus adopt)
+## Chunk 4: legacy data migration (schema v9 plus adopt) (done 2026-10-28, branch jmap-backend)
+
+Rehearsed 2026-10-28 on a copy of the installed database (2598 todos,
+schema v8) placed in the dev container: v9 staged every row, the dev
+build adopted all 2598 at launch, and the engine pushed them in one
+pass.  The server then held 2604 Tasks (the 2598 plus the six probe
+tasks), the local store had no pending entries, and a spot-checked
+swept, categorized, linked task matched the spec encoding exactly.
+The backup copy is kept in the session scratchpad; the dev container
+now holds the adopted data for chunks 5 and 6 to develop against.
 
 This is the chunk that moves data, and it is written before the UI
 switches over so that it can be rehearsed on a copy of the real
@@ -135,7 +144,13 @@ database from the dev build.
     the server, then wipe the server and repeat as needed.  This is the
     test of the cutover, run as many times as it takes.
 
-## Chunk 5: reads from Jinx
+## Chunk 5: reads from Jinx (done 2026-10-28, branch jmap-backend)
+
+Verified: the dev build shows today's page from the adopted data, a
+Task created directly on the server appeared in its store within
+seconds over push, and `nerf todo` lists today's open todos from the
+dev database.  The push test task (uid `chunk5-push-test`) is still on
+the server.
 
 *   `TaskReader` in NerfCore: `engine.objects(type: "Task")` decoded
     through the codec into `[Todo]`, with each object's `pending` and
@@ -149,7 +164,14 @@ database from the dev build.
 *   After this chunk the dev build shows the adopted data from Jinx
     tables.  The `todo` table is already gone (chunk 4).
 
-## Chunk 6: writes through Jinx
+## Chunk 6: writes through Jinx (done 2026-10-28, branch jmap-backend)
+
+Verified against the dev database: `nerf add-todo` created a Task with
+category and link, a second identical add was refused as a duplicate,
+`nerf done` pushed a moment ending, and a second `done` was refused.
+With the dev build running, a todo added by the CLI appeared on its
+page with no notification from the CLI: the engine tailed the journal
+on the Darwin signal.  Nothing pending afterward.
 
 Every todo mutation becomes an engine call, using `replace(_:with:)`
 with a fresh encoding for single edits and `write { }` for anything
@@ -166,7 +188,13 @@ that touches several todos:
 *   The app runs `engine.run()` in a task at launch for push, pull,
     EventSource, and journal tailing.
 
-## Chunk 7: categories by keyword
+## Chunk 7: categories by keyword (done 2026-10-28, branch jmap-backend)
+
+Adoption of unknown names happens on every read through `TaskReader`
+rather than on sync-in change sets, which covers the CLI too.  Verified
+against the dev database: a Task created on the server with a new
+category keyword produced a local "Chunk Seven" category, blue, last
+in the order, and `nerf todo` grouped the task under it.
 
 *   On every `syncIn` change set, scan affected Tasks for
     `nerfjournal:category:` keywords with no local Category and create
@@ -174,13 +202,13 @@ that touches several todos:
 *   Rename and delete rewrite the keyword on every carrying Task in one
     batch.
 
-## Chunk 8: settings and status
+## Chunk 8: settings and status (done 2026-10-28, branch jmap-backend)
 
 A settings pane: session URL and account, `SyncStatus` (connected, last
 sync in and out, pending count, last failure), and a list of todos with
 a `lastError`.  The CLI gets `nerf sync` and `nerf sync-status`.
 
-## Chunk 9: export, import, factory reset
+## Chunk 9: export, import, factory reset (done 2026-10-28, branch jmap-backend)
 
 *   Export reads todos through `TaskReader`; the file format keeps
     `id` (now the local key) and gains `uid`.

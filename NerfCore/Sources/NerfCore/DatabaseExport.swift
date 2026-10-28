@@ -14,10 +14,10 @@ public struct DatabaseExport: Codable, Sendable {
     public let taskBundles: [TaskBundle]
     public let bundleTodos: [BundleTodo]
     public let journalPages: [JournalPage]
-    public let todos: [Todo]
+    public let todos: [ExportedTodo]
 
     public init(version: Int, exportedAt: Date, categories: [Category], taskBundles: [TaskBundle],
-         bundleTodos: [BundleTodo], journalPages: [JournalPage], todos: [Todo]) {
+         bundleTodos: [BundleTodo], journalPages: [JournalPage], todos: [ExportedTodo]) {
         self.version      = version
         self.exportedAt   = exportedAt
         self.categories   = categories
@@ -40,7 +40,7 @@ public struct DatabaseExport: Codable, Sendable {
         taskBundles = try c.decode([TaskBundle].self,  forKey: .taskBundles)
         bundleTodos = try c.decode([BundleTodo].self,  forKey: .bundleTodos)
         journalPages = try c.decode([JournalPage].self, forKey: .journalPages)
-        todos       = try c.decode([Todo].self,        forKey: .todos)
+        todos       = try c.decode([ExportedTodo].self, forKey: .todos)
     }
 }
 

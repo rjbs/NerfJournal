@@ -11,6 +11,10 @@ extension Notification.Name {
 
 struct AppDatabase {
     let dbQueue: DatabaseQueue
+    // The journal's sync engine, sharing the database file. Built here so
+    // that it exists exactly once per process; AppDelegate starts it
+    // running at launch. -- claude, 2026-10-28
+    let sync: JournalSync
 
     static let shared: AppDatabase = {
         let fm = FileManager.default
@@ -28,59 +32,23 @@ struct AppDatabase {
 
     init(path: String) throws {
         dbQueue = try DatabaseQueue(path: path)
-        try migrate(dbQueue)
+        try NerfSchema.migrate(dbQueue)
+        sync = try JournalSync(writer: dbQueue, databasePath: path, settings: SyncSettings.from(.standard))
     }
 
-    private func migrate(_ db: DatabaseQueue) throws {
-        try NerfSchema.migrate(db)
-    }
-
+    // Export, import and reset span both halves of the store (the journal's
+    // own tables and the engine's), so NerfCore owns them. -- claude, 2026-10-28
     func exportData() async throws -> Data {
-        let snapshot = try await dbQueue.read { db in
-            DatabaseExport(
-                version: NerfSchema.currentVersion,
-                exportedAt: Date(),
-                categories: try Category.order(Column("sortOrder")).fetchAll(db),
-                taskBundles: try TaskBundle.order(Column("id")).fetchAll(db),
-                bundleTodos: try BundleTodo.order(Column("id")).fetchAll(db),
-                journalPages: try JournalPage.order(Column("date")).fetchAll(db),
-                todos: try Todo.order(Column("id")).fetchAll(db)
-            )
-        }
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        return try encoder.encode(snapshot)
+        try await sync.exportData()
     }
 
-    // Replaces all data with the contents of the export. The entire operation
-    // runs in one transaction, so a malformed import leaves the database unchanged.
     func importData(_ data: Data) async throws {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let snapshot = try decoder.decode(DatabaseExport.self, from: data)
-        try await dbQueue.write { db in
-            try Todo.deleteAll(db)
-            try BundleTodo.deleteAll(db)
-            try JournalPage.deleteAll(db)
-            try TaskBundle.deleteAll(db)
-            try Category.deleteAll(db)
-            for var r in snapshot.categories   { try r.insert(db) }
-            for var r in snapshot.taskBundles  { try r.insert(db) }
-            for var r in snapshot.bundleTodos  { try r.insert(db) }
-            for var r in snapshot.journalPages { try r.insert(db) }
-            for var r in snapshot.todos        { try r.insert(db) }
-        }
+        _ = try await sync.importData(data)
     }
 
+    // Empties this client only. The server keeps its Tasks, and the next
+    // sync fetches them again.
     func factoryReset() async throws {
-        try await dbQueue.write { db in
-            try Todo.deleteAll(db)
-            try BundleTodo.deleteAll(db)
-            try JournalPage.deleteAll(db)
-            try TaskBundle.deleteAll(db)
-            try Category.deleteAll(db)
-            return
-        }
+        try await sync.resetLocalData()
     }
 }

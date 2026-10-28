@@ -5,7 +5,7 @@ import NerfCore
 
 // The command is `TodoCommand`, not `Todo`, so it doesn't collide with the
 // `Todo` model type it queries.
-struct TodoCommand: ParsableCommand {
+struct TodoCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "todo",
         abstract: "Print today's remaining todos, grouped by category."
@@ -17,25 +17,22 @@ struct TodoCommand: ParsableCommand {
 
     @OptionGroup var db: DatabaseOptions
 
-    func run() throws {
-        let dbQueue = try db.open()
+    func run() async throws {
+        let sync = try db.openSync()
         let today = CivilDate.today
 
-        // "Remaining" = still open (ending IS NULL); "today's" = start on or before
-        // today, which keeps carried-forward work and excludes Future Log items.
+        // "Remaining" = still open; "today's" = start on or before today, which
+        // keeps carried-forward work and excludes Future Log items.
         let todos: [Todo]
         let categories: [Category]
         do {
-            (todos, categories) = try dbQueue.read { database in
-                let todos = try Todo
-                    .filter(Column("start") <= today && Column("ending") == nil)
-                    .order(Column("id"))
-                    .fetchAll(database)
-                let categories = try Category.fetchAll(database)
-                return (todos, categories)
-            }
+            // Todos first: reading them may create categories for keywords
+            // this database has not seen, and the grouping needs those.
+            todos = try await TaskReader(sync: sync).todos()
+                .filter { $0.start <= today && $0.ending == nil }
+            categories = try await sync.categories()
         } catch {
-            throw CLIError("could not query todos: \(error)")
+            throw CLIError("could not read todos: \(error)")
         }
 
         let groups = groupedByCategory(todos, categoryID: \.categoryID, categories: categories)
