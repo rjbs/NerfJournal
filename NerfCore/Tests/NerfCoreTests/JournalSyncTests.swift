@@ -11,17 +11,19 @@ private typealias Category = NerfCore.Category
 private func day(_ iso: String) -> CivilDate { CivilDate(iso: iso)! }
 
 // A journal database with the full schema, Jinx tables included, wired to
-// a scripted server. The server starts with one TaskList unless told not to.
+// a scripted server that has a default list and a "Work" list.
 private struct Rig {
     let server: ScriptedServer
     let db: DatabaseQueue
     let sync: JournalSync
-    let listId: String?
+    let listId: String
+    let workId: String
 
-    init(withTaskList: Bool = true) throws {
+    init() throws {
         server = ScriptedServer(accountId: "rjbs", capabilities: [TaskTypes.capability])
         server.configure("Task", .init(uniqueProperty: "uid"))
-        listId = withTaskList ? server.create("TaskList", ["name": "Journal"]) : nil
+        listId = server.create("TaskList", ["name": "Journal", "isDefault": true])
+        workId = server.create("TaskList", ["name": "Work", "color": "blue", "sortOrder": 1])
         db = try DatabaseQueue()
         try NerfSchema.migrate(db)
         sync = try JournalSync(
@@ -35,7 +37,7 @@ private struct Rig {
 
 final class JournalSyncTests: XCTestCase {
 
-    func testSchemaIncludesJinxTables() throws {
+    func testSchemaIncludesJinxTablesAndStagesLegacyData() throws {
         let db = try DatabaseQueue()
         try NerfSchema.migrate(db)
         let tables = try db.read { db in
@@ -43,37 +45,19 @@ final class JournalSyncTests: XCTestCase {
         }
         XCTAssertFalse(tables.contains("todo"), "v9 staged the todos as todo_legacy")
         XCTAssertTrue(tables.contains("todo_legacy"))
-        XCTAssertTrue(tables.contains("category"))
+        XCTAssertFalse(tables.contains("category"), "v10 staged the categories as category_legacy")
+        XCTAssertTrue(tables.contains("category_legacy"))
         XCTAssertTrue(tables.contains("jinx_object"))
         XCTAssertTrue(tables.contains("jinx_pending"))
     }
 
-    func testTaskListIdIsFetchedOnFirstAskAndThenCached() async throws {
-        let rig = try Rig()
-        let first = try await rig.sync.taskListId()
-        XCTAssertEqual(first, rig.listId)
-        rig.server.clearRequests()
-        let second = try await rig.sync.taskListId()
-        XCTAssertEqual(second, first)
-        XCTAssertTrue(rig.server.requests.isEmpty, "a cached answer sends nothing")
-    }
-
-    func testNoTaskListIsAnError() async throws {
-        let rig = try Rig(withTaskList: false)
-        do {
-            _ = try await rig.sync.taskListId()
-            XCTFail("expected noTaskList")
-        } catch JournalSyncError.noTaskList {
-        }
-    }
-
     func testCreatedTodoReachesTheServerAndReadsBack() async throws {
         let rig = try Rig()
-        let work = Category(id: 1, name: "Work", color: .blue, sortOrder: 0)
+        let lists = try await rig.sync.listIndex()
+        let work = try XCTUnwrap(lists.entry(named: "Work"))
         let todo = Todo(id: nil, title: "Review the release notes", shouldMigrate: false,
-                        start: day("2026-09-13"), categoryID: 1, externalURL: "https://example.com/pr/42")
-        let listId = try await rig.sync.taskListId()
-        let encoding = TaskCodec.encodeNew(todo, categories: [work], uid: "uid-1", taskListId: listId)
+                        start: day("2026-09-13"), categoryID: work.key.rawValue, externalURL: "https://example.com/pr/42")
+        let encoding = try TaskCodec.encodeNew(todo, lists: lists, uid: "uid-1")
         let key = try await rig.sync.engine.create("Task", encoding)
         try await rig.sync.engine.sync()
 
@@ -82,15 +66,15 @@ final class JournalSyncTests: XCTestCase {
         let id = try XCTUnwrap(synced.id, "the create was pushed and the id came back")
         let onServer = try XCTUnwrap(rig.server.object("Task", id))
         XCTAssertEqual(onServer["title"], "Review the release notes")
-        XCTAssertEqual(onServer["taskListIds"], [.init(listId): true])
+        XCTAssertEqual(onServer["taskListIds"], [.init(rig.workId): true])
         XCTAssertEqual(onServer["nerfjournal.rjbs.cloud:autoCancel"], true)
-        XCTAssertEqual(onServer["keywords"], ["nerfjournal:category:Work": true])
+        XCTAssertNil(onServer["keywords"])
 
         let tasks = try await rig.sync.tasks()
         XCTAssertEqual(tasks.count, 1)
-        let decoded = TaskCodec.decode(tasks[0].value, id: tasks[0].key.rawValue, categories: [work])
+        let decoded = TaskCodec.decode(tasks[0].value, id: tasks[0].key.rawValue, lists: lists)
         XCTAssertEqual(decoded, Todo(id: key.rawValue, title: todo.title, shouldMigrate: false,
-                                     start: todo.start, categoryID: 1, externalURL: todo.externalURL))
+                                     start: todo.start, categoryID: work.key.rawValue, externalURL: todo.externalURL))
         let status = try await rig.sync.status()
         XCTAssertEqual(status.pendingCount, 0)
     }
@@ -99,12 +83,13 @@ final class JournalSyncTests: XCTestCase {
         let rig = try Rig()
         let id = rig.server.create("Task", [
             "title": "From elsewhere", "start": "2026-09-13T09:00:00", "progress": "failed",
-            "updated": "2026-09-14T12:00:00Z", "taskListIds": [.init(rig.listId!): true],
+            "updated": "2026-09-14T12:00:00Z", "taskListIds": [.init(rig.listId): true],
         ])
         try await rig.sync.engine.sync()
+        let lists = try await rig.sync.listIndex()
         let stored = try await rig.sync.engine.object(type: "Task", id: id)
         let synced = try XCTUnwrap(stored)
-        let decoded = TaskCodec.decode(synced.value, id: synced.key.rawValue, categories: [], zone: TimeZone(identifier: "UTC")!)
+        let decoded = TaskCodec.decode(synced.value, id: synced.key.rawValue, lists: lists, zone: TimeZone(identifier: "UTC")!)
         XCTAssertEqual(decoded, Todo(id: synced.key.rawValue, title: "From elsewhere", shouldMigrate: true,
                                      start: day("2026-09-13"), ending: TodoEnding(day: day("2026-09-14"), kind: .abandoned)))
     }

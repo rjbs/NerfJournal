@@ -15,14 +15,16 @@ public enum TaskCodec {
     public static let vendorPrefix = "nerfjournal.rjbs.cloud:"
     public static let autoCancelProperty = vendorPrefix + "autoCancel"
     public static let endedAtProperty = vendorPrefix + "endedAt"
-    public static let categoryKeywordPrefix = "nerfjournal:category:"
+    // Categories were keywords until 2026-10-28; the legacy step strips
+    // these, and a write still drops any it finds.
+    public static let legacyCategoryKeywordPrefix = "nerfjournal:category:"
     public static let externalLinkKey = "nerfjournal-external"
 
     // The properties the encoding carries, and therefore the only ones a
-    // replacement write may change. `uid` and `taskListIds` are set at
-    // creation only and are deliberately not here.
+    // replacement write may change. `uid` is set at creation only and is
+    // deliberately not here.
     public static let ownedProperties: Set<String> = [
-        "@type", "title", "start", "showWithoutTime",
+        "@type", "title", "start", "showWithoutTime", "taskListIds",
         "progress", "progressUpdated", "keywords", "links",
         autoCancelProperty, endedAtProperty,
     ]
@@ -36,17 +38,23 @@ public enum TaskCodec {
     // `progressUpdated` for a day-only ending, which has no instant of its
     // own; it is a parameter so tests are deterministic, and nil omits the
     // property, which is what a one-time import of old records wants.
+    //
+    // The todo's category decides `taskListIds`: its category's list, or
+    // the default list. A category whose list the server has not yet
+    // acknowledged has no id to file under, which is an error rather than
+    // a silent fall-back to the default list. -- claude, 2026-10-28
     public static func encode(
         _ todo: Todo,
-        categories: [Category],
+        lists: TaskListIndex,
         existing: JSONValue? = nil,
         now: Date? = Date()
-    ) -> JSONValue {
+    ) throws -> JSONValue {
         var task: [String: JSONValue] = [
             "@type": "Task",
             "title": .string(todo.title),
             "start": .string(todo.start.iso + "T00:00:00"),
             "showWithoutTime": true,
+            "taskListIds": .object([try listId(for: todo, in: lists): true]),
         ]
         if !todo.shouldMigrate {
             task[autoCancelProperty] = true
@@ -76,12 +84,8 @@ public enum TaskCodec {
         }
 
         var keywords = existing?["keywords"]?.objectValue ?? [:]
-        for key in keywords.keys where key.hasPrefix(categoryKeywordPrefix) {
+        for key in keywords.keys where key.hasPrefix(legacyCategoryKeywordPrefix) {
             keywords[key] = nil
-        }
-        if let categoryID = todo.categoryID,
-           let category = categories.first(where: { $0.id == categoryID }) {
-            keywords[categoryKeywordPrefix + category.name] = true
         }
         if !keywords.isEmpty {
             task["keywords"] = .object(keywords)
@@ -100,18 +104,28 @@ public enum TaskCodec {
     }
 
     // The encoding for a Task that does not exist yet: the ordinary
-    // encoding plus the client-chosen `uid` and the list it belongs to.
+    // encoding plus the client-chosen `uid`.
     public static func encodeNew(
         _ todo: Todo,
-        categories: [Category],
+        lists: TaskListIndex,
         uid: String,
-        taskListId: String,
         now: Date? = Date()
-    ) -> JSONValue {
-        var task = encode(todo, categories: categories, now: now)
+    ) throws -> JSONValue {
+        var task = try encode(todo, lists: lists, now: now)
         task["uid"] = .string(uid)
-        task["taskListIds"] = .object([taskListId: true])
         return task
+    }
+
+    // The server id of the list `todo` belongs in. A category id that
+    // names no list (the list was deleted elsewhere) reads as no category,
+    // which is also how the todo decodes.
+    static func listId(for todo: Todo, in lists: TaskListIndex) throws -> String {
+        if let categoryID = todo.categoryID, let entry = lists.entry(forCategory: categoryID) {
+            guard let id = entry.serverId else { throw JournalSyncError.categoryNotSynced(entry.name) }
+            return id
+        }
+        guard let id = lists.defaultListId else { throw JournalSyncError.noTaskList }
+        return id
     }
 
     // MARK: - Decoding
@@ -121,7 +135,7 @@ public enum TaskCodec {
     public static func decode(
         _ task: JSONValue,
         id: Int64?,
-        categories: [Category],
+        lists: TaskListIndex,
         zone: TimeZone = .current
     ) -> Todo {
         let start = startDay(of: task, zone: zone)
@@ -137,30 +151,24 @@ public enum TaskCodec {
             }
         }
 
-        let categoryID = categoryNames(in: task)
-            .compactMap { name in categories.first { $0.name == name } }
-            .min { $0.sortOrder < $1.sortOrder }?
-            .id
-
         return Todo(
             id: id,
             title: task["title"]?.stringValue ?? "",
             shouldMigrate: shouldMigrate,
             start: start,
             ending: ending,
-            categoryID: categoryID,
+            categoryID: lists.categoryID(forListIds: task["taskListIds"]),
             externalURL: externalURL(of: task)
         )
     }
 
-    // Every category name the Task's keywords claim, in no particular
-    // order. A reader creates local Categories for names it lacks before
-    // decoding, which is how categories follow Tasks between clients.
-    public static func categoryNames(in task: JSONValue) -> [String] {
+    // Every category name the Task's legacy keywords claim, in no
+    // particular order. Only the legacy step reads these.
+    public static func legacyCategoryNames(in task: JSONValue) -> [String] {
         guard let keywords = task["keywords"]?.objectValue else { return [] }
         return keywords.compactMap { key, value in
-            guard value == .bool(true), key.hasPrefix(categoryKeywordPrefix) else { return nil }
-            return String(key.dropFirst(categoryKeywordPrefix.count))
+            guard value == .bool(true), key.hasPrefix(legacyCategoryKeywordPrefix) else { return nil }
+            return String(key.dropFirst(legacyCategoryKeywordPrefix.count))
         }
     }
 

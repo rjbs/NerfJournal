@@ -6,7 +6,7 @@ import JinxStore
 // produce it. The app runs these at launch; the CLI assumes they have run.
 public enum NerfSchema {
     // The schema version an export file records. Bump alongside a new migration.
-    public static let currentVersion = 9
+    public static let currentVersion = 10
 
     public static func migrate(_ db: DatabaseQueue) throws {
         try migrate(db, upTo: nil)
@@ -305,6 +305,45 @@ public enum NerfSchema {
                     """, arguments: [UUID().uuidString.lowercased(), id])
             }
             try db.execute(sql: "DROP TABLE todo")
+        }
+
+        // Categories move to the server as TaskLists. As v9 did for todos,
+        // this only stages them: the table steps aside as category_legacy,
+        // with a column for the key of the list each row becomes, and the
+        // two tables that referenced it are rebuilt without the foreign key,
+        // since their categoryID will hold list keys the engine assigns.
+        // JournalSync.adoptLegacyCategories does the rest. -- claude, 2026-10-28
+        migrator.registerMigration("v10") { db in
+            try db.execute(sql: "ALTER TABLE category RENAME TO category_legacy")
+            try db.execute(sql: "ALTER TABLE category_legacy ADD COLUMN listKey INTEGER")
+
+            try db.create(table: "bundleTodo_new") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("bundleID", .integer).notNull()
+                    .references("taskBundle", onDelete: .cascade)
+                t.column("title", .text).notNull()
+                t.column("sortOrder", .integer).notNull().defaults(to: 0)
+                t.column("externalURL", .text)
+                t.column("categoryID", .integer)
+            }
+            try db.execute(sql: """
+                INSERT INTO bundleTodo_new (id, bundleID, title, sortOrder, externalURL, categoryID)
+                SELECT id, bundleID, title, sortOrder, externalURL, categoryID FROM bundleTodo
+                """)
+            try db.execute(sql: "DROP TABLE bundleTodo")
+            try db.execute(sql: "ALTER TABLE bundleTodo_new RENAME TO bundleTodo")
+
+            try db.create(table: "exportGroupMember_new") { t in
+                t.column("groupID", .integer).notNull()
+                    .references("exportGroup", onDelete: .cascade)
+                t.column("categoryID", .integer)
+            }
+            try db.execute(sql: """
+                INSERT INTO exportGroupMember_new (groupID, categoryID)
+                SELECT groupID, categoryID FROM exportGroupMember
+                """)
+            try db.execute(sql: "DROP TABLE exportGroupMember")
+            try db.execute(sql: "ALTER TABLE exportGroupMember_new RENAME TO exportGroupMember")
         }
 
         // The sync engine's own tables (jinx_object, jinx_pending, ...) live

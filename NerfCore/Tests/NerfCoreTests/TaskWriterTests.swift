@@ -19,17 +19,15 @@ private struct Rig {
     let reader: TaskReader
     let writer: TaskWriter
     let listId: String
+    let workId: String
 
     init() throws {
         server = ScriptedServer(accountId: "rjbs", capabilities: [TaskTypes.capability])
         server.configure("Task", .init(uniqueProperty: "uid"))
-        listId = server.create("TaskList", ["name": "Journal"])
+        listId = server.create("TaskList", ["name": "Journal", "isDefault": true])
+        workId = server.create("TaskList", ["name": "Work", "sortOrder": 1])
         db = try DatabaseQueue()
         try NerfSchema.migrate(db)
-        try db.write { db in
-            var work = Category(id: nil, name: "Work", color: .blue, sortOrder: 0)
-            try work.insert(db)
-        }
         sync = try JournalSync(
             writer: db,
             settings: SyncSettings(sessionURL: ScriptedServer.baseUrl, accountId: "rjbs"),
@@ -38,6 +36,12 @@ private struct Rig {
         )
         reader = TaskReader(sync: sync)
         writer = TaskWriter(sync: sync)
+    }
+
+    // The local key of the Work category, which exists once the lists
+    // have been fetched.
+    func workKey() async throws -> Int64 {
+        try await sync.categories()[0].id!
     }
 
     func todos() async throws -> [Todo] { try await reader.todos() }
@@ -52,14 +56,16 @@ final class TaskWriterTests: XCTestCase {
 
     func testCreateManyIsOneBatchWithFreshUids() async throws {
         let rig = try Rig()
+        let work = try await rig.workKey()
         let keys = try await rig.writer.createMany([
-            Todo(id: nil, title: "A", shouldMigrate: true, start: day("2026-09-13"), categoryID: 1),
+            Todo(id: nil, title: "A", shouldMigrate: true, start: day("2026-09-13"), categoryID: work),
             Todo(id: nil, title: "B", shouldMigrate: false, start: day("2026-09-14"), externalURL: "https://b.example/"),
         ])
         XCTAssertEqual(keys.count, 2)
         let todos = try await rig.todos()
         XCTAssertEqual(todos.map(\.title), ["A", "B"])
         XCTAssertEqual(todos.map(\.id), keys.map(\.rawValue))
+        XCTAssertEqual(todos.map(\.categoryID), [work, nil])
 
         try await rig.sync.engine.sync()
         let sets = rig.server.calls(named: "Task/set")
@@ -67,7 +73,9 @@ final class TaskWriterTests: XCTestCase {
         let uids = Set(rig.server.objects("Task").values.compactMap { $0["uid"]?.stringValue })
         XCTAssertEqual(uids.count, 2)
         let first = try await rig.serverValue(keys[0])
-        XCTAssertEqual(first?["taskListIds"], [.init(rig.listId): true])
+        XCTAssertEqual(first?["taskListIds"], [.init(rig.workId): true])
+        let second = try await rig.serverValue(keys[1])
+        XCTAssertEqual(second?["taskListIds"], [.init(rig.listId): true])
     }
 
     func testUpdateChangesOnlyWhatChangedAndKeepsForeignProperties() async throws {
@@ -77,13 +85,14 @@ final class TaskWriterTests: XCTestCase {
             "keywords": ["urgent": true], "taskListIds": [.init(rig.listId): true],
         ])
         try await rig.sync.engine.sync()
+        let work = try await rig.workKey()
         let stored = try await rig.sync.engine.object(type: "Task", id: id)
         let key = try XCTUnwrap(stored).key
         rig.server.clearRequests()
 
         try await rig.writer.update(key, now: noon) { todo in
             todo.title = "Renamed"
-            todo.categoryID = 1
+            todo.categoryID = work
         }
         try await rig.sync.engine.sync()
 
@@ -91,14 +100,16 @@ final class TaskWriterTests: XCTestCase {
         XCTAssertEqual(set.arguments["update"], [
             .init(id): [
                 "title": "Renamed",
-                "keywords/nerfjournal:category:Work": true,
+                "taskListIds/\(rig.listId)": .null,
+                "taskListIds/\(rig.workId)": true,
                 "showWithoutTime": true,
                 "@type": "Task",
             ],
         ])
         let onServer = try XCTUnwrap(rig.server.object("Task", id))
         XCTAssertEqual(onServer["description"], "theirs")
-        XCTAssertEqual(onServer["keywords"], ["urgent": true, "nerfjournal:category:Work": true])
+        XCTAssertEqual(onServer["keywords"], ["urgent": true])
+        XCTAssertEqual(onServer["taskListIds"], [.init(rig.workId): true])
     }
 
     func testCompleteReopenAndDestroy() async throws {

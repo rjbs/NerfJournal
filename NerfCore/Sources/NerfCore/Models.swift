@@ -10,9 +10,70 @@ public enum CategoryColor: String, CaseIterable, Codable, DatabaseValueConvertib
         guard let s = String.fromDatabaseValue(dbValue) else { return nil }
         return CategoryColor(rawValue: s)
     }
+
+    // A TaskList's color is a CSS color, a name or #rrggbb. Every case here
+    // is itself a CSS color name, so writing is just the raw value. Reading
+    // takes one of our names as is and a hex value as the nearest case in
+    // RGB; anything else is nil and the caller falls back to `derived(from:)`.
+    // -- claude, 2026-10-28
+    public var cssName: String { rawValue }
+
+    public init?(css: String) {
+        let trimmed = css.trimmingCharacters(in: .whitespaces).lowercased()
+        if let named = CategoryColor(rawValue: trimmed) {
+            self = named
+            return
+        }
+        guard let rgb = Self.parseHex(trimmed) else { return nil }
+        self = Self.allCases.min { Self.distance($0.rgb, rgb) < Self.distance($1.rgb, rgb) }!
+    }
+
+    // The color for a list that has none, chosen from its name so every
+    // client picks the same one. FNV-1a rather than Hasher, whose seed
+    // changes per process.
+    public static func derived(from name: String) -> CategoryColor {
+        var hash: UInt32 = 2_166_136_261
+        for byte in name.utf8 {
+            hash ^= UInt32(byte)
+            hash = hash &* 16_777_619
+        }
+        return allCases[Int(hash % UInt32(allCases.count))]
+    }
+
+    // The CSS value of each name, for nearest-match reading.
+    var rgb: (Int, Int, Int) {
+        switch self {
+        case .blue:   (0x00, 0x00, 0xff)
+        case .red:    (0xff, 0x00, 0x00)
+        case .green:  (0x00, 0x80, 0x00)
+        case .orange: (0xff, 0xa5, 0x00)
+        case .purple: (0x80, 0x00, 0x80)
+        case .pink:   (0xff, 0xc0, 0xcb)
+        case .teal:   (0x00, 0x80, 0x80)
+        case .yellow: (0xff, 0xff, 0x00)
+        }
+    }
+
+    private static func parseHex(_ s: String) -> (Int, Int, Int)? {
+        guard s.hasPrefix("#") else { return nil }
+        var digits = Array(s.dropFirst())
+        if digits.count == 3 {
+            digits = digits.flatMap { [$0, $0] }
+        }
+        guard digits.count == 6, let value = Int(String(digits), radix: 16) else { return nil }
+        return ((value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff)
+    }
+
+    private static func distance(_ a: (Int, Int, Int), _ b: (Int, Int, Int)) -> Int {
+        let (dr, dg, db) = (a.0 - b.0, a.1 - b.1, a.2 - b.2)
+        return dr * dr + dg * dg + db * db
+    }
 }
 
-public struct Category: Identifiable, Codable, FetchableRecord, MutablePersistableRecord, Sendable {
+// A category is a TaskList on the server; `id` is the engine's local key
+// for that list, as a Todo's is for its Task. See TaskListIndex, which
+// builds these from the lists in the store. -- claude, 2026-10-28
+public struct Category: Identifiable, Codable, Hashable, Sendable {
     public var id: Int64?
     public var name: String
     public var color: CategoryColor
@@ -23,12 +84,6 @@ public struct Category: Identifiable, Codable, FetchableRecord, MutablePersistab
         self.name = name
         self.color = color
         self.sortOrder = sortOrder
-    }
-
-    public static let databaseTableName = "category"
-
-    public mutating func didInsert(_ inserted: InsertionSuccess) {
-        id = inserted.rowID
     }
 }
 
