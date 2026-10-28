@@ -202,13 +202,13 @@ in the order, and `nerf todo` grouped the task under it.
 *   Rename and delete rewrite the keyword on every carrying Task in one
     batch.
 
-## Chunk 8: settings and status
+## Chunk 8: settings and status (done 2026-10-28, branch jmap-backend)
 
 A settings pane: session URL and account, `SyncStatus` (connected, last
 sync in and out, pending count, last failure), and a list of todos with
 a `lastError`.  The CLI gets `nerf sync` and `nerf sync-status`.
 
-## Chunk 9: export, import, factory reset
+## Chunk 9: export, import, factory reset (done 2026-10-28, branch jmap-backend)
 
 *   Export reads todos through `TaskReader`; the file format keeps
     `id` (now the local key) and gains `uid`.
