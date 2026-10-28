@@ -1,5 +1,6 @@
 import Foundation
 import GRDB
+import JinxStore
 import NerfCore
 
 @MainActor
@@ -10,12 +11,17 @@ final class PageStore: ObservableObject {
     @Published var todos: [Todo] = []
     @Published var futureTodos: [Todo] = []
 
+    // Todos live in the sync engine now; only pages stay in the journal's
+    // own tables. Every mutation below is one engine write, and the change
+    // stream below reloads the page afterward. -- claude, 2026-10-28
     private let reader: TaskReader
+    private let writer: TaskWriter
     private var changeTask: Task<Void, Never>?
 
     init(database: AppDatabase = .shared) {
         self.db = database
         self.reader = TaskReader(sync: database.sync)
+        self.writer = TaskWriter(sync: database.sync)
         // Every committed change to a Task, whether made here, synced in from
         // the server, or written by another process on this database (the
         // engine tails their journal), reloads the page. This replaces the
@@ -33,6 +39,9 @@ final class PageStore: ObservableObject {
         changeTask?.cancel()
     }
 
+    // The engine's key for a todo the reader handed out.
+    private func key(_ todo: Todo) -> LocalKey { LocalKey(todo.id!) }
+
     // Load the most recent journal page, without creating one if none exists.
     func load() async throws {
         page = try await db.dbQueue.read { db in
@@ -44,31 +53,16 @@ final class PageStore: ObservableObject {
     }
 
     // Create today's page. Pending non-migratable todos from before today are
-    // abandoned; migratable ones carry forward naturally (no action needed).
+    // abandoned as of their start day; migratable ones carry forward naturally.
     func startToday() async throws {
         let today = CivilDate.today
 
         let newPage: JournalPage = try await db.dbQueue.write { db in
             var p = JournalPage(id: nil, date: today)
             try p.insert(db)
-
-            // Abandon them as of the last journal page before today — the last day
-            // we considered doing these tasks. The time-of-day is unknown, so this
-            // is a day-only ending. -- claude, 2026-03-02
-            let lastDay = try JournalPage
-                .filter(Column("date") < today)
-                .order(Column("date").desc)
-                .fetchOne(db)?
-                .date ?? today.adding(days: -1)
-            let abandonment = TodoEnding(day: lastDay, kind: .abandoned)
-            try Todo
-                .filter(Column("start") < today)
-                .filter(Column("shouldMigrate") == false)
-                .filter(Column("ending") == nil)
-                .updateAll(db, [Column("ending").set(to: abandonment)])
-
             return p
         }
+        try await writer.sweep(asOf: today)
 
         page = newPage
         try await refreshContents()
@@ -87,12 +81,7 @@ final class PageStore: ObservableObject {
 
     func completeTodo(_ todo: Todo, undoManager: UndoManager? = nil) async throws {
         let ending = defaultEnding(kind: .done)
-        try await db.dbQueue.write { db in
-            try Todo
-                .filter(Column("id") == todo.id)
-                .updateAll(db, [Column("ending").set(to: ending)])
-            return
-        }
+        try await writer.update(key(todo)) { $0.ending = ending }
         scheduleUndo(with: undoManager) { store in
             try await store.uncompleteTodo(todo, undoManager: undoManager)
         }
@@ -100,12 +89,7 @@ final class PageStore: ObservableObject {
     }
 
     func uncompleteTodo(_ todo: Todo, undoManager: UndoManager? = nil) async throws {
-        try await db.dbQueue.write { db in
-            try Todo
-                .filter(Column("id") == todo.id)
-                .updateAll(db, [Column("ending").set(to: nil as TodoEnding?)])
-            return
-        }
+        try await writer.update(key(todo)) { $0.ending = nil }
         scheduleUndo(with: undoManager) { store in
             try await store.completeTodo(todo, undoManager: undoManager)
         }
@@ -114,24 +98,14 @@ final class PageStore: ObservableObject {
 
     func abandonTodo(_ todo: Todo) async throws {
         let ending = defaultEnding(kind: .abandoned)
-        try await db.dbQueue.write { db in
-            try Todo
-                .filter(Column("id") == todo.id)
-                .updateAll(db, [Column("ending").set(to: ending)])
-            return
-        }
+        try await writer.update(key(todo)) { $0.ending = ending }
         try await refreshContents()
     }
 
     // Mark any non-pending todo as pending. Used by the context menu.
     func markPending(_ todo: Todo, undoManager: UndoManager? = nil) async throws {
         let oldEnding = todo.ending
-        try await db.dbQueue.write { db in
-            try Todo
-                .filter(Column("id") == todo.id)
-                .updateAll(db, [Column("ending").set(to: nil as TodoEnding?)])
-            return
-        }
+        try await writer.update(key(todo)) { $0.ending = nil }
         scheduleUndo(with: undoManager) { store in
             if oldEnding?.kind == .done {
                 try await store.completeTodo(todo, undoManager: undoManager)
@@ -145,14 +119,7 @@ final class PageStore: ObservableObject {
     func bulkComplete(_ todos: [Todo], undoManager: UndoManager? = nil) async throws {
         let oldEndings: [(Int64, TodoEnding?)] = todos.map { ($0.id!, $0.ending) }
         let ending = defaultEnding(kind: .done)
-        try await db.dbQueue.write { db in
-            for todo in todos {
-                try Todo
-                    .filter(Column("id") == todo.id)
-                    .updateAll(db, [Column("ending").set(to: ending)])
-            }
-            return
-        }
+        try await writer.updateMany(todos.map(key)) { $0.ending = ending }
         scheduleUndo(with: undoManager) { store in
             try await store.restoreBulkEndings(oldEndings)
         }
@@ -161,27 +128,18 @@ final class PageStore: ObservableObject {
 
     func bulkMarkPending(_ todos: [Todo], undoManager: UndoManager? = nil) async throws {
         let oldEndings: [(Int64, TodoEnding?)] = todos.map { ($0.id!, $0.ending) }
-        try await db.dbQueue.write { db in
-            for todo in todos {
-                try Todo
-                    .filter(Column("id") == todo.id)
-                    .updateAll(db, [Column("ending").set(to: nil as TodoEnding?)])
-            }
-            return
-        }
+        try await writer.updateMany(todos.map(key)) { $0.ending = nil }
         scheduleUndo(with: undoManager) { store in
             try await store.restoreBulkEndings(oldEndings)
         }
         try await refreshContents()
     }
 
+    // A destroyed Task cannot come back, so undo recreates the todos as new
+    // Tasks: same content, new identity. -- claude, 2026-10-28
     func bulkDelete(_ todos: [Todo], undoManager: UndoManager? = nil) async throws {
         let snapshot = todos
-        try await db.dbQueue.write { db in
-            for todo in todos {
-                try Todo.filter(Column("id") == todo.id).deleteAll(db)
-            }
-        }
+        try await writer.destroy(todos.map(key))
         scheduleUndo(with: undoManager) { store in
             try await store.restoreBulkTodos(snapshot)
         }
@@ -189,25 +147,13 @@ final class PageStore: ObservableObject {
     }
 
     private func restoreBulkTodos(_ todos: [Todo]) async throws {
-        try await db.dbQueue.write { db in
-            for todo in todos {
-                var restored = todo
-                try restored.insert(db)
-            }
-        }
+        _ = try await writer.createMany(todos)
         try await refreshContents()
     }
 
     func bulkAbandon(_ todos: [Todo]) async throws {
         let ending = defaultEnding(kind: .abandoned)
-        try await db.dbQueue.write { db in
-            for todo in todos {
-                try Todo
-                    .filter(Column("id") == todo.id)
-                    .updateAll(db, [Column("ending").set(to: ending)])
-            }
-            return
-        }
+        try await writer.updateMany(todos.map(key)) { $0.ending = ending }
         try await refreshContents()
     }
 
@@ -217,29 +163,22 @@ final class PageStore: ObservableObject {
     func addTodo(title: String, shouldMigrate: Bool, categoryID: Int64? = nil, done: Bool = false) async throws {
         guard page != nil else { return }
         let today = CivilDate.today
-        try await db.dbQueue.write { db in
-            var todo = Todo(
-                id: nil,
-                title: title,
-                shouldMigrate: done ? false : shouldMigrate,
-                start: today,
-                ending: done ? TodoEnding(moment: .now(), kind: .done) : nil,
-                categoryID: categoryID,
-                externalURL: nil
-            )
-            try todo.insert(db)
-        }
+        let todo = Todo(
+            id: nil,
+            title: title,
+            shouldMigrate: done ? false : shouldMigrate,
+            start: today,
+            ending: done ? TodoEnding(moment: .now(), kind: .done) : nil,
+            categoryID: categoryID,
+            externalURL: nil
+        )
+        _ = try await writer.create(todo)
         try await refreshContents()
     }
 
     func setTitle(_ title: String, for todo: Todo, undoManager: UndoManager? = nil) async throws {
         let oldTitle = todo.title
-        try await db.dbQueue.write { db in
-            try Todo
-                .filter(Column("id") == todo.id)
-                .updateAll(db, [Column("title").set(to: title)])
-            return
-        }
+        try await writer.update(key(todo)) { $0.title = title }
         scheduleUndo(with: undoManager) { store in
             try await store.setTitle(oldTitle, for: todo, undoManager: undoManager)
         }
@@ -247,10 +186,7 @@ final class PageStore: ObservableObject {
     }
 
     func deleteTodo(_ todo: Todo, undoManager: UndoManager? = nil) async throws {
-        try await db.dbQueue.write { db in
-            try Todo.filter(Column("id") == todo.id).deleteAll(db)
-            return
-        }
+        try await writer.destroy([key(todo)])
         scheduleUndo(with: undoManager) { store in
             try await store.restoreTodo(todo)
         }
@@ -259,12 +195,7 @@ final class PageStore: ObservableObject {
 
     func setCategory(_ categoryID: Int64?, for todo: Todo, undoManager: UndoManager? = nil) async throws {
         let oldCategoryID = todo.categoryID
-        try await db.dbQueue.write { db in
-            try Todo
-                .filter(Column("id") == todo.id)
-                .updateAll(db, [Column("categoryID").set(to: categoryID)])
-            return
-        }
+        try await writer.update(key(todo)) { $0.categoryID = categoryID }
         scheduleUndo(with: undoManager) { store in
             try await store.setCategory(oldCategoryID, for: todo, undoManager: undoManager)
         }
@@ -277,14 +208,7 @@ final class PageStore: ObservableObject {
         let oldCategories: [(Int64, Int64?)] = (todos + futureTodos)
             .filter { ids.contains($0.id!) }
             .map { ($0.id!, $0.categoryID) }
-        try await db.dbQueue.write { db in
-            for id in ids {
-                try Todo
-                    .filter(Column("id") == id)
-                    .updateAll(db, [Column("categoryID").set(to: categoryID)])
-            }
-            return
-        }
+        try await writer.updateMany(ids.map(LocalKey.init)) { $0.categoryID = categoryID }
         scheduleUndo(with: undoManager) { store in
             try await store.restoreBulkCategories(oldCategories)
         }
@@ -292,14 +216,7 @@ final class PageStore: ObservableObject {
     }
 
     private func restoreBulkEndings(_ endings: [(Int64, TodoEnding?)]) async throws {
-        try await db.dbQueue.write { db in
-            for (id, ending) in endings {
-                try Todo
-                    .filter(Column("id") == id)
-                    .updateAll(db, [Column("ending").set(to: ending)])
-            }
-            return
-        }
+        try await restoreEach(endings) { todo, ending in todo.ending = ending }
         try await refreshContents()
     }
 
@@ -309,13 +226,7 @@ final class PageStore: ObservableObject {
     func sendToDate(_ todos: [Todo], date: Date, undoManager: UndoManager? = nil) async throws {
         let oldStarts: [(Int64, CivilDate)] = todos.map { ($0.id!, $0.start) }
         let targetDate = CivilDate(instant: date, in: .current)
-        try await db.dbQueue.write { db in
-            for todo in todos {
-                try Todo
-                    .filter(Column("id") == todo.id)
-                    .updateAll(db, [Column("start").set(to: targetDate)])
-            }
-        }
+        try await writer.updateMany(todos.map(key)) { $0.start = targetDate }
         scheduleUndo(with: undoManager) { store in
             try await store.restoreBulkStartDates(oldStarts)
         }
@@ -323,35 +234,29 @@ final class PageStore: ObservableObject {
     }
 
     private func restoreBulkStartDates(_ dates: [(Int64, CivilDate)]) async throws {
-        try await db.dbQueue.write { db in
-            for (id, date) in dates {
-                try Todo
-                    .filter(Column("id") == id)
-                    .updateAll(db, [Column("start").set(to: date)])
-            }
-        }
+        try await restoreEach(dates) { todo, date in todo.start = date }
         try await refreshContents()
     }
 
     private func restoreBulkCategories(_ categories: [(Int64, Int64?)]) async throws {
-        try await db.dbQueue.write { db in
-            for (id, categoryID) in categories {
-                try Todo
-                    .filter(Column("id") == id)
-                    .updateAll(db, [Column("categoryID").set(to: categoryID)])
-            }
-            return
-        }
+        try await restoreEach(categories) { todo, categoryID in todo.categoryID = categoryID }
         try await refreshContents()
     }
 
-    func setURL(_ url: String?, for todo: Todo) async throws {
-        try await db.dbQueue.write { db in
-            try Todo
-                .filter(Column("id") == todo.id)
-                .updateAll(db, [Column("externalURL").set(to: url)])
-            return
+    // Undo for a bulk change restores a per-todo prior value; each todo gets
+    // its own transform, in one engine write.
+    private func restoreEach<Value: Sendable>(
+        _ values: [(Int64, Value)],
+        _ apply: @Sendable @escaping (inout Todo, Value) -> Void
+    ) async throws {
+        let byKey = Dictionary(values.map { (LocalKey($0.0), $0.1) }, uniquingKeysWith: { _, last in last })
+        try await writer.updateMany(Array(byKey.keys)) { todo in
+            if let value = byKey[LocalKey(todo.id!)] { apply(&todo, value) }
         }
+    }
+
+    func setURL(_ url: String?, for todo: Todo) async throws {
+        try await writer.update(key(todo)) { $0.externalURL = url }
         try await refreshContents()
     }
 
@@ -363,12 +268,7 @@ final class PageStore: ObservableObject {
         guard let oldEnding = todo.ending else { return }
         let moment = Moment(instant: date, offsetSeconds: TimeZone.current.secondsFromGMT(for: date))
         let newEnding = TodoEnding(day: oldEnding.day, time: moment, kind: oldEnding.kind)
-        try await db.dbQueue.write { db in
-            try Todo
-                .filter(Column("id") == todo.id)
-                .updateAll(db, [Column("ending").set(to: newEnding)])
-            return
-        }
+        try await writer.update(key(todo)) { $0.ending = newEnding }
         scheduleUndo(with: undoManager) { store in
             try await store.restoreBulkEndings([(todo.id!, oldEnding)])
         }
@@ -377,10 +277,7 @@ final class PageStore: ObservableObject {
 
     private func restoreTodo(_ todo: Todo) async throws {
         guard page != nil else { return }
-        try await db.dbQueue.write { db in
-            var restored = todo
-            try restored.insert(db)
-        }
+        _ = try await writer.create(todo)
         try await refreshContents()
     }
 
@@ -393,29 +290,19 @@ final class PageStore: ObservableObject {
                 .fetchAll(db)
         }
         let today = CivilDate.today
-        let insertedIDs: [Int64] = try await db.dbQueue.write { [bundleTodos] db in
-            var ids: [Int64] = []
-            for bundleTodo in bundleTodos {
-                var todo = Todo(
-                    id: nil,
-                    title: bundleTodo.title,
-                    shouldMigrate: bundle.todosShouldMigrate,
-                    start: today,
-                    ending: nil,
-                    categoryID: bundleTodo.categoryID,
-                    externalURL: bundleTodo.externalURL
-                )
-                try todo.insert(db)
-                if let id = todo.id { ids.append(id) }
-            }
-            return ids
-        }
+        let created = try await writer.createMany(bundleTodos.map { bundleTodo in
+            Todo(
+                id: nil,
+                title: bundleTodo.title,
+                shouldMigrate: bundle.todosShouldMigrate,
+                start: today,
+                ending: nil,
+                categoryID: bundleTodo.categoryID,
+                externalURL: bundleTodo.externalURL
+            )
+        })
         scheduleUndo(with: undoManager) { store in
-            try await store.db.dbQueue.write { db in
-                for id in insertedIDs {
-                    try Todo.filter(Column("id") == id).deleteAll(db)
-                }
-            }
+            try await store.writer.destroy(created)
             try await store.refreshContents()
         }
         try await refreshContents()

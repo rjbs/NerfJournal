@@ -50,32 +50,30 @@ struct DuplicateFound {
     var value: String
 }
 
-// Skip insertion if any open (ending IS NULL) todo already has this title or URL.
-func findOpenDuplicate(_ dbQueue: DatabaseQueue, title: String, url: String?) throws -> DuplicateFound? {
+// Skip insertion if any open todo already has this title or URL.
+func findOpenDuplicate(_ sync: JournalSync, title: String, url: String?) async -> DuplicateFound? {
     do {
-        return try dbQueue.read { database -> DuplicateFound? in
-            let titleDup = try Row.fetchOne(
-                database,
-                sql: "SELECT 1 FROM todo WHERE ending IS NULL AND title = ?",
-                arguments: [title]
-            )
-            if titleDup != nil {
-                return DuplicateFound(field: "title", value: title)
-            }
-            if let url = url {
-                let urlDup = try Row.fetchOne(
-                    database,
-                    sql: "SELECT 1 FROM todo WHERE ending IS NULL AND externalURL = ?",
-                    arguments: [url]
-                )
-                if urlDup != nil {
-                    return DuplicateFound(field: "url", value: url)
-                }
-            }
-            return nil
+        let open = try await TaskReader(sync: sync).todos().filter(\.isPending)
+        if open.contains(where: { $0.title == title }) {
+            return DuplicateFound(field: "title", value: title)
         }
+        if let url, open.contains(where: { $0.externalURL == url }) {
+            return DuplicateFound(field: "url", value: url)
+        }
+        return nil
     } catch {
         fputs("warning: could not check for duplicates: \(error)\n", stderr)
         return nil
+    }
+}
+
+// Pushes what was just written. The app, sharing this database, would push
+// it eventually anyway, so a server that cannot be reached is a warning,
+// not a failure: the todo is safely in the local store. -- claude, 2026-10-28
+func pushAfterWrite(_ sync: JournalSync) async {
+    do {
+        try await sync.engine.sync()
+    } catch {
+        fputs("warning: wrote the todo locally but could not sync it to the server: \(error)\n", stderr)
     }
 }

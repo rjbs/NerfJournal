@@ -65,14 +65,3 @@ struct DatabaseOptions: ParsableArguments {
         }
     }
 }
-
-// MARK: - Change notification
-
-// Notify any running NerfJournal instance to refresh after a write.
-func postExternalChangeNotification() {
-    DistributedNotificationCenter.default().postNotificationName(
-        NSNotification.Name("org.rjbs.nerfjournal.externalChange"),
-        object: nil,
-        deliverImmediately: true
-    )
-}

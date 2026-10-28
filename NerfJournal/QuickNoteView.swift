@@ -24,30 +24,25 @@ final class QuickNoteStore: ObservableObject {
     func addTodo(title: String, categoryID: Int64?, start: Date? = nil, done: Bool = false) async {
         let today = CivilDate.today
         let startDay = done ? today : (start.map { CivilDate(instant: $0, in: .current) } ?? today)
-        try? await AppDatabase.shared.dbQueue.write { db in
-            if done, try JournalPage.filter(Column("date") == today).fetchOne(db) == nil {
-                var page = JournalPage(id: nil, date: today)
-                try page.insert(db)
+        if done {
+            try? await AppDatabase.shared.dbQueue.write { db in
+                if try JournalPage.filter(Column("date") == today).fetchOne(db) == nil {
+                    var page = JournalPage(id: nil, date: today)
+                    try page.insert(db)
+                }
             }
-            var todo = Todo(
-                id: nil,
-                title: title,
-                shouldMigrate: done ? false : true,
-                start: startDay,
-                ending: done ? TodoEnding(moment: .now(), kind: .done) : nil,
-                categoryID: categoryID,
-                externalURL: nil
-            )
-            try todo.insert(db)
         }
-        notify()
-    }
-
-    private func notify() {
-        DistributedNotificationCenter.default().postNotificationName(
-            NSNotification.Name("org.rjbs.nerfjournal.externalChange"),
-            object: nil, deliverImmediately: true
+        let todo = Todo(
+            id: nil,
+            title: title,
+            shouldMigrate: done ? false : true,
+            start: startDay,
+            ending: done ? TodoEnding(moment: .now(), kind: .done) : nil,
+            categoryID: categoryID,
+            externalURL: nil
         )
+        // The engine's change stream tells PageStore; no notification needed.
+        _ = try? await TaskWriter(sync: AppDatabase.shared.sync).create(todo)
     }
 }
 
