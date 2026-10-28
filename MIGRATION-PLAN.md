@@ -144,7 +144,13 @@ database from the dev build.
     the server, then wipe the server and repeat as needed.  This is the
     test of the cutover, run as many times as it takes.
 
-## Chunk 5: reads from Jinx
+## Chunk 5: reads from Jinx (done 2026-10-28, branch jmap-backend)
+
+Verified: the dev build shows today's page from the adopted data, a
+Task created directly on the server appeared in its store within
+seconds over push, and `nerf todo` lists today's open todos from the
+dev database.  The push test task (uid `chunk5-push-test`) is still on
+the server.
 
 *   `TaskReader` in NerfCore: `engine.objects(type: "Task")` decoded
     through the codec into `[Todo]`, with each object's `pending` and
