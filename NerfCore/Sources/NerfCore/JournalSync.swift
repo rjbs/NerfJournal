@@ -204,4 +204,9 @@ public actor JournalSync {
     public func status() async throws -> SyncStatus {
         try await engine.currentStatus()
     }
+
+    // The local categories, which decoding a Task's keyword needs.
+    public func categories() async throws -> [Category] {
+        try await writer.read { db in try Category.fetchAll(db) }
+    }
 }

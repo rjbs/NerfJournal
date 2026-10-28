@@ -36,14 +36,32 @@ struct DatabaseOptions: ParsableArguments {
         return "\(home)/Library/Containers/org.rjbs.nerfjournal/Data/Library/Application Support/NerfJournal/journal.sqlite"
     }
 
+    var path: String { database ?? Self.defaultPath() }
+
     func open() throws -> DatabaseQueue {
-        let path = database ?? Self.defaultPath()
         var config = Configuration()
         config.busyMode = .timeout(5)
         do {
             return try DatabaseQueue(path: path, configuration: config)
         } catch {
             throw CLIError("could not open database at \(path): \(error)")
+        }
+    }
+
+    // The database plus the sync engine over it, which is how todos are read
+    // and written now. Server settings come from NERF_JMAP_URL and
+    // NERF_JMAP_ACCOUNT, defaulting to the prototype. Reads need no server;
+    // only a sync does. -- claude, 2026-10-28
+    func openSync() throws -> JournalSync {
+        let dbQueue = try open()
+        do {
+            return try JournalSync(
+                writer: dbQueue,
+                databasePath: path,
+                settings: SyncSettings.from(environment: ProcessInfo.processInfo.environment)
+            )
+        } catch {
+            throw CLIError("could not set up sync for \(path): \(error)")
         }
     }
 }

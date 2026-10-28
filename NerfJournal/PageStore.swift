@@ -10,15 +10,27 @@ final class PageStore: ObservableObject {
     @Published var todos: [Todo] = []
     @Published var futureTodos: [Todo] = []
 
+    private let reader: TaskReader
+    private var changeTask: Task<Void, Never>?
+
     init(database: AppDatabase = .shared) {
         self.db = database
-        DistributedNotificationCenter.default().addObserver(
-            forName: NSNotification.Name("org.rjbs.nerfjournal.externalChange"),
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor [weak self] in try? await self?.refreshContents() }
+        self.reader = TaskReader(sync: database.sync)
+        // Every committed change to a Task, whether made here, synced in from
+        // the server, or written by another process on this database (the
+        // engine tails their journal), reloads the page. This replaces the
+        // distributed notification the CLI used to post. -- claude, 2026-10-28
+        changeTask = Task { [weak self] in
+            let changes = await database.sync.engine.changes()
+            for await change in changes {
+                guard change.types[JournalSync.taskType.name] != nil else { continue }
+                try? await self?.refreshContents()
+            }
         }
+    }
+
+    isolated deinit {
+        changeTask?.cancel()
     }
 
     // Load the most recent journal page, without creating one if none exists.
@@ -435,24 +447,17 @@ final class PageStore: ObservableObject {
         // last page day remain visible when you haven't started today yet.
         // -- claude, 2026-03-03
         let pageDate = page!.date
-        let (allTodos, ft) = try await db.dbQueue.read { db in
-            let t = try Todo
-                .filter(Column("start") <= pageDate)
-                .fetchAll(db)
-            let f = try Todo
-                .filter(Column("start") > pageDate)
-                .filter(Column("ending") == nil)
-                .order(Column("start"), Column("id"))
-                .fetchAll(db)
-            return (t, f)
-        }
+        let allTodos = try await reader.todos()
         todos = allTodos
             .filter { todo in
+                guard todo.start <= pageDate else { return false }
                 guard let ending = todo.ending else { return true }
                 return ending.day >= pageDate
             }
             .sortedForDisplay()
-        futureTodos = ft
+        futureTodos = allTodos
+            .filter { $0.start > pageDate && $0.ending == nil }
+            .sorted { ($0.start, $0.id ?? 0) < ($1.start, $1.id ?? 0) }
         NotificationCenter.default.post(name: .nerfJournalTodosDidChange, object: nil)
     }
 
