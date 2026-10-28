@@ -108,7 +108,16 @@ In NerfCore, so the app and the CLI share it:
 *   Tests use `JinxScriptedServer` and `GRDBSyncStore.inMemory()`.  No
     network in tests.
 
-## Chunk 4: legacy data migration (schema v9 plus adopt)
+## Chunk 4: legacy data migration (schema v9 plus adopt) (done 2026-10-28, branch jmap-backend)
+
+Rehearsed 2026-10-28 on a copy of the installed database (2598 todos,
+schema v8) placed in the dev container: v9 staged every row, the dev
+build adopted all 2598 at launch, and the engine pushed them in one
+pass.  The server then held 2604 Tasks (the 2598 plus the six probe
+tasks), the local store had no pending entries, and a spot-checked
+swept, categorized, linked task matched the spec encoding exactly.
+The backup copy is kept in the session scratchpad; the dev container
+now holds the adopted data for chunks 5 and 6 to develop against.
 
 This is the chunk that moves data, and it is written before the UI
 switches over so that it can be rehearsed on a copy of the real
