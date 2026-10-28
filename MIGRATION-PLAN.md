@@ -217,7 +217,15 @@ a `lastError`.  The CLI gets `nerf sync` and `nerf sync-status`.
 *   Factory reset wipes the client-only tables and calls `engine.wipe()`.
     It never destroys server data.
 
-## Chunk 10: cutover
+## Chunk 10: cutover (done 2026-10-28)
+
+Done as written, with the installed database at 2598 todos by then:
+backup to `~/Desktop/nerfjournal-backup.sqlite` (integrity ok, v8),
+server wiped from 2609 to 0, Release build from main launched on the
+installed container, 2598 Tasks adopted with ids and nothing pending or
+failed, server at 2598, release `nerf` installed to `~/bin`.  The dev
+container was left as it was; it is out of step with the server and
+should have its local data reset before the Dev build is used again.
 
 1.  Quit the installed app.  Copy its `journal.sqlite` to a dated backup
     outside the container.
