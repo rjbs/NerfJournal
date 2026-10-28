@@ -132,6 +132,10 @@ struct NerfJournalApp: App {
         }
         .defaultSize(width: 480, height: 400)
 
+        Settings {
+            SyncSettingsView()
+        }
+
         Window("Export Groups", id: "export-groups") {
             ExportGroupManagerView()
                 .environmentObject(exportGroupStore)
