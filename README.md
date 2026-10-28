@@ -148,7 +148,10 @@ nerf add-todo [--no-migrate] [--category NAME] [--strict] [--url URL] [--start W
   than a moment, a timestamp is reduced to the start of its day in the local
   calendar. A future date lands the todo in the Future Log; omitting
   `--start` starts it today as before.
-- `--database PATH`: override the default database path (for testing)
+- `--database PATH`: override the default database path. The `NERF_DATABASE`
+  environment variable sets the default instead, so a shell can be pointed
+  at another database (such as the dev build's container, see Building)
+  for a whole session.
 
 Exits 0 on success (quiet), 1 on any error (message to stderr). A todo
 starting today requires today's journal page to already exist; a

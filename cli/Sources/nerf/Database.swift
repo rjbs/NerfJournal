@@ -21,10 +21,17 @@ struct CLIError: Error, CustomStringConvertible {
 
 // Mixed into each subcommand via @OptionGroup so they all accept --database.
 struct DatabaseOptions: ParsableArguments {
-    @Option(name: .long, help: "Override the default database path (for testing).")
+    @Option(name: .long, help: "Override the default database path (also settable as NERF_DATABASE).")
     var database: String?
 
+    // The installed app's database, unless NERF_DATABASE says otherwise. The
+    // variable exists so a shell can be pointed at the dev build's container
+    // (org.rjbs.nerfjournal.dev) without passing --database to every command.
+    // -- claude, 2026-10-28
     static func defaultPath() -> String {
+        if let path = ProcessInfo.processInfo.environment["NERF_DATABASE"], !path.isEmpty {
+            return path
+        }
         let home = NSHomeDirectory()
         return "\(home)/Library/Containers/org.rjbs.nerfjournal/Data/Library/Application Support/NerfJournal/journal.sqlite"
     }
