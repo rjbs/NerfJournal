@@ -188,7 +188,13 @@ that touches several todos:
 *   The app runs `engine.run()` in a task at launch for push, pull,
     EventSource, and journal tailing.
 
-## Chunk 7: categories by keyword
+## Chunk 7: categories by keyword (done 2026-10-28, branch jmap-backend)
+
+Adoption of unknown names happens on every read through `TaskReader`
+rather than on sync-in change sets, which covers the CLI too.  Verified
+against the dev database: a Task created on the server with a new
+category keyword produced a local "Chunk Seven" category, blue, last
+in the order, and `nerf todo` grouped the task under it.
 
 *   On every `syncIn` change set, scan affected Tasks for
     `nerfjournal:category:` keywords with no local Category and create
