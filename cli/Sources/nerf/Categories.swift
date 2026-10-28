@@ -1,9 +1,8 @@
 import ArgumentParser
 import Foundation
-import GRDB
 import NerfCore
 
-struct Categories: ParsableCommand {
+struct Categories: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "categories",
         abstract: "List the categories defined in NerfJournal, in display order."
@@ -15,18 +14,14 @@ struct Categories: ParsableCommand {
 
     @OptionGroup var db: DatabaseOptions
 
-    func run() throws {
-        let dbQueue = try db.open()
+    func run() async throws {
+        let sync = try db.openSync()
 
         let categories: [Category]
         do {
-            categories = try dbQueue.read { database in
-                try Category
-                    .order(Column("sortOrder"))
-                    .fetchAll(database)
-            }
+            categories = try await sync.categories()
         } catch {
-            throw CLIError("could not query categories: \(error)")
+            throw CLIError("could not read categories: \(error)")
         }
 
         if json {

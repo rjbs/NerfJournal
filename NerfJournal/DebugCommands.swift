@@ -69,10 +69,10 @@ struct DebugCommands: Commands {
         let alert = NSAlert()
         alert.messageText = "Factory Reset"
         alert.informativeText = """
-            This will delete every journal page, task bundle, and category \
-            on this Mac, and forget every todo this Mac has synced, including \
-            changes not yet sent. The server keeps its tasks; the next sync \
-            fetches them again.
+            This will delete every journal page, task bundle, and export \
+            group on this Mac, and forget every todo and category this Mac \
+            has synced, including changes not yet sent. The server keeps its \
+            lists and tasks; the next sync fetches them again.
             """
         alert.alertStyle = .critical
         alert.addButton(withTitle: "Reset This Mac")

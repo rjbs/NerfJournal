@@ -21,7 +21,7 @@ public struct SyncedTodo: Sendable, Equatable, Identifiable {
 }
 
 // Reads todos out of the sync engine's store. Every read decodes every Task
-// through the codec against the current categories; the journal is small
+// through the codec against the lists as they stand; the journal is small
 // enough that filtering happens in memory, as it always has. A Task whose
 // destroy is still waiting to be pushed is already gone as far as the
 // journal is concerned. -- claude, 2026-10-28
@@ -33,16 +33,12 @@ public struct TaskReader: Sendable {
     }
 
     public func syncedTodos(zone: TimeZone = .current) async throws -> [SyncedTodo] {
-        // A keyword naming a category this client has never seen becomes a
-        // local Category first, so no Task reads as uncategorized merely
-        // because another client named the category.
-        try await sync.adoptUnknownCategories()
-        let categories = try await sync.categories()
+        let lists = try await sync.listIndex()
         return try await sync.tasks().compactMap { object in
             guard object.pending != .destroy else { return nil }
             return SyncedTodo(
                 key: object.key,
-                todo: TaskCodec.decode(object.value, id: object.key.rawValue, categories: categories, zone: zone),
+                todo: TaskCodec.decode(object.value, id: object.key.rawValue, lists: lists, zone: zone),
                 uid: object.value["uid"]?.stringValue,
                 serverId: object.id,
                 pending: object.pending,

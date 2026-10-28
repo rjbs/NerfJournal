@@ -42,7 +42,7 @@ struct Did: AsyncParsableCommand {
             throw CLIError("no journal page for today — start one in NerfJournal first")
         }
 
-        let categoryID = try resolveCategory(dbQueue, name: category, strict: strict)
+        let categoryID = try await resolveCategory(sync, name: category, strict: strict)
 
         if let dup = await findOpenDuplicate(sync, title: title, url: url) {
             print("Didn't create todo for duplicate \(dup.field): \(dup.value) — use `nerf done` to complete it")

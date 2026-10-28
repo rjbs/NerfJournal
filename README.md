@@ -43,21 +43,23 @@ fields:
 - `ending`: nil if still pending; otherwise a `TodoEnding` with a `date`
   and `kind` (`.done` or `.abandoned`).
 - `categoryID`: optional reference to a `Category` for display grouping.
-  On the server this is a keyword, `nerfjournal:category:<name>`.
+  On the server this is which TaskList the Task is in.
 - `externalURL`: optional URL, shown as a clickable link icon on the row.
 
 **Category** — a named, colored grouping. Fields: `name`,
 `color` (one of eight named swatches: blue, red, green, orange, purple,
 pink, teal, yellow), `sortOrder`. Todos on a page are grouped by
 category, sorted by `sortOrder`, with uncategorized todos in an "Other"
-section at the end. Categories have no object on the server: a Task
-names its category in a keyword, and color and order are local. A
-keyword naming a category this Mac has never seen creates one on read,
-and renaming or deleting a category rewrites the keyword on every Task
-carrying it.
+section at the end. A category is a TaskList on the server: the list
+flagged default is "no category," every other list is a category, and
+the list's name, color and sort order are the category's. A category's
+`id` is the sync engine's local key for its list, as a todo's is for
+its Task. Creating a category pushes its list to the server at once,
+and deleting one moves its todos to the default list first, because a
+Task can only be filed in a list the server already knows.
 
-Pages, bundles, categories, and export groups are client-only and stay
-in the local SQLite database. Only todos sync.
+Pages, bundles, and export groups are client-only and stay in the local
+SQLite database. Todos and categories sync.
 
 **TaskBundle** — a named collection of todos that can be applied to
 today's page all at once. Examples: "Daily", "Sprint Start", "On-Call
@@ -135,9 +137,10 @@ fetches its tasks again.
 both need and nothing that is UI: `CivilDate` and `Moment`, the record
 types, the schema migrations (`NerfSchema`), the export snapshot type,
 the quick-entry date parser, and the whole JMAP side: `TaskCodec` (the
-Todo-to-Task encoding from `JMAP-SPEC.md`), `JournalSync` (the Jinx
-engine assembled for the journal, plus legacy adoption, category
-syncing, export, import, and reset), `TaskReader`, and `TaskWriter`.
+Todo-to-Task encoding from `JMAP-SPEC.md`), `TaskListIndex` (the
+lists as categories), `JournalSync` (the Jinx engine assembled for the
+journal, plus legacy adoption, export, import, and reset),
+`TaskReader`, `TaskWriter`, and `CategoryWriter`.
 It depends on [Jinx](../Jinx), expected as a sibling checkout at
 `../Jinx`. The app links NerfCore as a local package dependency; the
 CLI depends on it by path. Its tests run against Jinx's in-process

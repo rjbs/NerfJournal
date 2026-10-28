@@ -24,10 +24,10 @@ func fetchTodayPage(_ dbQueue: DatabaseQueue, date: CivilDate) throws -> Journal
 // miss warns but continues, since a miscategorized todo is better than a lost
 // one for scripted callers; under strict a miss instead throws so nothing is
 // created and the program exits nonzero.
-func resolveCategory(_ dbQueue: DatabaseQueue, name: String?, strict: Bool) throws -> Int64? {
+func resolveCategory(_ sync: JournalSync, name: String?, strict: Bool) async throws -> Int64? {
     guard let name else { return nil }
     do {
-        let categories = try dbQueue.read { db in try Category.fetchAll(db) }
+        let categories = try await sync.categories()
         if let match = categories.first(where: { $0.name.lowercased() == name.lowercased() }) {
             return match.id
         }

@@ -27,10 +27,9 @@ public struct TaskWriter: Sendable {
     // uid, which is what makes a create safe to resend.
     public func createMany(_ todos: [Todo], now: Date = Date()) async throws -> [LocalKey] {
         guard !todos.isEmpty else { return [] }
-        let categories = try await sync.categories()
-        let listId = try await sync.taskListId()
-        let encodings = todos.map {
-            TaskCodec.encodeNew($0, categories: categories, uid: UUID().uuidString.lowercased(), taskListId: listId, now: now)
+        let lists = try await sync.listIndex()
+        let encodings = try todos.map {
+            try TaskCodec.encodeNew($0, lists: lists, uid: UUID().uuidString.lowercased(), now: now)
         }
         return try await sync.engine.write { writer in
             try writer.adopt(JournalSync.taskType.name, encodings)
@@ -42,10 +41,9 @@ public struct TaskWriter: Sendable {
     // refused by the server as a duplicate and sit as a failed create.
     public func adopt(_ todos: [(uid: String, todo: Todo)], now: Date = Date()) async throws {
         guard !todos.isEmpty else { return }
-        let categories = try await sync.categories()
-        let listId = try await sync.taskListId()
-        let encodings = todos.map {
-            TaskCodec.encodeNew($0.todo, categories: categories, uid: $0.uid, taskListId: listId, now: now)
+        let lists = try await sync.listIndex()
+        let encodings = try todos.map {
+            try TaskCodec.encodeNew($0.todo, lists: lists, uid: $0.uid, now: now)
         }
         try await sync.engine.write { writer in
             _ = try writer.adopt(JournalSync.taskType.name, encodings)
@@ -60,13 +58,13 @@ public struct TaskWriter: Sendable {
 
     public func updateMany(_ keys: [LocalKey], now: Date = Date(), _ change: @Sendable (inout Todo) -> Void) async throws {
         guard !keys.isEmpty else { return }
-        let categories = try await sync.categories()
+        let lists = try await sync.listIndex()
         try await sync.engine.write { writer in
             for key in keys {
                 try writer.update(key) { current in
-                    var todo = TaskCodec.decode(current, id: key.rawValue, categories: categories)
+                    var todo = TaskCodec.decode(current, id: key.rawValue, lists: lists)
                     change(&todo)
-                    let encoding = TaskCodec.encode(todo, categories: categories, existing: current, now: now)
+                    let encoding = try TaskCodec.encode(todo, lists: lists, existing: current, now: now)
                     return try current.mergingOwnedProperties(TaskCodec.ownedProperties, from: encoding)
                 }
             }
@@ -91,10 +89,10 @@ public struct TaskWriter: Sendable {
     // keys it cancelled.
     @discardableResult
     public func sweep(asOf today: CivilDate, now: Date = Date()) async throws -> [LocalKey] {
-        let categories = try await sync.categories()
+        let lists = try await sync.listIndex()
         let stale = try await sync.tasks().filter { object in
             guard object.pending != .destroy else { return false }
-            let todo = TaskCodec.decode(object.value, id: object.key.rawValue, categories: categories)
+            let todo = TaskCodec.decode(object.value, id: object.key.rawValue, lists: lists)
             return todo.isPending && !todo.shouldMigrate && todo.start < today
         }
         guard !stale.isEmpty else { return [] }

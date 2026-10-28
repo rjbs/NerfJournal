@@ -54,10 +54,14 @@ public struct SyncSettings: Sendable, Hashable {
 public enum JournalSyncError: Error, CustomStringConvertible, Sendable {
     // The account has no TaskList, so there is nowhere to create a Task.
     case noTaskList
+    // The category's list has not reached the server, so no Task can be
+    // filed in it yet.
+    case categoryNotSynced(String)
 
     public var description: String {
         switch self {
         case .noTaskList: "the account has no task list"
+        case .categoryNotSynced(let name): "the category \"\(name)\" has not reached the server yet"
         }
     }
 }
@@ -72,12 +76,13 @@ public actor JournalSync {
     public typealias Engine = SyncEngine<GRDBSyncStore>
 
     public static let taskType = TaskTypes.task(ownedProperties: TaskCodec.ownedProperties)
-    public static let types = [TaskTypes.taskList, taskType]
+    public static let listType = TaskTypes.taskList
+    public static let types = [listType, taskType]
 
     public nonisolated let engine: Engine
     public nonisolated let settings: SyncSettings
     nonisolated let writer: any DatabaseWriter
-    private var cachedTaskListId: String?
+    private var fetchedListsOnce = false
 
     // The production wiring: an HTTP client against `settings`, signalled
     // to other processes on `databasePath`.
@@ -112,89 +117,39 @@ public actor JournalSync {
         return "org.rjbs.nerfjournal.jinx.\(hex)"
     }
 
-    // The id of the TaskList new Tasks go into, read from the store once and
-    // kept. The first call on a fresh store syncs to fetch the lists.
-    public func taskListId() async throws -> String {
-        if let cachedTaskListId { return cachedTaskListId }
-        if let id = try await storedTaskListId() {
-            cachedTaskListId = id
-            return id
+    // MARK: - Lists
+
+    // The TaskLists in the store. A store that has none syncs once to fetch
+    // them, so a fresh client can file its first Task; after that the lists
+    // are whatever the store holds, and the engine's own syncing keeps them
+    // current.
+    public func listIndex() async throws -> TaskListIndex {
+        var index = TaskListIndex(objects: try await lists())
+        if index.entries.isEmpty, !fetchedListsOnce {
+            fetchedListsOnce = true
+            try await engine.sync()
+            index = TaskListIndex(objects: try await lists())
         }
-        try await engine.sync()
-        guard let id = try await storedTaskListId() else { throw JournalSyncError.noTaskList }
-        cachedTaskListId = id
+        return index
+    }
+
+    // The id of the list uncategorized Tasks go into.
+    public func defaultListId() async throws -> String {
+        guard let id = try await listIndex().defaultListId else { throw JournalSyncError.noTaskList }
         return id
     }
 
-    private func storedTaskListId() async throws -> String? {
-        try await engine.objects(type: TaskTypes.taskList.name).compactMap(\.id).first
-    }
-
-    // MARK: - Legacy adoption
-
-    public struct AdoptionReport: Sendable, Hashable {
-        // Rows turned into pending creates on this run.
-        public var adopted: Int
-        // Rows a previous run had already adopted, found by uid.
-        public var alreadyPresent: Int
-
-        public init(adopted: Int, alreadyPresent: Int) {
-            self.adopted = adopted
-            self.alreadyPresent = alreadyPresent
-        }
-    }
-
-    private struct LegacyRow: Sendable {
-        var uid: String
-        var todo: Todo
-    }
-
-    // Moves the todos migration v9 staged in todo_legacy into the engine as
-    // pending creates, then drops the table. Returns nil when there is no
-    // table, which is every launch after the first successful one. Safe to
-    // run again after a crash at any point: rows already adopted are
-    // recognized by uid and skipped. The creates reach the server through
-    // the engine's ordinary sync-out. -- claude, 2026-10-28
-    public func adoptLegacyTodos() async throws -> AdoptionReport? {
-        let staged = try await writer.read { db -> (rows: [LegacyRow], categories: [Category])? in
-            guard try db.tableExists("todo_legacy") else { return nil }
-            let categories = try Category.fetchAll(db)
-            let rows = try Row.fetchAll(db, sql: "SELECT * FROM todo_legacy ORDER BY id").map { row in
-                LegacyRow(
-                    uid: row["uid"],
-                    todo: Todo(
-                        id: row["id"],
-                        title: row["title"],
-                        shouldMigrate: row["shouldMigrate"],
-                        start: row["start"],
-                        ending: row["ending"],
-                        categoryID: row["categoryID"],
-                        externalURL: row["externalURL"]
-                    )
-                )
-            }
-            return (rows, categories)
-        }
-        guard let staged else { return nil }
-
-        let listId = try await taskListId()
-        let present = Set(try await tasks().compactMap { $0.value["uid"]?.stringValue })
-        let fresh = staged.rows.filter { !present.contains($0.uid) }
-        if !fresh.isEmpty {
-            let encodings = fresh.map {
-                TaskCodec.encodeNew($0.todo, categories: staged.categories, uid: $0.uid, taskListId: listId, now: nil)
-            }
-            try await engine.write { writer in
-                _ = try writer.adopt(Self.taskType.name, encodings)
-            }
-        }
-        try await writer.write { db in
-            try db.execute(sql: "DROP TABLE todo_legacy")
-        }
-        return AdoptionReport(adopted: fresh.count, alreadyPresent: staged.rows.count - fresh.count)
+    // The categories, which are the non-default lists in display order.
+    public func categories() async throws -> [Category] {
+        try await listIndex().categories
     }
 
     // MARK: - Convenience
+
+    // Every TaskList in the store, in local key order.
+    public func lists() async throws -> [SyncedObject] {
+        try await engine.objects(type: Self.listType.name)
+    }
 
     // Every Task in the store, in local key order.
     public func tasks() async throws -> [SyncedObject] {
@@ -203,10 +158,5 @@ public actor JournalSync {
 
     public func status() async throws -> SyncStatus {
         try await engine.currentStatus()
-    }
-
-    // The local categories, which decoding a Task's keyword needs.
-    public func categories() async throws -> [Category] {
-        try await writer.read { db in try Category.fetchAll(db) }
     }
 }

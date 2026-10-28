@@ -1,5 +1,6 @@
 import XCTest
 import JinxJSON
+import JinxStore
 import NerfCore
 
 private typealias Category = NerfCore.Category
@@ -14,9 +15,14 @@ private func day(_ iso: String) -> CivilDate { CivilDate(iso: iso)! }
 
 private let newYork = TimeZone(identifier: "America/New_York")!
 
-private let work = Category(id: 1, name: "Work", color: .blue, sortOrder: 0)
-private let home = Category(id: 2, name: "Home", color: .green, sortOrder: 1)
-private let categories = [home, work]
+// The lists every case encodes against: a default list, two categories,
+// and one category whose list has not reached the server.
+private let lists = TaskListIndex(entries: [
+    .init(key: LocalKey(10), serverId: "L0", name: "Tasks", color: .blue, sortOrder: 0, isDefault: true),
+    .init(key: LocalKey(1), serverId: "L1", name: "Work", color: .blue, sortOrder: 0, isDefault: false),
+    .init(key: LocalKey(2), serverId: "L2", name: "Home", color: .green, sortOrder: 1, isDefault: false),
+    .init(key: LocalKey(3), serverId: nil, name: "Unsent", color: .red, sortOrder: 2, isDefault: false, pending: .create),
+])
 
 // The moment the spec's worked examples use: 14:03:22 in New York.
 private let specMoment = Moment(instant: instant("2026-09-13T18:03:22Z"), offsetSeconds: -4 * 3600)
@@ -25,11 +31,11 @@ final class TaskCodecTests: XCTestCase {
 
     // MARK: - Encoding, from the spec's worked examples
 
-    func testEncodesPendingMigratingTodo() {
-        checkEncodeNew(
+    func testEncodesPendingMigratingTodo() throws {
+        try checkEncodeNew(
             Todo(id: nil, title: "Review the release notes", shouldMigrate: true,
                  start: day("2026-09-13"), categoryID: 1, externalURL: "https://example.com/pr/42"),
-            uid: "9d2f5b1e-3e4a-4c5b-8f7e-1a2b3c4d5e6f", taskListId: "L1",
+            uid: "9d2f5b1e-3e4a-4c5b-8f7e-1a2b3c4d5e6f",
             expecting: [
                 "@type": "Task",
                 "uid": "9d2f5b1e-3e4a-4c5b-8f7e-1a2b3c4d5e6f",
@@ -37,18 +43,18 @@ final class TaskCodecTests: XCTestCase {
                 "title": "Review the release notes",
                 "start": "2026-09-13T00:00:00",
                 "showWithoutTime": true,
-                "keywords": ["nerfjournal:category:Work": true],
                 "links": ["nerfjournal-external": ["@type": "Link", "href": "https://example.com/pr/42", "rel": "related"]],
             ]
         )
     }
 
-    func testEncodesCompletionAtKnownMoment() {
-        checkEncode(
+    func testEncodesCompletionAtKnownMoment() throws {
+        try checkEncode(
             Todo(id: nil, title: "Review the release notes", shouldMigrate: true,
                  start: day("2026-09-13"), ending: TodoEnding(moment: specMoment, kind: .done)),
             expecting: [
                 "@type": "Task",
+                "taskListIds": ["L0": true],
                 "title": "Review the release notes",
                 "start": "2026-09-13T00:00:00",
                 "showWithoutTime": true,
@@ -59,13 +65,14 @@ final class TaskCodecTests: XCTestCase {
         )
     }
 
-    func testEncodesSweptHabitualTodo() {
-        checkEncode(
+    func testEncodesSweptHabitualTodo() throws {
+        try checkEncode(
             Todo(id: nil, title: "Read the on-call log", shouldMigrate: false,
                  start: day("2026-09-12"), ending: TodoEnding(day: day("2026-09-12"), kind: .abandoned)),
             now: instant("2026-09-13T12:00:07Z"),
             expecting: [
                 "@type": "Task",
+                "taskListIds": ["L0": true],
                 "title": "Read the on-call log",
                 "start": "2026-09-12T00:00:00",
                 "showWithoutTime": true,
@@ -77,10 +84,34 @@ final class TaskCodecTests: XCTestCase {
         )
     }
 
+    // MARK: - Which list
+
+    func testUnknownCategoryFilesInTheDefaultList() throws {
+        try checkEncode(
+            Todo(id: nil, title: "T", shouldMigrate: true, start: day("2026-09-12"), categoryID: 99),
+            expecting: ["@type": "Task", "taskListIds": ["L0": true], "title": "T",
+                        "start": "2026-09-12T00:00:00", "showWithoutTime": true]
+        )
+    }
+
+    func testUnsentCategoryIsRefused() {
+        checkEncodeFails(
+            Todo(id: nil, title: "T", shouldMigrate: true, start: day("2026-09-12"), categoryID: 3),
+            in: lists, expecting: .categoryNotSynced("Unsent")
+        )
+    }
+
+    func testNoListsIsRefused() {
+        checkEncodeFails(
+            Todo(id: nil, title: "T", shouldMigrate: true, start: day("2026-09-12")),
+            in: TaskListIndex(entries: []), expecting: .noTaskList
+        )
+    }
+
     // MARK: - Encoding against an existing Task
 
-    func testReopeningClearsTheEnding() {
-        checkEncode(
+    func testReopeningClearsTheEnding() throws {
+        try checkEncode(
             Todo(id: nil, title: "T", shouldMigrate: true, start: day("2026-09-12")),
             existing: [
                 "progress": "completed",
@@ -88,31 +119,31 @@ final class TaskCodecTests: XCTestCase {
                 "nerfjournal.rjbs.cloud:endedAt": "2026-09-13",
             ],
             expecting: [
-                "@type": "Task", "title": "T", "start": "2026-09-12T00:00:00", "showWithoutTime": true,
+                "@type": "Task", "taskListIds": ["L0": true], "title": "T", "start": "2026-09-12T00:00:00", "showWithoutTime": true,
                 "progress": "needs-action",
             ]
         )
     }
 
-    func testForeignInProcessIsKept() {
-        checkEncode(
+    func testForeignInProcessIsKept() throws {
+        try checkEncode(
             Todo(id: nil, title: "T", shouldMigrate: true, start: day("2026-09-12")),
             existing: ["progress": "in-process"],
             expecting: [
-                "@type": "Task", "title": "T", "start": "2026-09-12T00:00:00", "showWithoutTime": true,
+                "@type": "Task", "taskListIds": ["L0": true], "title": "T", "start": "2026-09-12T00:00:00", "showWithoutTime": true,
                 "progress": "in-process",
             ]
         )
     }
 
-    func testDayOnlyEndingKeepsProgressUpdatedWhenUnchanged() {
-        checkEncode(
+    func testDayOnlyEndingKeepsProgressUpdatedWhenUnchanged() throws {
+        try checkEncode(
             Todo(id: nil, title: "T", shouldMigrate: true, start: day("2026-09-12"),
                  ending: TodoEnding(day: day("2026-09-12"), kind: .abandoned)),
             existing: ["progress": "cancelled", "progressUpdated": "2026-09-13T12:00:07Z"],
             now: instant("2026-10-01T00:00:00Z"),
             expecting: [
-                "@type": "Task", "title": "T", "start": "2026-09-12T00:00:00", "showWithoutTime": true,
+                "@type": "Task", "taskListIds": ["L0": true], "title": "T", "start": "2026-09-12T00:00:00", "showWithoutTime": true,
                 "progress": "cancelled",
                 "progressUpdated": "2026-09-13T12:00:07Z",
                 "nerfjournal.rjbs.cloud:endedAt": "2026-09-12",
@@ -120,14 +151,14 @@ final class TaskCodecTests: XCTestCase {
         )
     }
 
-    func testDayOnlyEndingStampsProgressUpdatedWhenProgressChanges() {
-        checkEncode(
+    func testDayOnlyEndingStampsProgressUpdatedWhenProgressChanges() throws {
+        try checkEncode(
             Todo(id: nil, title: "T", shouldMigrate: true, start: day("2026-09-12"),
                  ending: TodoEnding(day: day("2026-09-12"), kind: .done)),
             existing: ["progress": "cancelled", "progressUpdated": "2026-09-13T12:00:07Z"],
             now: instant("2026-10-01T00:00:00Z"),
             expecting: [
-                "@type": "Task", "title": "T", "start": "2026-09-12T00:00:00", "showWithoutTime": true,
+                "@type": "Task", "taskListIds": ["L0": true], "title": "T", "start": "2026-09-12T00:00:00", "showWithoutTime": true,
                 "progress": "completed",
                 "progressUpdated": "2026-10-01T00:00:00Z",
                 "nerfjournal.rjbs.cloud:endedAt": "2026-09-12",
@@ -135,10 +166,11 @@ final class TaskCodecTests: XCTestCase {
         )
     }
 
-    func testForeignKeywordsAndLinksSurviveAndOurCategoryIsReplaced() {
-        checkEncode(
+    func testForeignKeywordsAndLinksSurviveAndLegacyCategoryKeywordsGo() throws {
+        try checkEncode(
             Todo(id: nil, title: "T", shouldMigrate: true, start: day("2026-09-12"), categoryID: 2),
             existing: [
+                "taskListIds": ["L0": true, "L1": true],
                 "keywords": ["nerfjournal:category:Work": true, "nerfjournal:category:Stale": true, "urgent": true],
                 "links": [
                     "nerfjournal-external": ["@type": "Link", "href": "https://old.example/"],
@@ -146,8 +178,8 @@ final class TaskCodecTests: XCTestCase {
                 ],
             ],
             expecting: [
-                "@type": "Task", "title": "T", "start": "2026-09-12T00:00:00", "showWithoutTime": true,
-                "keywords": ["nerfjournal:category:Home": true, "urgent": true],
+                "@type": "Task", "taskListIds": ["L2": true], "title": "T", "start": "2026-09-12T00:00:00", "showWithoutTime": true,
+                "keywords": ["urgent": true],
                 "links": ["spec": ["@type": "Link", "href": "https://spec.example/"]],
             ]
         )
@@ -155,18 +187,18 @@ final class TaskCodecTests: XCTestCase {
 
     // MARK: - Round trips
 
-    func testRoundTrips() {
-        checkRoundTrip(Todo(id: 7, title: "Plain", shouldMigrate: true, start: day("2026-09-13")))
-        checkRoundTrip(Todo(id: 8, title: "Habit", shouldMigrate: false, start: day("2026-09-13"),
-                            categoryID: 2, externalURL: "https://example.com/"))
-        checkRoundTrip(Todo(id: 9, title: "Done", shouldMigrate: true, start: day("2026-09-13"),
-                            ending: TodoEnding(moment: specMoment, kind: .done), categoryID: 1))
-        checkRoundTrip(Todo(id: 10, title: "Swept", shouldMigrate: false, start: day("2026-09-12"),
-                            ending: TodoEnding(day: day("2026-09-12"), kind: .abandoned)))
-        checkRoundTrip(Todo(id: 11, title: "Done at Z", shouldMigrate: true, start: day("2026-09-13"),
-                            ending: TodoEnding(moment: Moment(instant: instant("2026-09-13T23:30:00Z"), offsetSeconds: 0), kind: .done)))
-        checkRoundTrip(Todo(id: 12, title: "Done in Tokyo", shouldMigrate: true, start: day("2026-09-13"),
-                            ending: TodoEnding(moment: Moment(instant: instant("2026-09-13T23:30:00Z"), offsetSeconds: 9 * 3600), kind: .done)))
+    func testRoundTrips() throws {
+        try checkRoundTrip(Todo(id: 7, title: "Plain", shouldMigrate: true, start: day("2026-09-13")))
+        try checkRoundTrip(Todo(id: 8, title: "Habit", shouldMigrate: false, start: day("2026-09-13"),
+                                categoryID: 2, externalURL: "https://example.com/"))
+        try checkRoundTrip(Todo(id: 9, title: "Done", shouldMigrate: true, start: day("2026-09-13"),
+                                ending: TodoEnding(moment: specMoment, kind: .done), categoryID: 1))
+        try checkRoundTrip(Todo(id: 10, title: "Swept", shouldMigrate: false, start: day("2026-09-12"),
+                                ending: TodoEnding(day: day("2026-09-12"), kind: .abandoned)))
+        try checkRoundTrip(Todo(id: 11, title: "Done at Z", shouldMigrate: true, start: day("2026-09-13"),
+                                ending: TodoEnding(moment: Moment(instant: instant("2026-09-13T23:30:00Z"), offsetSeconds: 0), kind: .done)))
+        try checkRoundTrip(Todo(id: 12, title: "Done in Tokyo", shouldMigrate: true, start: day("2026-09-13"),
+                                ending: TodoEnding(moment: Moment(instant: instant("2026-09-13T23:30:00Z"), offsetSeconds: 9 * 3600), kind: .done)))
     }
 
     // MARK: - Lenient reading
@@ -232,20 +264,27 @@ final class TaskCodecTests: XCTestCase {
                                     ending: TodoEnding(day: day("2026-09-13"), kind: .done)))
     }
 
-    func testCategoryKeywords() {
-        checkDecode(["title": "T", "start": "2026-09-13T00:00:00",
-                     "keywords": ["nerfjournal:category:Home": true, "nerfjournal:category:Work": true, "urgent": true]],
+    func testTaskListIdsDecideTheCategory() {
+        checkDecode(["title": "T", "start": "2026-09-13T00:00:00", "taskListIds": ["L2": true, "L1": true]],
                     expecting: Todo(id: 1, title: "T", shouldMigrate: true, start: day("2026-09-13"), categoryID: 1))
-        checkDecode(["title": "T", "start": "2026-09-13T00:00:00",
-                     "keywords": ["nerfjournal:category:Nope": true]],
+        checkDecode(["title": "T", "start": "2026-09-13T00:00:00", "taskListIds": ["L0": true, "L2": true]],
+                    expecting: Todo(id: 1, title: "T", shouldMigrate: true, start: day("2026-09-13"), categoryID: 2))
+        checkDecode(["title": "T", "start": "2026-09-13T00:00:00", "taskListIds": ["L0": true]],
+                    expecting: Todo(id: 1, title: "T", shouldMigrate: true, start: day("2026-09-13")))
+        checkDecode(["title": "T", "start": "2026-09-13T00:00:00", "taskListIds": ["L9": true]],
+                    expecting: Todo(id: 1, title: "T", shouldMigrate: true, start: day("2026-09-13")))
+        checkDecode(["title": "T", "start": "2026-09-13T00:00:00", "taskListIds": ["L1": false]],
                     expecting: Todo(id: 1, title: "T", shouldMigrate: true, start: day("2026-09-13")))
         checkDecode(["title": "T", "start": "2026-09-13T00:00:00",
-                     "keywords": ["nerfjournal:category:work": true]],
+                     "keywords": ["nerfjournal:category:Work": true]],
                     expecting: Todo(id: 1, title: "T", shouldMigrate: true, start: day("2026-09-13")))
-        checkCategoryNames(["keywords": ["nerfjournal:category:Nope": true, "nerfjournal:category:Work": true, "urgent": true]],
-                           expecting: ["Nope", "Work"])
-        checkCategoryNames(["keywords": [:]], expecting: [])
-        checkCategoryNames([:], expecting: [])
+    }
+
+    func testLegacyCategoryNames() {
+        checkLegacyNames(["keywords": ["nerfjournal:category:Nope": true, "nerfjournal:category:Work": true, "urgent": true]],
+                         expecting: ["Nope", "Work"])
+        checkLegacyNames(["keywords": [:]], expecting: [])
+        checkLegacyNames([:], expecting: [])
     }
 
     func testLinks() {
@@ -264,32 +303,38 @@ final class TaskCodecTests: XCTestCase {
     // MARK: - Helpers
 
     private func checkEncode(_ todo: Todo, existing: JSONValue? = nil, now: Date = instant("2026-01-01T00:00:00Z"),
-                             expecting expected: JSONValue, file: StaticString = #filePath, line: UInt = #line) {
-        let actual = TaskCodec.encode(todo, categories: categories, existing: existing, now: now)
+                             expecting expected: JSONValue, file: StaticString = #filePath, line: UInt = #line) throws {
+        let actual = try TaskCodec.encode(todo, lists: lists, existing: existing, now: now)
         XCTAssertEqual(actual, expected, file: file, line: line)
     }
 
-    private func checkEncodeNew(_ todo: Todo, uid: String, taskListId: String,
-                                expecting expected: JSONValue, file: StaticString = #filePath, line: UInt = #line) {
-        let actual = TaskCodec.encodeNew(todo, categories: categories, uid: uid, taskListId: taskListId)
+    private func checkEncodeNew(_ todo: Todo, uid: String,
+                                expecting expected: JSONValue, file: StaticString = #filePath, line: UInt = #line) throws {
+        let actual = try TaskCodec.encodeNew(todo, lists: lists, uid: uid)
         XCTAssertEqual(actual, expected, file: file, line: line)
+    }
+
+    private func checkEncodeFails(_ todo: Todo, in index: TaskListIndex, expecting expected: JournalSyncError,
+                                  file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertThrowsError(try TaskCodec.encode(todo, lists: index), file: file, line: line) { error in
+            XCTAssertEqual(String(describing: error), String(describing: expected), file: file, line: line)
+        }
     }
 
     private func checkDecode(_ task: JSONValue, expecting expected: Todo,
                              file: StaticString = #filePath, line: UInt = #line) {
-        let actual = TaskCodec.decode(task, id: expected.id, categories: categories, zone: newYork)
+        let actual = TaskCodec.decode(task, id: expected.id, lists: lists, zone: newYork)
         XCTAssertEqual(actual, expected, file: file, line: line)
     }
 
-    private func checkRoundTrip(_ todo: Todo, file: StaticString = #filePath, line: UInt = #line) {
-        let encoded = TaskCodec.encode(todo, categories: categories)
-        let decoded = TaskCodec.decode(encoded, id: todo.id, categories: categories, zone: newYork)
+    private func checkRoundTrip(_ todo: Todo, file: StaticString = #filePath, line: UInt = #line) throws {
+        let encoded = try TaskCodec.encode(todo, lists: lists)
+        let decoded = TaskCodec.decode(encoded, id: todo.id, lists: lists, zone: newYork)
         XCTAssertEqual(decoded, todo, file: file, line: line)
     }
 
-    private func checkCategoryNames(_ task: JSONValue, expecting expected: [String],
-                                    file: StaticString = #filePath, line: UInt = #line) {
-        XCTAssertEqual(TaskCodec.categoryNames(in: task).sorted(), expected, file: file, line: line)
+    private func checkLegacyNames(_ task: JSONValue, expecting expected: [String],
+                                  file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertEqual(TaskCodec.legacyCategoryNames(in: task).sorted(), expected, file: file, line: line)
     }
 }
-

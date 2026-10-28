@@ -41,15 +41,16 @@ server.  Waiting on JMAP for Tasks support in Cyrus IMAP.
 | Concept        | Lives on the server as          | Notes                       |
 |----------------|---------------------------------|-----------------------------|
 | Todo           | a Task                          | this document               |
-| Category       | a keyword on each Task          | color and order are local   |
+| Category       | a TaskList                      | the default list is "none"  |
 | JournalPage    | nothing                         | client-only saved view      |
 | TaskBundle     | nothing                         | client-only template        |
 | BundleTodo     | nothing                         | becomes a Task when applied |
 | Export group   | nothing                         | client-only                 |
 
-Only one TaskList is used for now.  Categories are keywords rather than
-TaskLists precisely so that splitting the journal across TaskLists
-remains possible later without recoding categories.
+Categories were keywords until 2026-10-28, with TaskLists reserved for
+some other division of the journal.  The only such division anyone
+could name was work versus personal, and that will be separate
+accounts, so the lists went to the categories (CATEGORY-LISTS-PLAN.md).
 
 ## The Todo to Task mapping
 
@@ -72,10 +73,12 @@ not otherwise used.
 ### taskListIds
 
 A Task must belong to at least one TaskList; the server rejects a
-create without one.  On create the client sets `taskListIds` to the
-single configured list.  It never otherwise reads or writes the
-property, so a Task another client has placed in several lists stays
-there.
+create without one.  `taskListIds` is how a Task carries its category
+(see "Categories: TaskLists" below): a categorized Task is in exactly
+its category's list, an uncategorized one is in exactly the default
+list.  The property is owned, so every write sets the whole map; a
+Task another client has placed in several lists is reduced to one the
+next time NerfJournal writes it.
 
 ### title
 
@@ -236,45 +239,53 @@ completed elsewhere should not appear on its first day's page as done.
 
 Per principle 5, the derived value is not written back.
 
-### Categories: keywords
+### Categories: TaskLists
 
-`Todo.categoryID` becomes a keyword on the Task.  Keywords are a map of
-String to Boolean; the key is
+A Category is a TaskList.  The list flagged `isDefault` is "no
+category"; every other list in the account is a category, with the
+list's `name`, `color` and `sortOrder` as the category's.  A Task's
+category is the list it is in:
 
-    "nerfjournal:category:<category name>"
-
-where the name is the local Category's `name`, exactly, and matching is
-case-sensitive.  A categorized Task carries exactly one such keyword.
-An uncategorized Task carries none.
-
-    "keywords": {
-        "nerfjournal:category:Work": true
-    }
-
-Category color and sort order remain local and are not synced.
+    "taskListIds": { "L-work": true }
 
 Rules:
 
-*   **On write**, the client sets its one category keyword and removes
-    any other keyword with the `nerfjournal:category:` prefix.  Keywords
-    without that prefix are left alone.
+*   **On write**, `taskListIds` is exactly the category's list, or
+    exactly the default list for an uncategorized todo.
 
-*   **Multiple category keywords on read**: the Task is assigned to the
-    matching Category with the lowest `sortOrder`.  The others are
-    ignored until the next write cleans them up.
+*   **On read**, a Task in several lists takes the category list with
+    the lowest `sortOrder` (then name).  A Task only in the default
+    list, or only in lists this client has not fetched, has no category.
 
-*   **Unknown category on read**: a keyword `nerfjournal:category:X`
-    where no local Category is named `X` causes the client to create a
-    Category named `X` with a default color, appended to the sort order.
-    This makes categories sync by name between two NerfJournal clients
-    without any category object on the server.  It is the one exception
-    to principle 5, and it writes only to local state.
+*   **The default list** is the one with `isDefault: true`.  The server
+    keeps that flag on exactly one list and moves it with
+    `onSuccessSetIsDefault`; NerfJournal only reads it.  If no list is
+    flagged, the first by `sortOrder` stands in.  If there are no lists
+    at all, there is nowhere to put a Task and creating one fails.
 
-*   **Renaming a Category** rewrites the keyword on every Task carrying
-    it, in a single JMAP set.
+*   **Color** is written as the CSS color name of the category's color,
+    which every NerfJournal color is.  On read, one of those names
+    matches directly, a `#rrggbb` value takes the nearest NerfJournal
+    color, and a missing or unreadable color is derived from the list's
+    name, so every client picks the same one.
 
-*   **Deleting a Category** removes its keyword from every Task carrying
-    it.
+*   **Creating a category** creates the list after the last category in
+    order and pushes it at once, since a Task cannot be filed in a list
+    that has no server id yet; until the push succeeds, filing a todo in
+    the new category is refused rather than silently filed in the
+    default list.
+
+*   **Renaming, recoloring or reordering** is a `TaskList/set` update of
+    the one property.
+
+*   **Deleting a category** moves its Tasks to the default list, pushes
+    that, then destroys the list.  Nothing is ever destroyed with
+    `onDestroyRemoveTasks`.
+
+Until 2026-10-28 categories were keywords, `nerfjournal:category:<name>`,
+with color and order local.  The legacy step strips those keywords as it
+files each Task in its list, and a write still drops any it finds.
+Keywords without that prefix are left alone.
 
 ### External URL: links
 
@@ -309,14 +320,14 @@ Standard:
 | Property          | Written | Read | Purpose                          |
 |-------------------|---------|------|----------------------------------|
 | `@type`           | yes     | yes  | always `"Task"`                  |
-| `taskListIds`     | create  | no   | the configured list              |
+| `taskListIds`     | yes     | yes  | category, as the list it is in   |
 | `uid`             | create  | no   | UUID                             |
 | `title`           | yes     | yes  | todo title                       |
 | `start`           | yes     | yes  | civil start day                  |
 | `showWithoutTime` | yes     | no   | always true                      |
 | `progress`        | yes     | yes  | pending / done / abandoned       |
 | `progressUpdated` | yes     | fallback | courtesy write, fallback read |
-| `keywords`        | yes     | yes  | category                         |
+| `keywords`        | yes     | no   | carried through; legacy category keywords dropped |
 | `links`           | yes     | yes  | external URL                     |
 | `created`         | no      | fallback | start day for foreign Tasks  |
 | `updated`         | no      | fallback | ending day for foreign Tasks |
@@ -335,10 +346,10 @@ A migrating todo, pending, in the Work category, with a URL:
     {
       "@type": "Task",
       "uid": "9d2f5b1e-3e4a-4c5b-8f7e-1a2b3c4d5e6f",
+      "taskListIds": { "L-work": true },
       "title": "Review the release notes",
       "start": "2026-09-13T00:00:00",
       "showWithoutTime": true,
-      "keywords": { "nerfjournal:category:Work": true },
       "links": {
         "nerfjournal-external": {
           "@type": "Link",
@@ -394,7 +405,7 @@ Each existing `todo` row becomes one Task:
 | `start`         | `start` + `showWithoutTime`                    |
 | `ending.kind`   | `progress`: done to `completed`, abandoned to `cancelled` |
 | `ending.day`, `ending.time` | `endedAt`: moment form when `time` is present, else day form |
-| `categoryID`    | `keywords` entry from the Category's name      |
+| `categoryID`    | `taskListIds`: the Category's list, else the default list |
 | `externalURL`   | `links["nerfjournal-external"]`                |
 
 `progressUpdated` is set to the ending instant for moment endings and
@@ -420,8 +431,8 @@ Observed on the prototype server, 2026-10-04, and relevant to the engine:
 *   Task/query reports `canCalculateChanges` false, so the engine must
     use Task/changes against the local cache rather than
     Task/queryChanges.
-*   There is no `keyword` filter condition, so categories are filtered
-    locally.  `progress` filters take an array of strings; `before` and
+*   Categories are filtered locally (the `inTaskList` filter exists but
+    the whole journal is cached anyway).  `progress` filters take an array of strings; `before` and
     `after` take a LocalDateTime, not a UTCDateTime.
 *   Unknown properties, prefixed or not, are stored and returned without
     validation.  Nothing on the server enforces this document.

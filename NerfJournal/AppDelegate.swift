@@ -25,15 +25,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         #endif
     }
 
-    // Adopts any todos a schema migration staged for the server, then keeps
-    // the engine syncing for the life of the process. Adoption needs the
-    // server (for the task list), so a launch without it logs and moves on;
-    // the next launch tries again. -- claude, 2026-10-28
+    // Adopts whatever a schema migration staged for the server, categories
+    // before todos since the todos are filed by category, then keeps the
+    // engine syncing for the life of the process. Adoption needs the server
+    // (new lists must get their ids), so a launch without it logs and moves
+    // on; the next launch tries again. -- claude, 2026-10-28
     private func startSync() {
         let sync = AppDatabase.shared.sync
         let log = syncLog
         syncTask = Task.detached {
             do {
+                if let report = try await sync.adoptLegacyCategories() {
+                    log.notice("adopted legacy categories: \(report.created) lists created, \(report.matched) matched, \(report.tasksMoved) tasks moved")
+                }
                 if let report = try await sync.adoptLegacyTodos() {
                     log.notice("adopted \(report.adopted) legacy todos; \(report.alreadyPresent) already present")
                 }
