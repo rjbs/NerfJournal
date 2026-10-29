@@ -37,16 +37,15 @@ private struct Rig {
 
 final class JournalSyncTests: XCTestCase {
 
-    func testSchemaIncludesJinxTablesAndStagesLegacyData() throws {
+    func testSchemaHasTheClientTablesAndJinxTables() throws {
         let db = try DatabaseQueue()
         try NerfSchema.migrate(db)
         let tables = try db.read { db in
-            try String.fetchAll(db, sql: "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
+            try String.fetchAll(db, sql: "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name != 'grdb_migrations' ORDER BY name")
         }
-        XCTAssertFalse(tables.contains("todo"), "v9 staged the todos as todo_legacy")
-        XCTAssertTrue(tables.contains("todo_legacy"))
-        XCTAssertFalse(tables.contains("category"), "v10 staged the categories as category_legacy")
-        XCTAssertTrue(tables.contains("category_legacy"))
+        let clientTables = tables.filter { !$0.hasPrefix("jinx_") }
+        XCTAssertEqual(clientTables, ["bundleTodo", "exportGroup", "exportGroupMember", "journalPage", "taskBundle"],
+                       "todos and categories live in the engine's tables, not their own")
         XCTAssertTrue(tables.contains("jinx_object"))
         XCTAssertTrue(tables.contains("jinx_pending"))
     }

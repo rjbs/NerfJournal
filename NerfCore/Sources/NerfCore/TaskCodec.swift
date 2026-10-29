@@ -15,9 +15,6 @@ public enum TaskCodec {
     public static let vendorPrefix = "nerfjournal.rjbs.cloud:"
     public static let autoCancelProperty = vendorPrefix + "autoCancel"
     public static let endedAtProperty = vendorPrefix + "endedAt"
-    // Categories were keywords until 2026-10-28; the legacy step strips
-    // these, and a write still drops any it finds.
-    public static let legacyCategoryKeywordPrefix = "nerfjournal:category:"
     public static let externalLinkKey = "nerfjournal-external"
 
     // The properties the encoding carries, and therefore the only ones a
@@ -83,11 +80,7 @@ public enum TaskCodec {
             task["progress"] = .string(existingProgress)
         }
 
-        var keywords = existing?["keywords"]?.objectValue ?? [:]
-        for key in keywords.keys where key.hasPrefix(legacyCategoryKeywordPrefix) {
-            keywords[key] = nil
-        }
-        if !keywords.isEmpty {
+        if let keywords = existing?["keywords"]?.objectValue, !keywords.isEmpty {
             task["keywords"] = .object(keywords)
         }
 
@@ -160,16 +153,6 @@ public enum TaskCodec {
             categoryID: lists.categoryID(forListIds: task["taskListIds"]),
             externalURL: externalURL(of: task)
         )
-    }
-
-    // Every category name the Task's legacy keywords claim, in no
-    // particular order. Only the legacy step reads these.
-    public static func legacyCategoryNames(in task: JSONValue) -> [String] {
-        guard let keywords = task["keywords"]?.objectValue else { return [] }
-        return keywords.compactMap { key, value in
-            guard value == .bool(true), key.hasPrefix(legacyCategoryKeywordPrefix) else { return nil }
-            return String(key.dropFirst(legacyCategoryKeywordPrefix.count))
-        }
     }
 
     // MARK: - Pieces

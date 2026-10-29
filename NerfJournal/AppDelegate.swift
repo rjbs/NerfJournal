@@ -2,7 +2,6 @@ import AppKit
 import NerfCore
 import Carbon.HIToolbox
 import Combine
-import os
 import SwiftUI
 
 @MainActor
@@ -13,7 +12,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var quickNoteStore: QuickNoteStore?
     private var cancellables = Set<AnyCancellable>()
     private var syncTask: Task<Void, Never>?
-    private let syncLog = Logger(subsystem: "org.rjbs.nerfjournal", category: "sync")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         startSync()
@@ -25,25 +23,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         #endif
     }
 
-    // Adopts whatever a schema migration staged for the server, categories
-    // before todos since the todos are filed by category, then keeps the
-    // engine syncing for the life of the process. Adoption needs the server
-    // (new lists must get their ids), so a launch without it logs and moves
-    // on; the next launch tries again. -- claude, 2026-10-28
+    // Keeps the engine syncing for the life of the process. -- claude, 2026-10-28
     private func startSync() {
         let sync = AppDatabase.shared.sync
-        let log = syncLog
         syncTask = Task.detached {
-            do {
-                if let report = try await sync.adoptLegacyCategories() {
-                    log.notice("adopted legacy categories: \(report.created) lists created, \(report.matched) matched, \(report.tasksMoved) tasks moved")
-                }
-                if let report = try await sync.adoptLegacyTodos() {
-                    log.notice("adopted \(report.adopted) legacy todos; \(report.alreadyPresent) already present")
-                }
-            } catch {
-                log.error("legacy adoption failed: \(String(describing: error))")
-            }
             await sync.engine.run()
         }
     }

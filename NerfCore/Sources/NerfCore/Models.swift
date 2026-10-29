@@ -1,15 +1,8 @@
 import Foundation
 import GRDB
 
-public enum CategoryColor: String, CaseIterable, Codable, DatabaseValueConvertible, Sendable {
+public enum CategoryColor: String, CaseIterable, Codable, Sendable {
     case blue, red, green, orange, purple, pink, teal, yellow
-
-    public var databaseValue: DatabaseValue { rawValue.databaseValue }
-
-    public static func fromDatabaseValue(_ dbValue: DatabaseValue) -> CategoryColor? {
-        guard let s = String.fromDatabaseValue(dbValue) else { return nil }
-        return CategoryColor(rawValue: s)
-    }
 
     // A TaskList's color is a CSS color, a name or #rrggbb. Every case here
     // is itself a CSS color name, so writing is just the raw value. Reading
@@ -147,27 +140,16 @@ public struct JournalPage: Identifiable, Codable, FetchableRecord, MutablePersis
         self.id = id
         self.date = date
     }
-
-    // Custom decode so pre-CivilDate exports (an ISO instant in `date`) still
-    // import; encode stays synthesized. -- claude, 2026-07-25
-    private enum CodingKeys: String, CodingKey { case id, date }
-
-    public init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        id = try c.decodeIfPresent(Int64.self, forKey: .id)
-        date = try CivilDate.lenientlyDecode(c, forKey: .date)
-    }
 }
 
-// Completion or abandonment record. Stored as a JSON string in SQLite
-// (via DatabaseValueConvertible); encoded as a nested object in export JSON
-// (via Codable). These are distinct code paths with no conflict.
+// Completion or abandonment record, encoded as a nested object in export
+// JSON and carried on the server as the Task's progress and endedAt.
 //
 // `day` (the civil day it ended) is always present — the ordering/membership
 // spine. `time` is the precise moment when we know it (a genuine completion),
 // and nil when we don't: resolving something on a past page, or the auto-abandon
 // sweep, both of which record only the day. -- claude, 2026-07-25
-public struct TodoEnding: Codable, DatabaseValueConvertible, Hashable, Sendable {
+public struct TodoEnding: Codable, Hashable, Sendable {
     public enum Kind: String, Codable, Sendable { case done, abandoned }
     public var day: CivilDate
     public var time: Moment?
@@ -183,51 +165,14 @@ public struct TodoEnding: Codable, DatabaseValueConvertible, Hashable, Sendable 
     public init(moment: Moment, kind: Kind) {
         self.init(day: moment.civilDate, time: moment, kind: kind)
     }
-
-    // Encode stays synthesized from these three keys. Pre-CivilDate endings
-    // stored a single instant under `date`; we read that legacy shape in New York
-    // and split it into day + (real) time via the same sentinel logic the DB
-    // migration uses. -- claude, 2026-07-25
-    private enum CodingKeys: String, CodingKey { case day, time, kind }
-    private enum LegacyKeys: String, CodingKey { case date, kind }
-
-    public init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        if let day = try c.decodeIfPresent(CivilDate.self, forKey: .day) {
-            self.day = day
-            self.time = try c.decodeIfPresent(Moment.self, forKey: .time)
-            self.kind = try c.decode(Kind.self, forKey: .kind)
-        } else {
-            let lc = try decoder.container(keyedBy: LegacyKeys.self)
-            let instant = try lc.decode(Date.self, forKey: .date)
-            let split = LegacyEnding.classify(
-                instant: instant, assuming: TimeZone(identifier: "America/New_York")!)
-            self.day = split.day
-            self.time = split.moment
-            self.kind = try lc.decode(Kind.self, forKey: .kind)
-        }
-    }
-
-    public var databaseValue: DatabaseValue {
-        let enc = JSONEncoder()
-        enc.dateEncodingStrategy = .iso8601
-        let data = try! enc.encode(self)
-        return String(data: data, encoding: .utf8)!.databaseValue
-    }
-
-    public static func fromDatabaseValue(_ dbValue: DatabaseValue) -> TodoEnding? {
-        guard let s = String.fromDatabaseValue(dbValue),
-              let d = s.data(using: .utf8) else { return nil }
-        let dec = JSONDecoder()
-        dec.dateDecodingStrategy = .iso8601
-        return try? dec.decode(TodoEnding.self, from: d)
-    }
 }
 
 // A todo spans journal pages naturally: it is visible on any day from its
 // `start` date until the day it ends. No per-page duplication; "migration"
-// is an emergent display property, not a status value.
-public struct Todo: Identifiable, Codable, FetchableRecord, MutablePersistableRecord, Equatable, Sendable {
+// is an emergent display property, not a status value. A todo is a Task
+// on the server, decoded by TaskCodec; its id is the sync engine's local
+// key for that Task.
+public struct Todo: Identifiable, Codable, Equatable, Sendable {
     public var id: Int64?
     public var title: String
     public var shouldMigrate: Bool
@@ -247,51 +192,9 @@ public struct Todo: Identifiable, Codable, FetchableRecord, MutablePersistableRe
         self.externalURL = externalURL
     }
 
-    public static let databaseTableName = "todo"
-
-    public mutating func didInsert(_ inserted: InsertionSuccess) {
-        id = inserted.rowID
-    }
-
     public var isPending:   Bool { ending == nil }
     public var isDone:      Bool { ending?.kind == .done }
     public var isAbandoned: Bool { ending?.kind == .abandoned }
-}
-
-extension Todo {
-    // Custom coding in an extension so the memberwise init is still synthesized.
-    // Decodes `start` first; falls back to `added` so JSON exported before the
-    // column rename still imports correctly. Encodes only `start`.
-    // -- claude, 2026-03-03
-    private enum CodingKeys: String, CodingKey {
-        case id, title, shouldMigrate, start, added, ending, categoryID, externalURL
-    }
-
-    public init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        id            = try c.decodeIfPresent(Int64.self,      forKey: .id)
-        title         = try c.decode(String.self,              forKey: .title)
-        shouldMigrate = try c.decode(Bool.self,                forKey: .shouldMigrate)
-        if c.contains(.start) {
-            start = try CivilDate.lenientlyDecode(c, forKey: .start)
-        } else {
-            start = try CivilDate.lenientlyDecode(c, forKey: .added)
-        }
-        ending        = try c.decodeIfPresent(TodoEnding.self, forKey: .ending)
-        categoryID    = try c.decodeIfPresent(Int64.self,      forKey: .categoryID)
-        externalURL   = try c.decodeIfPresent(String.self,     forKey: .externalURL)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encodeIfPresent(id,           forKey: .id)
-        try c.encode(title,                 forKey: .title)
-        try c.encode(shouldMigrate,         forKey: .shouldMigrate)
-        try c.encode(start,                 forKey: .start)
-        try c.encodeIfPresent(ending,       forKey: .ending)
-        try c.encodeIfPresent(categoryID,   forKey: .categoryID)
-        try c.encodeIfPresent(externalURL,  forKey: .externalURL)
-    }
 }
 
 public struct ExportGroup: Identifiable, Codable, FetchableRecord, MutablePersistableRecord, Sendable {

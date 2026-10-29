@@ -5,8 +5,8 @@ import JinxJSON
 import JinxStore
 
 // A todo in an export file: the Todo's own fields plus the uid its Task
-// carries, flattened into one object so files written before the JMAP
-// backend (which have no uid) still decode. -- claude, 2026-10-28
+// carries, flattened into one object. The uid is nil only for a Task
+// another client created without one. -- claude, 2026-10-28
 public struct ExportedTodo: Codable, Sendable, Equatable {
     public var uid: String?
     public var todo: Todo
@@ -77,9 +77,8 @@ extension JournalSync {
     // file's (bundle todos pointed at the lists) and adopts every todo
     // whose uid the store does not already hold. New lists must reach the
     // server before todos can be filed in them, so the import syncs in the
-    // middle. A todo with no uid (a file from before the JMAP backend)
-    // gets a fresh one, so importing such a file twice duplicates its
-    // todos; that is the price of having no identity to match on.
+    // middle. A todo with no uid gets a fresh one, so importing it twice
+    // duplicates it; that is the price of having no identity to match on.
     @discardableResult
     public func importSnapshot(_ snapshot: DatabaseExport) async throws -> ImportReport {
         var index = try await listIndex()

@@ -62,29 +62,6 @@ final class CivilDateTests: XCTestCase {
         checkMomentCivilDay(instant: "2026-07-24T02:00:00Z", offsetSeconds: -4 * 3600, isDay: "2026-07-23") // 22:00 EDT prev day
     }
 
-    // MARK: - LegacyEnding.classify: sentinel detection (assumes New York)
-
-    func testNoonSentinelBecomesDayOnly() {
-        // Noon EDT = 16:00 UTC; noon EST = 17:00 UTC. Both are the done-marker hack.
-        checkEndingIsDayOnly(instant: "2026-07-09T16:00:00Z", isDay: "2026-07-09")
-        checkEndingIsDayOnly(instant: "2026-01-09T17:00:00Z", isDay: "2026-01-09")
-    }
-
-    func testEndOfDaySentinelBecomesDayOnly() {
-        // 23:59:59 EDT on the 9th = 03:59:59 UTC on the 10th.
-        checkEndingIsDayOnly(instant: "2026-07-10T03:59:59Z", isDay: "2026-07-09")
-    }
-
-    func testRealCompletionKeepsMomentAndOffset() {
-        // 18:47:23 UTC = 14:47:23 EDT — a genuine click, not a sentinel.
-        checkEndingIsMoment(instant: "2026-07-09T18:47:23Z", isDay: "2026-07-09", offsetSeconds: -4 * 3600)
-    }
-
-    func testNoonOnADifferentSecondIsStillAMoment() {
-        // 12:00:01 EDT (16:00:01 UTC) is one second off the sentinel — a real time.
-        checkEndingIsMoment(instant: "2026-07-09T16:00:01Z", isDay: "2026-07-09", offsetSeconds: -4 * 3600)
-    }
-
     // MARK: - Helpers
 
     private func checkISO(_ iso: String, file: StaticString = #filePath, line: UInt = #line) {
@@ -117,20 +94,5 @@ final class CivilDateTests: XCTestCase {
                                      file: StaticString = #filePath, line: UInt = #line) {
         let m = Moment(instant: instant(iso), offsetSeconds: offsetSeconds)
         XCTAssertEqual(m.civilDate, CivilDate(iso: expected)!, file: file, line: line)
-    }
-
-    private func checkEndingIsDayOnly(instant iso: String, isDay expected: String,
-                                      file: StaticString = #filePath, line: UInt = #line) {
-        let r = LegacyEnding.classify(instant: instant(iso), assuming: tz("America/New_York"))
-        XCTAssertEqual(r.day, CivilDate(iso: expected)!, file: file, line: line)
-        XCTAssertNil(r.moment, "expected \(iso) to be a day-only sentinel", file: file, line: line)
-    }
-
-    private func checkEndingIsMoment(instant iso: String, isDay expected: String, offsetSeconds: Int,
-                                     file: StaticString = #filePath, line: UInt = #line) {
-        let r = LegacyEnding.classify(instant: instant(iso), assuming: tz("America/New_York"))
-        XCTAssertEqual(r.day, CivilDate(iso: expected)!, file: file, line: line)
-        XCTAssertEqual(r.moment?.offsetSeconds, offsetSeconds, file: file, line: line)
-        XCTAssertEqual(r.moment?.instant, instant(iso), file: file, line: line)
     }
 }

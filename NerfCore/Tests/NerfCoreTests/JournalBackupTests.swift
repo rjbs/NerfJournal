@@ -124,20 +124,6 @@ final class JournalBackupTests: XCTestCase {
         XCTAssertEqual(todos.first { $0.title == "A" }?.categoryID, work)
     }
 
-    func testImportOfPreJMAPFileGivesTodosFreshUids() async throws {
-        let rig = try Rig()
-        let legacy = """
-        {"version": 8, "exportedAt": "2026-09-13T12:00:00Z", "categories": [], "taskBundles": [],
-         "bundleTodos": [], "journalPages": [],
-         "todos": [{"id": 5, "title": "Old", "shouldMigrate": true, "start": "2026-09-13"}]}
-        """
-        let report = try await rig.sync.importData(Data(legacy.utf8))
-        XCTAssertEqual(report, ImportReport(adopted: 1, alreadyPresent: 0))
-        let synced = try await TaskReader(sync: rig.sync).syncedTodos()
-        XCTAssertEqual(synced.map(\.todo.title), ["Old"])
-        XCTAssertNotNil(synced[0].uid)
-    }
-
     func testResetEmptiesTheClientAndLeavesTheServerAlone() async throws {
         let rig = try Rig()
         _ = try await rig.seed()

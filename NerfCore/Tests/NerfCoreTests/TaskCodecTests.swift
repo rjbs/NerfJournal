@@ -166,12 +166,12 @@ final class TaskCodecTests: XCTestCase {
         )
     }
 
-    func testForeignKeywordsAndLinksSurviveAndLegacyCategoryKeywordsGo() throws {
+    func testForeignKeywordsAndLinksSurviveAndListsAreReplaced() throws {
         try checkEncode(
             Todo(id: nil, title: "T", shouldMigrate: true, start: day("2026-09-12"), categoryID: 2),
             existing: [
                 "taskListIds": ["L0": true, "L1": true],
-                "keywords": ["nerfjournal:category:Work": true, "nerfjournal:category:Stale": true, "urgent": true],
+                "keywords": ["urgent": true, "theirs": true],
                 "links": [
                     "nerfjournal-external": ["@type": "Link", "href": "https://old.example/"],
                     "spec": ["@type": "Link", "href": "https://spec.example/"],
@@ -179,7 +179,7 @@ final class TaskCodecTests: XCTestCase {
             ],
             expecting: [
                 "@type": "Task", "taskListIds": ["L2": true], "title": "T", "start": "2026-09-12T00:00:00", "showWithoutTime": true,
-                "keywords": ["urgent": true],
+                "keywords": ["urgent": true, "theirs": true],
                 "links": ["spec": ["@type": "Link", "href": "https://spec.example/"]],
             ]
         )
@@ -275,16 +275,6 @@ final class TaskCodecTests: XCTestCase {
                     expecting: Todo(id: 1, title: "T", shouldMigrate: true, start: day("2026-09-13")))
         checkDecode(["title": "T", "start": "2026-09-13T00:00:00", "taskListIds": ["L1": false]],
                     expecting: Todo(id: 1, title: "T", shouldMigrate: true, start: day("2026-09-13")))
-        checkDecode(["title": "T", "start": "2026-09-13T00:00:00",
-                     "keywords": ["nerfjournal:category:Work": true]],
-                    expecting: Todo(id: 1, title: "T", shouldMigrate: true, start: day("2026-09-13")))
-    }
-
-    func testLegacyCategoryNames() {
-        checkLegacyNames(["keywords": ["nerfjournal:category:Nope": true, "nerfjournal:category:Work": true, "urgent": true]],
-                         expecting: ["Nope", "Work"])
-        checkLegacyNames(["keywords": [:]], expecting: [])
-        checkLegacyNames([:], expecting: [])
     }
 
     func testLinks() {
@@ -331,10 +321,5 @@ final class TaskCodecTests: XCTestCase {
         let encoded = try TaskCodec.encode(todo, lists: lists)
         let decoded = TaskCodec.decode(encoded, id: todo.id, lists: lists, zone: newYork)
         XCTAssertEqual(decoded, todo, file: file, line: line)
-    }
-
-    private func checkLegacyNames(_ task: JSONValue, expecting expected: [String],
-                                  file: StaticString = #filePath, line: UInt = #line) {
-        XCTAssertEqual(TaskCodec.legacyCategoryNames(in: task).sorted(), expected, file: file, line: line)
     }
 }
