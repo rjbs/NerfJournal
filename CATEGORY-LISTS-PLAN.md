@@ -1,5 +1,9 @@
 # Plan: categories become TaskLists
 
+Historical. The cutover ran on 2026-10-28, and the legacy step (schema
+v10, `adoptLegacyCategories`) was removed from the codebase the same day,
+since the one installation is on the current version.
+
 Companion to MIGRATION-PLAN.md, which moved todos onto a JMAP for Tasks
 server with categories encoded as a keyword on each Task.  This plan
 replaces that encoding: each category becomes a TaskList, and a Task's

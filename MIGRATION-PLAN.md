@@ -1,5 +1,9 @@
 # Migration plan: SQLite todos to JMAP Tasks via Jinx
 
+Historical. The migration ran on 2026-10-28, and the legacy-adoption
+code and schema migrations it describes were removed from the codebase
+the same day, since the one installation is on the current version.
+
 Companion to JMAP-SPEC.md (the encoding) and SYNC-DESIGN.md (the engine
 requirements, implemented by Jinx).  This is the ordered list of
 deliverable chunks for NerfJournal.  Each is mergeable on its own and

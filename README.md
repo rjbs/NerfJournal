@@ -73,13 +73,12 @@ applied.
 ## Architecture
 
 - **`AppDatabase`** — wraps a GRDB `DatabaseQueue`, owns the SQLite
-  file, runs schema migrations, and builds the process's one
+  file, creates the schema, and builds the process's one
   `JournalSync`. The file lives under the app's sandbox container:
   `~/Library/Containers/org.rjbs.nerfjournal/Data/Library/Application Support/NerfJournal/journal.sqlite`
   and holds both the client-only tables and the sync engine's `jinx_`
-  tables. `AppDelegate` starts the engine at launch: it adopts any
-  todos a migration staged for the server, then runs push, pull,
-  EventSource push notifications, and journal tailing until quit.
+  tables. `AppDelegate` starts the engine at launch, which runs push,
+  pull, EventSource push notifications, and journal tailing until quit.
 - **`PageStore`** — `@MainActor ObservableObject` that publishes the
   current page's todos and future-scheduled todos (`futureTodos`),
   and exposes mutating actions: start today, complete/uncomplete/abandon/
@@ -135,11 +134,11 @@ fetches its tasks again.
 
 `NerfCore/` is a Swift package holding everything the app and the CLI
 both need and nothing that is UI: `CivilDate` and `Moment`, the record
-types, the schema migrations (`NerfSchema`), the export snapshot type,
+types, the schema (`NerfSchema`), the export snapshot type,
 the quick-entry date parser, and the whole JMAP side: `TaskCodec` (the
 Todo-to-Task encoding from `JMAP-SPEC.md`), `TaskListIndex` (the
 lists as categories), `JournalSync` (the Jinx engine assembled for the
-journal, plus legacy adoption, export, import, and reset),
+journal, plus export, import, and reset),
 `TaskReader`, `TaskWriter`, and `CategoryWriter`.
 It depends on [Jinx](../Jinx), expected as a sibling checkout at
 `../Jinx`. The app links NerfCore as a local package dependency; the
@@ -291,10 +290,10 @@ Roughly in priority order:
 
 NerfCore has a test suite (`cd NerfCore && swift test`): the date types,
 the Task codec against the spec's worked examples and every lenient-read
-rule, and the engine wiring, legacy adoption, reader, writer, category
-sync, and export/import/reset, all against Jinx's in-process scripted
-JMAP server. Test cases are written as calls to named helpers that take
-the inputs and expected outputs, with the rig construction hidden.
+rule, and the engine wiring, list index, reader, writers, and
+export/import/reset, all against Jinx's in-process scripted JMAP
+server. Test cases are written as calls to named helpers that take the
+inputs and expected outputs, with the rig construction hidden.
 
 The app itself has no automated tests. The architecture is amenable to
 them; here is where to start.
@@ -309,9 +308,6 @@ or use `await MainActor.run { ... }`.
 
 **Export tests** — `exportPageHTML` and `exportPageMrkdwn` are pure functions;
 exercise them with known todo/category fixtures and assert the output strings.
-
-**Migration tests** — create a pre-migration DB via raw SQL, run the migrator,
-verify the target tables exist and any preserved data survived correctly.
 
 **UI tests** (`XCUITest`) — slow, brittle, and require the app to inject a test
 database via a launch argument. Probably not worth the effort for a personal app.

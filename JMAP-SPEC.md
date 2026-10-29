@@ -282,10 +282,8 @@ Rules:
     that, then destroys the list.  Nothing is ever destroyed with
     `onDestroyRemoveTasks`.
 
-Until 2026-10-28 categories were keywords, `nerfjournal:category:<name>`,
-with color and order local.  The legacy step strips those keywords as it
-files each Task in its list, and a write still drops any it finds.
-Keywords without that prefix are left alone.
+Keywords are not NerfJournal's; a write carries them through untouched.
+(Until 2026-10-28 categories were keywords, `nerfjournal:category:<name>`.)
 
 ### External URL: links
 
@@ -392,24 +390,6 @@ A page for civil day D shows every Task with start day on or before D
 that is either pending or has an ending day on or after D.  The future
 log for D is every pending Task with start day after D.  Both are
 evaluated against the local cache; neither needs a server-side query.
-
-## One-time migration from SQLite
-
-Each existing `todo` row becomes one Task:
-
-| SQLite column   | Task property                                  |
-|-----------------|------------------------------------------------|
-| `id`            | dropped; the new JMAP id is recorded locally   |
-| `title`         | `title`                                        |
-| `shouldMigrate` | `nerfjournal.rjbs.cloud:autoCancel` = NOT it   |
-| `start`         | `start` + `showWithoutTime`                    |
-| `ending.kind`   | `progress`: done to `completed`, abandoned to `cancelled` |
-| `ending.day`, `ending.time` | `endedAt`: moment form when `time` is present, else day form |
-| `categoryID`    | `taskListIds`: the Category's list, else the default list |
-| `externalURL`   | `links["nerfjournal-external"]`                |
-
-`progressUpdated` is set to the ending instant for moment endings and
-omitted for day-only endings, since no true instant exists.
 
 ## Left to the sync engine
 
