@@ -229,20 +229,23 @@ public enum TaskCodec {
         parseInternetDateTime(s)
     }
 
+    // Date.ISO8601FormatStyle rather than ISO8601DateFormatter: every read
+    // decodes every Task, and the formatter cost more than a hundred
+    // microseconds just to construct and tens more per parse, which over
+    // a few thousand ended Tasks was most of a CLI run. The style is a
+    // Sendable value, so one can be shared without ceremony, and parses
+    // in about a microsecond. It takes a Z or an offset, with or without
+    // fractional seconds, and rejects a bare day or a zoneless time, as
+    // the formatter did. -- claude, 2026-10-29
+    private static let internetDateTime = Date.ISO8601FormatStyle(includingFractionalSeconds: false)
+    private static let fractionalInternetDateTime = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+
     private static func parseInternetDateTime(_ s: String) -> Date? {
-        let plain = ISO8601DateFormatter()
-        plain.formatOptions = [.withInternetDateTime]
-        if let date = plain.date(from: s) { return date }
-        let fractional = ISO8601DateFormatter()
-        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return fractional.date(from: s)
+        (try? internetDateTime.parse(s)) ?? (try? fractionalInternetDateTime.parse(s))
     }
 
     static func utcDateTime(_ instant: Date) -> String {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime]
-        f.timeZone = TimeZone(secondsFromGMT: 0)
-        return f.string(from: instant)
+        internetDateTime.format(instant)
     }
 
     // The moment at its own offset, so the string's day is the Moment's
