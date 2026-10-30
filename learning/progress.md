@@ -20,6 +20,6 @@ nav_order: 3
 | 11 | The Command-Line Tool: swift-argument-parser | written |
 | 12 | Swift 6: Strict Concurrency by Default | written |
 | 13 | Packages, Modules, and Tests | written |
-| — | Coda: The Software Moved On | not started |
+| — | Coda: The Software Moved On | written |
 
 ## Notes
