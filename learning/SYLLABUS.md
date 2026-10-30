@@ -11,8 +11,7 @@ learning Swift and SwiftUI using NerfJournal as the working example throughout.
 
 ## How This Works
 
-Each unit lives in its own file in this directory. When you're ready to begin a
-unit, ask Claude to generate the chapter. Each chapter follows this structure:
+Each unit lives in its own file in this directory and follows this structure:
 
 - **Introduction** — what the unit covers and why it matters now
 - **Concepts** — explanation tied directly to how the concept appears in NerfJournal,
@@ -20,8 +19,6 @@ unit, ask Claude to generate the chapter. Each chapter follows this structure:
 - **Reading** — links to Apple docs, swift.org, WWDC sessions, and other resources
 - **Code tour** — specific files and line ranges to read and understand
 - **Exercises** — optional hands-on experiments; skip freely, but at least read them
-
-Progress is tracked in `progress.md`.
 
 ---
 
