@@ -15,13 +15,6 @@ public enum TaskCodec {
     public static let vendorPrefix = "nerfjournal.semiotic.systems:"
     public static let autoCancelProperty = vendorPrefix + "autoCancel"
     public static let endedAtProperty = vendorPrefix + "endedAt"
-
-    // The prefix before 2026-10-30. Read as a fallback and owned so that
-    // any write strips it; gone once the server has been swept.
-    // -- claude, 2026-10-30
-    static let legacyVendorPrefix = "nerfjournal.rjbs.cloud:"
-    static let legacyAutoCancelProperty = legacyVendorPrefix + "autoCancel"
-    static let legacyEndedAtProperty = legacyVendorPrefix + "endedAt"
     public static let externalLinkKey = "nerfjournal-external"
 
     // The properties the encoding carries, and therefore the only ones a
@@ -31,7 +24,6 @@ public enum TaskCodec {
         "@type", "title", "start", "showWithoutTime", "taskListIds",
         "progress", "progressUpdated", "keywords", "links",
         autoCancelProperty, endedAtProperty,
-        legacyAutoCancelProperty, legacyEndedAtProperty,
     ]
 
     // MARK: - Encoding
@@ -140,12 +132,12 @@ public enum TaskCodec {
         zone: TimeZone = .current
     ) -> Todo {
         let start = startDay(of: task, zone: zone)
-        let shouldMigrate = (task[autoCancelProperty] ?? task[legacyAutoCancelProperty]) != .bool(true)
+        let shouldMigrate = task[autoCancelProperty] != .bool(true)
 
         var ending: TodoEnding?
         if let progress = task["progress"]?.stringValue, isEnded(progress: progress) {
             let kind: TodoEnding.Kind = progress == "completed" ? .done : .abandoned
-            if let endedAt = (task[endedAtProperty] ?? task[legacyEndedAtProperty])?.stringValue, let parsed = parseEndedAt(endedAt) {
+            if let endedAt = task[endedAtProperty]?.stringValue, let parsed = parseEndedAt(endedAt) {
                 ending = TodoEnding(day: parsed.day, time: parsed.time, kind: kind)
             } else {
                 ending = TodoEnding(day: fallbackEndingDay(of: task, start: start, zone: zone), kind: kind)

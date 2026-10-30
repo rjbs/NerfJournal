@@ -1,6 +1,5 @@
 import XCTest
 import JinxJSON
-import JinxPatch
 import JinxStore
 import NerfCore
 
@@ -291,41 +290,7 @@ final class TaskCodecTests: XCTestCase {
                     expecting: Todo(id: 1, title: "T", shouldMigrate: true, start: day("2026-09-13")))
     }
 
-    // MARK: - The prefix before 2026-10-30
-
-    func testLegacyPrefixIsReadAndStrippedOnWrite() throws {
-        checkDecode(["title": "T", "start": "2026-09-12T00:00:00", "progress": "cancelled",
-                     "nerfjournal.rjbs.cloud:autoCancel": true, "nerfjournal.rjbs.cloud:endedAt": "2026-09-12"],
-                    expecting: Todo(id: 1, title: "T", shouldMigrate: false, start: day("2026-09-12"),
-                                    ending: TodoEnding(day: day("2026-09-12"), kind: .abandoned)))
-        // The new name wins when both are present.
-        checkDecode(["title": "T", "start": "2026-09-12T00:00:00", "progress": "cancelled",
-                     "nerfjournal.semiotic.systems:endedAt": "2026-09-13", "nerfjournal.rjbs.cloud:endedAt": "2026-09-12"],
-                    expecting: Todo(id: 1, title: "T", shouldMigrate: true, start: day("2026-09-12"),
-                                    ending: TodoEnding(day: day("2026-09-13"), kind: .abandoned)))
-        try checkOwnedMerge(
-            Todo(id: nil, title: "T", shouldMigrate: false, start: day("2026-09-12"),
-                 ending: TodoEnding(day: day("2026-09-12"), kind: .abandoned)),
-            existing: ["uid": "u", "progress": "cancelled", "progressUpdated": "2026-09-13T12:00:07Z",
-                       "nerfjournal.rjbs.cloud:autoCancel": true, "nerfjournal.rjbs.cloud:endedAt": "2026-09-12"],
-            expecting: ["@type": "Task", "uid": "u", "taskListIds": ["L0": true], "title": "T",
-                        "start": "2026-09-12T00:00:00", "showWithoutTime": true,
-                        "progress": "cancelled", "progressUpdated": "2026-09-13T12:00:07Z",
-                        "nerfjournal.semiotic.systems:autoCancel": true,
-                        "nerfjournal.semiotic.systems:endedAt": "2026-09-12"]
-        )
-    }
-
     // MARK: - Helpers
-
-    // The Task as the writer stores it: `existing` with the owned
-    // properties replaced by the encoding of `todo`.
-    private func checkOwnedMerge(_ todo: Todo, existing: JSONValue, expecting expected: JSONValue,
-                                 file: StaticString = #filePath, line: UInt = #line) throws {
-        let encoding = try TaskCodec.encode(todo, lists: lists, existing: existing)
-        let actual = try existing.mergingOwnedProperties(TaskCodec.ownedProperties, from: encoding)
-        XCTAssertEqual(actual, expected, file: file, line: line)
-    }
 
 
     private func checkEncode(_ todo: Todo, existing: JSONValue? = nil, now: Date = instant("2026-01-01T00:00:00Z"),
