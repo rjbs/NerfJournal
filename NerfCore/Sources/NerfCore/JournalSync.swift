@@ -28,23 +28,44 @@ public struct SyncSettings: Sendable, Hashable {
     public static let sessionURLEnvironmentKey = "NERF_JMAP_URL"
     public static let accountIdEnvironmentKey = "NERF_JMAP_ACCOUNT"
 
-    public static func from(_ defaults: UserDefaults) -> SyncSettings {
-        var settings = prototype
-        if let s = defaults.string(forKey: sessionURLDefaultsKey), let url = URL(string: s) {
-            settings.sessionURL = url
-        }
-        if let account = defaults.string(forKey: accountIdDefaultsKey), !account.isEmpty {
-            settings.accountId = account
-        }
-        return settings
+    // The sources, each layered over `base`: the app's UserDefaults, the
+    // same keys read straight from a preferences file (which is how the
+    // CLI sees the sandboxed app's settings; the app's own domain is
+    // invisible to UserDefaults outside its sandbox), and the environment.
+    // A key that is absent or unusable leaves the base value standing.
+    // -- claude, 2026-10-30
+    public static func from(_ defaults: UserDefaults, over base: SyncSettings = .prototype) -> SyncSettings {
+        from(values: [
+            sessionURLDefaultsKey: defaults.string(forKey: sessionURLDefaultsKey),
+            accountIdDefaultsKey: defaults.string(forKey: accountIdDefaultsKey),
+        ], over: base)
     }
 
-    public static func from(environment: [String: String]) -> SyncSettings {
-        var settings = prototype
-        if let s = environment[sessionURLEnvironmentKey], let url = URL(string: s) {
+    // Nil when there is no readable property list at `url`.
+    public static func from(preferencesAt url: URL, over base: SyncSettings = .prototype) -> SyncSettings? {
+        guard let data = try? Data(contentsOf: url),
+              let plist = try? PropertyListSerialization.propertyList(from: data, format: nil),
+              let values = plist as? [String: Any]
+        else { return nil }
+        return from(values: [
+            sessionURLDefaultsKey: values[sessionURLDefaultsKey] as? String,
+            accountIdDefaultsKey: values[accountIdDefaultsKey] as? String,
+        ], over: base)
+    }
+
+    public static func from(environment: [String: String], over base: SyncSettings = .prototype) -> SyncSettings {
+        from(values: [
+            sessionURLDefaultsKey: environment[sessionURLEnvironmentKey],
+            accountIdDefaultsKey: environment[accountIdEnvironmentKey],
+        ], over: base)
+    }
+
+    private static func from(values: [String: String?], over base: SyncSettings) -> SyncSettings {
+        var settings = base
+        if let s = values[sessionURLDefaultsKey] ?? nil, let url = URL(string: s) {
             settings.sessionURL = url
         }
-        if let account = environment[accountIdEnvironmentKey], !account.isEmpty {
+        if let account = values[accountIdDefaultsKey] ?? nil, !account.isEmpty {
             settings.accountId = account
         }
         return settings

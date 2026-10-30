@@ -153,8 +153,10 @@ engine. A write lands in the shared local store, is pushed to the server
 once (a server that cannot be reached is a warning, not a failure; the
 app pushes later), and reaches a running app through the engine's
 cross-process journal, so the UI updates with no notification from the
-CLI. Server settings come from `NERF_JMAP_URL` and `NERF_JMAP_ACCOUNT`,
-defaulting to the prototype server. It is built with
+CLI. Server settings are the ones saved in the app's settings pane, read
+from the app container's preferences file; `NERF_JMAP_URL` and
+`NERF_JMAP_ACCOUNT` override them, and the prototype server stands in
+when nothing is saved. It is built with
 [swift-argument-parser](https://github.com/apple/swift-argument-parser)
 and dispatches to subcommands, so it grows as new chores come up. Useful
 for scripts that gather work items (GitHub PRs, Linear tickets, etc.) and
@@ -339,8 +341,8 @@ Requires macOS 27+, Xcode 27+. Uses [GRDB](https://github.com/groue/GRDB.swift)
 for local persistence and [Jinx](../Jinx) for JMAP sync, the former a
 remote Swift Package dependency and the latter a local one that must be
 checked out beside this repository as `../Jinx`. At runtime the app needs
-a JMAP for Tasks server; the default is the prototype on
-`http://127.0.0.1:8080`, account `rjbs`.
+a JMAP for Tasks server, set in the app's settings pane; the default is
+the prototype on `http://127.0.0.1:8080`, account `rjbs`.
 
 The app is sandboxed. Set your Development Team in Xcode's Signing &
 Capabilities tab before building.

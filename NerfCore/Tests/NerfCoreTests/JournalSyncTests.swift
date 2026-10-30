@@ -118,4 +118,32 @@ final class JournalSyncTests: XCTestCase {
         XCTAssertEqual(SyncSettings.from(defaults),
                        SyncSettings(sessionURL: URL(string: "https://jmap.example/session")!, accountId: "u2"))
     }
+
+    func testSettingsLayerAndReadPreferencesFiles() throws {
+        let saved = SyncSettings(sessionURL: URL(string: "https://saved.example/session")!, accountId: "saved")
+        checkSettings(environment: [:], over: saved, expecting: saved)
+        checkSettings(environment: ["NERF_JMAP_URL": "https://env.example/session"], over: saved,
+                      expecting: SyncSettings(sessionURL: URL(string: "https://env.example/session")!, accountId: "saved"))
+        checkSettings(environment: ["NERF_JMAP_ACCOUNT": ""], over: saved, expecting: saved)
+
+        try checkPreferences(["jmapSessionURL": "https://file.example/session", "jmapAccountId": "f"],
+                             expecting: SyncSettings(sessionURL: URL(string: "https://file.example/session")!, accountId: "f"))
+        try checkPreferences(["jmapAccountId": "f", "other": 1],
+                             expecting: SyncSettings(sessionURL: SyncSettings.prototype.sessionURL, accountId: "f"))
+        try checkPreferences([:], expecting: .prototype)
+        XCTAssertNil(SyncSettings.from(preferencesAt: URL(fileURLWithPath: "/nonexistent/\(UUID().uuidString).plist")))
+    }
+
+    private func checkSettings(environment: [String: String], over base: SyncSettings, expecting expected: SyncSettings,
+                               file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertEqual(SyncSettings.from(environment: environment, over: base), expected, file: file, line: line)
+    }
+
+    private func checkPreferences(_ values: [String: Any], expecting expected: SyncSettings,
+                                  file: StaticString = #filePath, line: UInt = #line) throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).plist")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try PropertyListSerialization.data(fromPropertyList: values, format: .xml, options: 0).write(to: url)
+        XCTAssertEqual(SyncSettings.from(preferencesAt: url), expected, file: file, line: line)
+    }
 }

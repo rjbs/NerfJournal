@@ -38,6 +38,20 @@ struct DatabaseOptions: ParsableArguments {
 
     var path: String { database ?? Self.defaultPath() }
 
+    // The preferences file of the app whose sandbox container holds the
+    // database, so a database in the dev container reads the dev build's
+    // settings. Nil for a database outside any container. The sandboxed
+    // app's defaults domain cannot be read through UserDefaults from
+    // outside the sandbox, hence the file. -- claude, 2026-10-30
+    static func appPreferencesURL(forDatabaseAt path: String) -> URL? {
+        let parts = URL(fileURLWithPath: path).pathComponents
+        guard let i = parts.firstIndex(of: "Containers"), i + 2 < parts.count, parts[i + 2] == "Data" else {
+            return nil
+        }
+        let container = URL(fileURLWithPath: "/").appending(path: parts[1...(i + 2)].joined(separator: "/"))
+        return container.appending(path: "Library/Preferences/\(parts[i + 1]).plist")
+    }
+
     func open() throws -> DatabaseQueue {
         var config = Configuration()
         config.busyMode = .timeout(5)
@@ -49,16 +63,20 @@ struct DatabaseOptions: ParsableArguments {
     }
 
     // The database plus the sync engine over it, which is how todos are read
-    // and written now. Server settings come from NERF_JMAP_URL and
-    // NERF_JMAP_ACCOUNT, defaulting to the prototype. Reads need no server;
-    // only a sync does. -- claude, 2026-10-28
+    // and written now. Server settings are the ones the app saved, so the
+    // CLI follows the app's settings pane; NERF_JMAP_URL and
+    // NERF_JMAP_ACCOUNT override them, and the prototype stands in when
+    // there is nothing saved. Reads need no server; only a sync does.
+    // -- claude, 2026-10-28; the saved settings 2026-10-30
     func openSync() throws -> JournalSync {
         let dbQueue = try open()
+        let saved = Self.appPreferencesURL(forDatabaseAt: path)
+            .flatMap { SyncSettings.from(preferencesAt: $0) } ?? .prototype
         do {
             return try JournalSync(
                 writer: dbQueue,
                 databasePath: path,
-                settings: SyncSettings.from(environment: ProcessInfo.processInfo.environment)
+                settings: SyncSettings.from(environment: ProcessInfo.processInfo.environment, over: saved)
             )
         } catch {
             throw CLIError("could not set up sync for \(path): \(error)")
