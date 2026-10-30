@@ -18,5 +18,8 @@ nav_order: 3
 | 9 | Swift Concurrency | written |
 | 10 | AppKit Interoperability and the Quick-Entry Panel | written |
 | 11 | The Command-Line Tool: swift-argument-parser | written |
+| 12 | Swift 6: Strict Concurrency by Default | not started |
+| 13 | Packages, Modules, and Tests | not started |
+| — | Coda: The Software Moved On | not started |
 
 ## Notes

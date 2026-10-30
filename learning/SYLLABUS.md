@@ -192,3 +192,49 @@ must hand-write `encode(to:)` (the thread first pulled in Unit 7).
 
 **Files to look at:** `cli/Package.swift`, `cli/Sources/nerf/Nerf.swift`,
 `cli/Sources/nerf/AddTodo.swift`, `cli/Sources/nerf/Database.swift`
+
+---
+
+Units 1–11 were written against the local-SQLite NerfJournal, preserved as the
+git tag `edition-local-sqlite`. The units below follow the move to a JMAP for
+Tasks backend, and the coda maps what changed.
+
+### Unit 12 — Swift 6: Strict Concurrency by Default
+
+Unit 9's model, now enforced in full. What Swift 6 *language mode* means, as
+distinct from the compiler version, and why turning it on was nearly free for
+NerfJournal. Default actor isolation (`SWIFT_DEFAULT_ACTOR_ISOLATION =
+MainActor`) for the app, and why NerfCore and the CLI keep the nonisolated
+default. The "approachable concurrency" feature flags. Real `actor` types at
+last, `JournalSync` and Jinx's `SyncEngine`, including `nonisolated let` and
+actor reentrancy. `AsyncStream` and `for await` as the replacement for
+cross-process notifications, with `isolated deinit` ending the loop.
+`Task.detached` for the engine's run loop.
+
+**Files to look at:** `PageStore.swift`, `CategoryStore.swift`, `DayClock.swift`,
+`AppDelegate.swift`, `NerfCore/Sources/NerfCore/JournalSync.swift`,
+`cli/Package.swift`, Jinx's `SyncEngine.swift`
+
+---
+
+### Unit 13 — Packages, Modules, and Tests
+
+What changes when your own code becomes a library. `NerfCore` as a Swift Package
+with a library product, consumed by the app (through an Xcode local package
+reference) and by the CLI (through a path dependency). The cost of `public`:
+explicit initializers, explicit `Sendable`, and a name collision with
+`ObjectiveC.Category`. Keeping UI out of the shared package with app-side
+extensions. Testing with XCTest: async tests, table-style helpers that report
+failures at the call site, a scripted fake server injected through a protocol,
+and testing only through the public API.
+
+**Files to look at:** `NerfCore/Package.swift`, `NerfCore/Sources/NerfCore/Models.swift`,
+`NerfJournal/CategoryColor+Swatch.swift`, `NerfCore/Tests/NerfCoreTests/`
+
+---
+
+### Coda — The Software Moved On
+
+What changed in NerfJournal after Unit 11, and why: the JMAP for Tasks backend,
+the Jinx sync engine, and the TaskMaster server. Then a unit-by-unit map of the
+earlier text that no longer describes the code, and what is true now.
