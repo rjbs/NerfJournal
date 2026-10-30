@@ -1,8 +1,9 @@
 import ArgumentParser
 import Foundation
 import GRDB
+import NerfCore
 
-struct AddTodo: ParsableCommand {
+struct AddTodo: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "add-todo",
         abstract: "Add a todo to today's NerfJournal page."
@@ -32,60 +33,59 @@ struct AddTodo: ParsableCommand {
     @Argument(help: "The todo title (all words are joined into one title).")
     var title: [String]
 
-    func run() throws {
+    func run() async throws {
         let title = self.title.joined(separator: " ")
         guard !title.isEmpty else {
             throw ValidationError("todo title is required")
         }
 
-        let today = Calendar.current.startOfDay(for: Date())
+        let today = CivilDate.today
 
-        let startDate: Date
+        let startDay: CivilDate
         if let start = self.start {
             guard let parsed = DateParser.parse(start) else {
                 throw ValidationError("could not understand start date: \(start)")
             }
-            startDate = parsed
+            startDay = CivilDate(instant: parsed, in: .current)
         } else {
-            startDate = today
+            startDay = today
         }
 
         let dbQueue = try db.open()
+        let sync = try db.openSync()
 
         // A todo starting today must land on today's page, which the CLI never
         // creates — so require it to exist.  A future-dated todo lives in the
         // Future Log instead, so it needs no page and can be filed any day. -- claude, 2026-06-13
-        if startDate <= today {
+        if startDay <= today {
             let todayPage = try fetchTodayPage(dbQueue, date: today)
             guard todayPage != nil else {
                 throw CLIError("no journal page for today — start one in NerfJournal first")
             }
         }
 
-        let categoryID = try resolveCategory(dbQueue, name: category, strict: strict)
+        let categoryID = try await resolveCategory(sync, name: category, strict: strict)
 
-        if let dup = try findOpenDuplicate(dbQueue, title: title, url: url) {
+        if let dup = await findOpenDuplicate(sync, title: title, url: url) {
             print("Didn't create todo for duplicate \(dup.field): \(dup.value)")
             return
         }
 
+        let todo = Todo(
+            id: nil,
+            title: title,
+            shouldMigrate: !noMigrate,
+            start: startDay,
+            ending: nil,
+            categoryID: categoryID,
+            externalURL: url
+        )
         do {
-            try dbQueue.write { database in
-                var todo = Todo(
-                    id: nil,
-                    title: title,
-                    shouldMigrate: !noMigrate,
-                    start: startDate,
-                    ending: nil,
-                    categoryID: categoryID,
-                    externalURL: url
-                )
-                try todo.insert(database)
-            }
+            _ = try await TaskWriter(sync: sync).create(todo)
         } catch {
-            throw CLIError("could not insert todo: \(error)")
+            throw CLIError("could not create todo: \(error)")
         }
 
-        postExternalChangeNotification()
+        await pushAfterWrite(sync)
     }
 }

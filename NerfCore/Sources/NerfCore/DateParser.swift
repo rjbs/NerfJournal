@@ -1,8 +1,7 @@
 import Foundation
 
-// Parses a short natural-language date string, mirroring the app's quick-entry
-// `~` parser (NerfJournal/DateParser.swift) so `nerf add-todo --start` accepts
-// the same vocabulary.  Returns the start-of-day Date for the match, or nil if
+// Parses a short natural-language date string typed after `~` in the
+// quick-entry field.  Returns the start-of-day Date for the match, or nil if
 // the query is unrecognized.
 //
 // Supported forms (all case-insensitive, prefix-matched where unambiguous):
@@ -11,8 +10,8 @@ import Foundation
 //   +N / +Nd                                 (N days from today)
 //   +Nw                                      (N weeks from today)
 //   an ISO 8601 date (2026-07-20) or timestamp (2026-07-20T09:00:00Z)
-enum DateParser {
-    static func parse(_ query: String) -> Date? {
+public enum DateParser {
+    public static func parse(_ query: String) -> Date? {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let q = trimmed.lowercased()
         guard !q.isEmpty else { return nil }

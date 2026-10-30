@@ -1,58 +1,20 @@
 import Foundation
 import GRDB
+import NerfCore
 
 extension Notification.Name {
-    static let nerfJournalDatabaseDidChange = Notification.Name("org.rjbs.nerfjournal.databaseDidChange")
+    static let nerfJournalDatabaseDidChange = Notification.Name("systems.semiotic.nerfjournal.databaseDidChange")
     // Posted by PageStore.refreshContents() so other stores can stay in sync
     // with live todo mutations without a full database reload. -- claude, 2026-03-06
-    static let nerfJournalTodosDidChange = Notification.Name("org.rjbs.nerfjournal.todosDidChange")
-}
-
-// Snapshot of the entire database, used for export and import.
-struct DatabaseExport: Codable {
-    // version mirrors the DB schema version at export time. Not currently
-    // consumed on import, but retained so future code can gate on it if
-    // schema versions diverge. -- claude, 2026-03-02
-    let version: Int
-    // exportedAt is informational metadata in the JSON; not used by the
-    // importer, but useful to a human inspecting an export file. -- claude, 2026-03-02
-    let exportedAt: Date
-    let categories: [Category]
-    let taskBundles: [TaskBundle]
-    let bundleTodos: [BundleTodo]
-    let journalPages: [JournalPage]
-    let todos: [Todo]
-
-    init(version: Int, exportedAt: Date, categories: [Category], taskBundles: [TaskBundle],
-         bundleTodos: [BundleTodo], journalPages: [JournalPage], todos: [Todo]) {
-        self.version      = version
-        self.exportedAt   = exportedAt
-        self.categories   = categories
-        self.taskBundles  = taskBundles
-        self.bundleTodos  = bundleTodos
-        self.journalPages = journalPages
-        self.todos        = todos
-    }
-
-    // Custom decoder so that imports of pre-v3 exports (lacking `categories`)
-    // succeed with an empty category list rather than a decode error. Exports
-    // from before notes were removed (v7) carry a `notes` key, which the
-    // synthesized CodingKeys ignore — those notes are silently dropped on
-    // import. -- claude, 2026-06-18
-    init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        version     = try c.decode(Int.self,           forKey: .version)
-        exportedAt  = try c.decode(Date.self,          forKey: .exportedAt)
-        categories  = try c.decodeIfPresent([Category].self,    forKey: .categories)  ?? []
-        taskBundles = try c.decode([TaskBundle].self,  forKey: .taskBundles)
-        bundleTodos = try c.decode([BundleTodo].self,  forKey: .bundleTodos)
-        journalPages = try c.decode([JournalPage].self, forKey: .journalPages)
-        todos       = try c.decode([Todo].self,        forKey: .todos)
-    }
+    static let nerfJournalTodosDidChange = Notification.Name("systems.semiotic.nerfjournal.todosDidChange")
 }
 
 struct AppDatabase {
     let dbQueue: DatabaseQueue
+    // The journal's sync engine, sharing the database file. Built here so
+    // that it exists exactly once per process; AppDelegate starts it
+    // running at launch. -- claude, 2026-10-28
+    let sync: JournalSync
 
     static let shared: AppDatabase = {
         let fm = FileManager.default
@@ -70,259 +32,23 @@ struct AppDatabase {
 
     init(path: String) throws {
         dbQueue = try DatabaseQueue(path: path)
-        try migrate(dbQueue)
+        try NerfSchema.migrate(dbQueue)
+        sync = try JournalSync(writer: dbQueue, databasePath: path, settings: SyncSettings.from(.standard))
     }
 
-    private func migrate(_ db: DatabaseQueue) throws {
-        var migrator = DatabaseMigrator()
-
-        migrator.registerMigration("v1") { db in
-            try db.create(table: "taskBundle") { t in
-                t.autoIncrementedPrimaryKey("id")
-                t.column("name", .text).notNull()
-                t.column("sortOrder", .integer).notNull().defaults(to: 0)
-                t.column("todosShouldMigrate", .boolean).notNull().defaults(to: true)
-            }
-
-            try db.create(table: "bundleTodo") { t in
-                t.autoIncrementedPrimaryKey("id")
-                t.column("bundleID", .integer).notNull()
-                    .references("taskBundle", onDelete: .cascade)
-                t.column("title", .text).notNull()
-                t.column("sortOrder", .integer).notNull().defaults(to: 0)
-                t.column("externalURL", .text)
-            }
-
-            try db.create(table: "journalPage") { t in
-                t.autoIncrementedPrimaryKey("id")
-                // Stored as start-of-day in the local timezone; must be normalized
-                // before insert to ensure the unique constraint behaves correctly.
-                t.column("date", .datetime).notNull().unique()
-            }
-
-            try db.create(table: "todo") { t in
-                t.autoIncrementedPrimaryKey("id")
-                t.column("pageID", .integer).notNull()
-                    .references("journalPage", onDelete: .cascade)
-                t.column("title", .text).notNull()
-                t.column("shouldMigrate", .boolean).notNull().defaults(to: true)
-                t.column("status", .text).notNull().defaults(to: "pending")
-                t.column("sortOrder", .integer).notNull().defaults(to: 0)
-                t.column("groupName", .text)
-                t.column("externalURL", .text)
-                t.column("firstAddedDate", .datetime).notNull()
-            }
-
-            try db.create(table: "note") { t in
-                t.autoIncrementedPrimaryKey("id")
-                t.column("pageID", .integer).notNull()
-                    .references("journalPage", onDelete: .cascade)
-                t.column("timestamp", .datetime).notNull()
-                t.column("text", .text)
-                t.column("relatedTodoID", .integer)
-                    .references("todo", onDelete: .setNull)
-            }
-        }
-
-        migrator.registerMigration("v2") { db in
-            // GRDB runs migrations with foreign keys off (the default
-            // foreignKeyChecks: .deferred) and does a single foreign_key_check
-            // at commit. Because this wipes every related table, that check
-            // sees an empty database no matter what order we delete in — so the
-            // children-first ordering here is defensive habit, not a
-            // requirement, and cascades wouldn't fire even if we relied on them.
-            // -- claude, 2026-06-13
-            try db.execute(sql: "DELETE FROM note")
-            try db.execute(sql: "DELETE FROM todo")
-            try db.execute(sql: "DELETE FROM journalPage")
-            try db.execute(sql: "DROP TABLE todo")
-            try db.create(table: "todo") { t in
-                t.autoIncrementedPrimaryKey("id")
-                t.column("title", .text).notNull()
-                t.column("shouldMigrate", .boolean).notNull().defaults(to: true)
-                // Start-of-day timestamp for the day the todo was first created.
-                t.column("added", .datetime).notNull()
-                // JSON-encoded TodoEnding; NULL means still pending.
-                t.column("ending", .text)
-                t.column("groupName", .text)
-                t.column("externalURL", .text)
-            }
-        }
-
-        migrator.registerMigration("v3") { db in
-            // Wipe everything. As in v2, foreign keys are off during the
-            // migration, so the children-first order here is defensive, not
-            // required. -- claude, 2026-06-13
-            try db.execute(sql: "DELETE FROM note")
-            try db.execute(sql: "DELETE FROM todo")
-            try db.execute(sql: "DELETE FROM bundleTodo")
-            try db.execute(sql: "DELETE FROM journalPage")
-            try db.execute(sql: "DELETE FROM taskBundle")
-            try db.execute(sql: "DROP TABLE note")
-            try db.execute(sql: "DROP TABLE todo")
-            try db.execute(sql: "DROP TABLE bundleTodo")
-            try db.execute(sql: "DROP TABLE journalPage")
-            try db.execute(sql: "DROP TABLE taskBundle")
-
-            // category is new; todo loses groupName and gains categoryID;
-            // bundleTodo gains categoryID.
-            try db.create(table: "category") { t in
-                t.autoIncrementedPrimaryKey("id")
-                t.column("name", .text).notNull()
-                t.column("color", .text).notNull().defaults(to: "blue")
-                t.column("sortOrder", .integer).notNull().defaults(to: 0)
-            }
-
-            try db.create(table: "taskBundle") { t in
-                t.autoIncrementedPrimaryKey("id")
-                t.column("name", .text).notNull()
-                t.column("sortOrder", .integer).notNull().defaults(to: 0)
-                t.column("todosShouldMigrate", .boolean).notNull().defaults(to: true)
-            }
-
-            try db.create(table: "bundleTodo") { t in
-                t.autoIncrementedPrimaryKey("id")
-                t.column("bundleID", .integer).notNull()
-                    .references("taskBundle", onDelete: .cascade)
-                t.column("title", .text).notNull()
-                t.column("sortOrder", .integer).notNull().defaults(to: 0)
-                t.column("externalURL", .text)
-                t.column("categoryID", .integer)
-                    .references("category", onDelete: .setNull)
-            }
-
-            try db.create(table: "journalPage") { t in
-                t.autoIncrementedPrimaryKey("id")
-                // Stored as start-of-day in the local timezone; must be normalized
-                // before insert to ensure the unique constraint behaves correctly.
-                t.column("date", .datetime).notNull().unique()
-            }
-
-            try db.create(table: "todo") { t in
-                t.autoIncrementedPrimaryKey("id")
-                t.column("title", .text).notNull()
-                t.column("shouldMigrate", .boolean).notNull().defaults(to: true)
-                // Start-of-day timestamp for the day the todo was first created.
-                t.column("added", .datetime).notNull()
-                // JSON-encoded TodoEnding; NULL means still pending.
-                t.column("ending", .text)
-                t.column("categoryID", .integer)
-                    .references("category", onDelete: .setNull)
-                t.column("externalURL", .text)
-            }
-
-            try db.create(table: "note") { t in
-                t.autoIncrementedPrimaryKey("id")
-                t.column("pageID", .integer).notNull()
-                    .references("journalPage", onDelete: .cascade)
-                t.column("timestamp", .datetime).notNull()
-                t.column("text", .text)
-                t.column("relatedTodoID", .integer)
-                    .references("todo", onDelete: .setNull)
-            }
-        }
-
-        migrator.registerMigration("v4") { db in
-            // relatedTodoID was never wired up (addNote was never called with a
-            // todo argument). All existing rows have NULL; drop the column.
-            try db.execute(sql: "ALTER TABLE note DROP COLUMN relatedTodoID")
-        }
-
-        migrator.registerMigration("v5") { db in
-            try db.execute(sql: "ALTER TABLE todo RENAME COLUMN added TO start")
-        }
-
-        migrator.registerMigration("v6") { db in
-            try db.create(table: "exportGroup") { t in
-                t.autoIncrementedPrimaryKey("id")
-                t.column("name", .text).notNull()
-                t.column("sortOrder", .integer).notNull().defaults(to: 0)
-            }
-            try db.create(table: "exportGroupMember") { t in
-                t.column("groupID", .integer).notNull()
-                    .references("exportGroup", onDelete: .cascade)
-                // NULL categoryID represents uncategorized ("Other") todos.
-                t.column("categoryID", .integer)
-                    .references("category", onDelete: .cascade)
-            }
-        }
-
-        migrator.registerMigration("v7") { db in
-            // Notes are gone. Each text-bearing note becomes a todo that was
-            // born already done: start = its page's date, ending = (its
-            // timestamp, .done). Notes with NULL text were never shown, so
-            // they're discarded. Reading rows as Date and inserting via GRDB
-            // lets Todo/TodoEnding encode both the start date and the ISO-8601
-            // ending JSON correctly — concatenating the raw timestamp column
-            // would emit the wrong date format. -- claude, 2026-06-18
-            let rows = try Row.fetchAll(db, sql: """
-                SELECT p.date AS date, n.timestamp AS timestamp, n.text AS text
-                FROM note n JOIN journalPage p ON n.pageID = p.id
-                WHERE n.text IS NOT NULL
-                """)
-            for row in rows {
-                let date: Date = row["date"]
-                let timestamp: Date = row["timestamp"]
-                let text: String = row["text"]
-                var todo = Todo(
-                    id: nil, title: text, shouldMigrate: false,
-                    start: date, ending: TodoEnding(date: timestamp, kind: .done),
-                    categoryID: nil, externalURL: nil
-                )
-                try todo.insert(db)
-            }
-            try db.execute(sql: "DROP TABLE note")
-        }
-
-        try migrator.migrate(db)
-    }
-
+    // Export, import and reset span both halves of the store (the journal's
+    // own tables and the engine's), so NerfCore owns them. -- claude, 2026-10-28
     func exportData() async throws -> Data {
-        let snapshot = try await dbQueue.read { db in
-            DatabaseExport(
-                version: 7,
-                exportedAt: Date(),
-                categories: try Category.order(Column("sortOrder")).fetchAll(db),
-                taskBundles: try TaskBundle.order(Column("id")).fetchAll(db),
-                bundleTodos: try BundleTodo.order(Column("id")).fetchAll(db),
-                journalPages: try JournalPage.order(Column("date")).fetchAll(db),
-                todos: try Todo.order(Column("id")).fetchAll(db)
-            )
-        }
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        return try encoder.encode(snapshot)
+        try await sync.exportData()
     }
 
-    // Replaces all data with the contents of the export. The entire operation
-    // runs in one transaction, so a malformed import leaves the database unchanged.
     func importData(_ data: Data) async throws {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let snapshot = try decoder.decode(DatabaseExport.self, from: data)
-        try await dbQueue.write { db in
-            try Todo.deleteAll(db)
-            try BundleTodo.deleteAll(db)
-            try JournalPage.deleteAll(db)
-            try TaskBundle.deleteAll(db)
-            try Category.deleteAll(db)
-            for var r in snapshot.categories   { try r.insert(db) }
-            for var r in snapshot.taskBundles  { try r.insert(db) }
-            for var r in snapshot.bundleTodos  { try r.insert(db) }
-            for var r in snapshot.journalPages { try r.insert(db) }
-            for var r in snapshot.todos        { try r.insert(db) }
-        }
+        _ = try await sync.importData(data)
     }
 
+    // Empties this client only. The server keeps its Tasks, and the next
+    // sync fetches them again.
     func factoryReset() async throws {
-        try await dbQueue.write { db in
-            try Todo.deleteAll(db)
-            try BundleTodo.deleteAll(db)
-            try JournalPage.deleteAll(db)
-            try TaskBundle.deleteAll(db)
-            try Category.deleteAll(db)
-            return
-        }
+        try await sync.resetLocalData()
     }
 }

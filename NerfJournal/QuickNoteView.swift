@@ -1,5 +1,6 @@
 import SwiftUI
 import GRDB
+import NerfCore
 
 @MainActor
 final class QuickNoteStore: ObservableObject {
@@ -8,9 +9,7 @@ final class QuickNoteStore: ObservableObject {
     @Published var categories: [Category] = []
 
     func load() async {
-        let cats = try? await AppDatabase.shared.dbQueue.read { db in
-            try Category.order(Column("sortOrder")).fetchAll(db)
-        }
+        let cats = try? await AppDatabase.shared.sync.categories()
         categories = cats ?? []
         loaded = true
     }
@@ -21,31 +20,27 @@ final class QuickNoteStore: ObservableObject {
     // exists, so it's visible right away — pending todos need no page.
     // -- claude, 2026-06-18
     func addTodo(title: String, categoryID: Int64?, start: Date? = nil, done: Bool = false) async {
-        let today = Calendar.current.startOfDay(for: Date())
-        try? await AppDatabase.shared.dbQueue.write { db in
-            if done, try JournalPage.filter(Column("date") == today).fetchOne(db) == nil {
-                var page = JournalPage(id: nil, date: today)
-                try page.insert(db)
+        let today = CivilDate.today
+        let startDay = done ? today : (start.map { CivilDate(instant: $0, in: .current) } ?? today)
+        if done {
+            try? await AppDatabase.shared.dbQueue.write { db in
+                if try JournalPage.filter(Column("date") == today).fetchOne(db) == nil {
+                    var page = JournalPage(id: nil, date: today)
+                    try page.insert(db)
+                }
             }
-            var todo = Todo(
-                id: nil,
-                title: title,
-                shouldMigrate: done ? false : true,
-                start: done ? today : (start ?? today),
-                ending: done ? TodoEnding(date: Date(), kind: .done) : nil,
-                categoryID: categoryID,
-                externalURL: nil
-            )
-            try todo.insert(db)
         }
-        notify()
-    }
-
-    private func notify() {
-        DistributedNotificationCenter.default().postNotificationName(
-            NSNotification.Name("org.rjbs.nerfjournal.externalChange"),
-            object: nil, deliverImmediately: true
+        let todo = Todo(
+            id: nil,
+            title: title,
+            shouldMigrate: done ? false : true,
+            start: startDay,
+            ending: done ? TodoEnding(moment: .now(), kind: .done) : nil,
+            categoryID: categoryID,
+            externalURL: nil
         )
+        // The engine's change stream tells PageStore; no notification needed.
+        _ = try? await TaskWriter(sync: AppDatabase.shared.sync).create(todo)
     }
 }
 

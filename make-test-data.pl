@@ -89,6 +89,32 @@ my @DONE_POOL = (
 
 sub iso8601 { strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($_[0])) }
 
+# The civil date (floating YYYY-MM-DD) a local timestamp falls on.
+sub civil_date { strftime('%Y-%m-%d', localtime($_[0])) }
+
+# UTC offset in seconds in effect locally at the given instant.
+sub offset_seconds {
+    my ($sign, $h, $m) = strftime('%z', localtime($_[0])) =~ /([+-])(\d\d)(\d\d)/;
+    my $s = $h * 3600 + $m * 60;
+    return $sign eq '-' ? -$s : $s;
+}
+
+# A precise-moment ending: a real time we lived, carrying its offset.
+sub moment_ending {
+    my ($ts, $kind) = @_;
+    return {
+        day  => civil_date($ts),
+        time => { instant => iso8601($ts), offsetSeconds => offset_seconds($ts) },
+        kind => $kind,
+    };
+}
+
+# A day-only ending: we know the day it resolved but not the time.
+sub day_ending {
+    my ($ts, $kind) = @_;
+    return { day => civil_date($ts), kind => $kind };
+}
+
 sub day_ts {
     # Unix timestamp for midnight local time, N days before today.
     my @t = localtime(time - $_[0] * 86400);
@@ -110,7 +136,7 @@ for my $pi (0 .. $#DAYS) {
     my $is_last = ($pi == $#DAYS);
     my $page_ts = day_ts($day);
 
-    push @pages_out, { id => $page_id, date => iso8601($page_ts) };
+    push @pages_out, { id => $page_id, date => civil_date($page_ts) };
     my $cur_pid = $page_id++;
 
     # --- resolve active (carried-over) todos --------------------------------
@@ -119,12 +145,9 @@ for my $pi (0 .. $#DAYS) {
         if ($is_last || ($t->{migrate} && rand() < 0.35)) {
             push @still_active, $t;    # carries forward to next day
         } else {
-            # Completed on this page.
-            my $done_ts = $page_ts + 3600;
-            $todos_out[ $t->{id} - 1 ]{ending} = {
-                date => iso8601($done_ts),
-                kind => 'done',
-            };
+            # Completed on this page; a carried-forward resolution records only
+            # the day, not a time.
+            $todos_out[ $t->{id} - 1 ]{ending} = day_ending($page_ts, 'done');
         }
     }
     @active = @still_active;
@@ -142,18 +165,18 @@ for my $pi (0 .. $#DAYS) {
         if ($is_last) {
             # Last page: everything stays pending.
         } elsif (!$migrate && rand() < 0.12) {
-            $ending = { date => iso8601($page_ts + 3600), kind => 'abandoned' };
+            $ending = day_ending($page_ts, 'abandoned');
         } elsif ($migrate && rand() < 0.28) {
             push @active, { id => $cur_tid, migrate => $migrate, title => $title };
         } else {
-            $ending = { date => iso8601($page_ts + 3600), kind => 'done' };
+            $ending = day_ending($page_ts, 'done');
         }
 
         push @todos_out, {
             id            => $cur_tid,
             title         => $title,
             shouldMigrate => $migrate ? JSON::PP::true : JSON::PP::false,
-            start         => iso8601($page_ts),
+            start         => civil_date($page_ts),
             ending        => $ending,
             categoryID    => (defined $cat_name ? $CAT_ID{$cat_name} : undef),
             externalURL   => undef,
@@ -171,8 +194,8 @@ for my $pi (0 .. $#DAYS) {
             id            => $todo_id++,
             title         => $DONE_POOL[ int(rand @DONE_POOL) ],
             shouldMigrate => JSON::PP::false,
-            start         => iso8601($page_ts),
-            ending        => { date => iso8601($done_ts), kind => 'done' },
+            start         => civil_date($page_ts),
+            ending        => moment_ending($done_ts, 'done'),
             categoryID    => undef,
             externalURL   => undef,
         };
@@ -221,7 +244,7 @@ for my $b (@BUNDLES) {
 # -- output ------------------------------------------------------------------
 
 my %export = (
-    version      => 7,
+    version      => 8,
     exportedAt   => iso8601(time),
     categories   => \@CATEGORIES,
     taskBundles  => \@bundles_out,

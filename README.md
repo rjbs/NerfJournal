@@ -28,7 +28,13 @@ abandoned (struck through).
 Today".
 
 **Todo** — a task. A todo is not duplicated across pages; it is visible
-on any day from its `start` date until it ends. Key fields:
+on any day from its `start` date until it ends. Todos live on a JMAP for
+Tasks server as JSCalendar Tasks, encoded as `JMAP-SPEC.md` describes,
+and the app works from a local copy kept in sync by the
+[Jinx](../Jinx) engine (see `SYNC-DESIGN.md`). A todo's `id` is the sync
+engine's local key for its Task; its Task also carries a `uid`, chosen
+at creation, which is the identity that survives export and import. Key
+fields:
 - `shouldMigrate`: if true, the todo carries forward indefinitely until
   completed or explicitly abandoned. If false, pressing "Start Today"
   automatically abandons it.
@@ -36,16 +42,24 @@ on any day from its `start` date until it ends. Key fields:
   date beyond the current page appear only in the Future Log.
 - `ending`: nil if still pending; otherwise a `TodoEnding` with a `date`
   and `kind` (`.done` or `.abandoned`).
-- `categoryID`: optional FK to a `Category` for display grouping.
+- `categoryID`: optional reference to a `Category` for display grouping.
+  On the server this is which TaskList the Task is in.
 - `externalURL`: optional URL, shown as a clickable link icon on the row.
 
 **Category** — a named, colored grouping. Fields: `name`,
 `color` (one of eight named swatches: blue, red, green, orange, purple,
 pink, teal, yellow), `sortOrder`. Todos on a page are grouped by
 category, sorted by `sortOrder`, with uncategorized todos in an "Other"
-section at the end.
+section at the end. A category is a TaskList on the server: the list
+flagged default is "no category," every other list is a category, and
+the list's name, color and sort order are the category's. A category's
+`id` is the sync engine's local key for its list, as a todo's is for
+its Task. Creating a category pushes its list to the server at once,
+and deleting one moves its todos to the default list first, because a
+Task can only be filed in a list the server already knows.
 
-**Note** — a timestamped freeform text entry attached to a page.
+Pages, bundles, and export groups are client-only and stay in the local
+SQLite database. Todos and categories sync.
 
 **TaskBundle** — a named collection of todos that can be applied to
 today's page all at once. Examples: "Daily", "Sprint Start", "On-Call
@@ -59,18 +73,24 @@ applied.
 ## Architecture
 
 - **`AppDatabase`** — wraps a GRDB `DatabaseQueue`, owns the SQLite
-  file, and runs schema migrations. The file lives under the app's
-  sandbox container:
-  `~/Library/Containers/org.rjbs.nerfjournal/Data/Library/Application Support/NerfJournal/journal.sqlite`
+  file, creates the schema, and builds the process's one
+  `JournalSync`. The file lives under the app's sandbox container:
+  `~/Library/Containers/systems.semiotic.nerfjournal/Data/Library/Application Support/NerfJournal/journal.sqlite`
+  and holds both the client-only tables and the sync engine's `jinx_`
+  tables. `AppDelegate` starts the engine at launch, which runs push,
+  pull, EventSource push notifications, and journal tailing until quit.
 - **`PageStore`** — `@MainActor ObservableObject` that publishes the
-  current page's todos, notes, and future-scheduled todos (`futureTodos`),
+  current page's todos and future-scheduled todos (`futureTodos`),
   and exposes mutating actions: start today, complete/uncomplete/abandon/
   mark-pending todo, add todo, delete todo, rename todo, set category,
-  set URL, send to date, apply bundle. "Start Today" creates a new page
-  and abandons any pending non-migratable todos from before today in one
-  atomic transaction. Also observes `DistributedNotificationCenter` for
-  `org.rjbs.nerfjournal.externalChange` and refreshes when it fires, so
-  external writers (such as the CLI tool below) update the UI live.
+  set URL, send to date, apply bundle. Every mutation is one engine
+  write through `TaskWriter`; reads go through `TaskReader`. "Start
+  Today" creates a new page and sweeps: every pending non-migratable
+  todo that started before today is abandoned as of its start day. The
+  store reloads on the engine's change stream, which carries its own
+  writes, what syncs in from the server, and what another process on
+  the same database (such as the CLI tool below) commits, so the UI
+  updates live without any notification from the writer.
 - **`JournalStore`** — `@MainActor ObservableObject` that indexes all
   pages and provides read-only access to any past page's todos and
   notes. Drives the calendar popover's highlighted dates.
@@ -100,13 +120,43 @@ applied.
   category, with drag-to-reorder within each group. Bundles are applied
   to today's page from a toolbar menu in the main window.
 
-Storage is local SQLite only. No iCloud sync or server component.
+Todos are stored on a JMAP for Tasks server; everything else is local
+SQLite. The server's session URL and account id are set in the app's
+Settings window (Cmd-,), which also shows the engine's status: connection,
+last fetch and push, the count waiting to send, the last failure, and any
+todos the server refused with their errors. Settings take effect at the
+next launch. The app works offline: writes queue locally and push when
+the server is reachable. Factory Reset (Debug menu) empties this Mac,
+pending changes included, and never touches the server; the next sync
+fetches its tasks again.
+
+## Shared Package
+
+`NerfCore/` is a Swift package holding everything the app and the CLI
+both need and nothing that is UI: `CivilDate` and `Moment`, the record
+types, the schema (`NerfSchema`), the export snapshot type,
+the quick-entry date parser, and the whole JMAP side: `TaskCodec` (the
+Todo-to-Task encoding from `JMAP-SPEC.md`), `TaskListIndex` (the
+lists as categories), `JournalSync` (the Jinx engine assembled for the
+journal, plus export, import, and reset),
+`TaskReader`, `TaskWriter`, and `CategoryWriter`.
+It depends on [Jinx](../Jinx), expected as a sibling checkout at
+`../Jinx`. The app links NerfCore as a local package dependency; the
+CLI depends on it by path. Its tests run against Jinx's in-process
+scripted JMAP server, with no network, via `cd NerfCore && swift test`.
 
 ## CLI Tool
 
-`cli/` contains a standalone Swift Package, `nerf`, that talks to the
-journal database directly via SQLite and notifies the running app to
-refresh immediately. It is built with
+`cli/` contains a Swift Package, `nerf`, that opens the same journal
+database as the app and reads and writes todos through the same sync
+engine. A write lands in the shared local store, is pushed to the server
+once (a server that cannot be reached is a warning, not a failure; the
+app pushes later), and reaches a running app through the engine's
+cross-process journal, so the UI updates with no notification from the
+CLI. Server settings are the ones saved in the app's settings pane, read
+from the app container's preferences file; `NERF_JMAP_URL` and
+`NERF_JMAP_ACCOUNT` override them, and the prototype server stands in
+when nothing is saved. It is built with
 [swift-argument-parser](https://github.com/apple/swift-argument-parser)
 and dispatches to subcommands, so it grows as new chores come up. Useful
 for scripts that gather work items (GitHub PRs, Linear tickets, etc.) and
@@ -139,7 +189,10 @@ nerf add-todo [--no-migrate] [--category NAME] [--strict] [--url URL] [--start W
   than a moment, a timestamp is reduced to the start of its day in the local
   calendar. A future date lands the todo in the Future Log; omitting
   `--start` starts it today as before.
-- `--database PATH`: override the default database path (for testing)
+- `--database PATH`: override the default database path. The `NERF_DATABASE`
+  environment variable sets the default instead, so a shell can be pointed
+  at another database (such as the dev build's container, see Building)
+  for a whole session.
 
 Exits 0 on success (quiet), 1 on any error (message to stderr). A todo
 starting today requires today's journal page to already exist; a
@@ -197,6 +250,21 @@ respectively. Both exit nonzero with a message, changing nothing, if the
 id matches no todo, if the todo hasn't started yet (a Future Log item), or
 if it has already been ended.
 
+### `nerf sync` / `nerf sync-status`
+
+```
+nerf sync [--database PATH]
+nerf sync-status [--database PATH]
+```
+
+`sync` runs one pass of the engine, pushing whatever is waiting and
+fetching what changed on the server, then prints the status report:
+server, account, connection, last fetch and push, and the count still
+waiting to send. It exits nonzero if the server could not be reached.
+`sync-status` prints the same report without syncing (so the timestamps
+read "never (this run)"), followed by any todos the server refused and
+the error it gave for each.
+
 ## Future Plans
 
 Roughly in priority order:
@@ -222,8 +290,15 @@ Roughly in priority order:
 
 ## Testing
 
-No automated tests exist yet. The architecture is amenable to them; here is
-where to start.
+NerfCore has a test suite (`cd NerfCore && swift test`): the date types,
+the Task codec against the spec's worked examples and every lenient-read
+rule, and the engine wiring, list index, reader, writers, and
+export/import/reset, all against Jinx's in-process scripted JMAP
+server. Test cases are written as calls to named helpers that take the
+inputs and expected outputs, with the rig construction hidden.
+
+The app itself has no automated tests. The architecture is amenable to
+them; here is where to start.
 
 **Store / mutation tests** (highest value) — `AppDatabase` accepts a `path:`
 argument; pass `":memory:"` to get a fresh in-memory SQLite for each test.
@@ -235,9 +310,6 @@ or use `await MainActor.run { ... }`.
 
 **Export tests** — `exportPageHTML` and `exportPageMrkdwn` are pure functions;
 exercise them with known todo/category fixtures and assert the output strings.
-
-**Migration tests** — create a pre-migration DB via raw SQL, run the migrator,
-verify the target tables exist and any preserved data survived correctly.
 
 **UI tests** (`XCUITest`) — slow, brittle, and require the app to inject a test
 database via a launch argument. Probably not worth the effort for a personal app.
@@ -265,9 +337,23 @@ Known structural improvements that aren't urgent but are worth doing:
 
 ## Building
 
-Requires macOS 14+, Xcode 15+. Uses [GRDB](https://github.com/groue/GRDB.swift)
-for local persistence, added as a Swift Package dependency. No other
-external dependencies.
+Requires macOS 27+, Xcode 27+. Uses [GRDB](https://github.com/groue/GRDB.swift)
+for local persistence and [Jinx](../Jinx) for JMAP sync, the former a
+remote Swift Package dependency and the latter a local one that must be
+checked out beside this repository as `../Jinx`. At runtime the app needs
+a JMAP for Tasks server, set in the app's settings pane; the default is
+the prototype on `http://127.0.0.1:8080`, account `rjbs`.
 
 The app is sandboxed. Set your Development Team in Xcode's Signing &
 Capabilities tab before building.
+
+There are two shared schemes. `NerfJournal` builds the app you install
+(Debug or Release, bundle id `systems.semiotic.nerfjournal`). `NerfJournal Dev`
+builds the `Dev` configuration: bundle id `systems.semiotic.nerfjournal.dev`,
+displayed as "NerfJournal Dev", compiled with the `DEV` condition. The
+sandbox gives it its own container, so its database is
+`~/Library/Containers/systems.semiotic.nerfjournal.dev/Data/Library/Application Support/NerfJournal/journal.sqlite`
+and it can run beside the installed app without touching its data. Under
+`DEV` the app does not register the global quick-entry hot key, which
+only one process can own. Point the CLI at the dev database with
+`NERF_DATABASE`.

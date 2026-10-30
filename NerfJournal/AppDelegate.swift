@@ -1,4 +1,5 @@
 import AppKit
+import NerfCore
 import Carbon.HIToolbox
 import Combine
 import SwiftUI
@@ -10,9 +11,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var panel: NSPanel?
     private var quickNoteStore: QuickNoteStore?
     private var cancellables = Set<AnyCancellable>()
+    private var syncTask: Task<Void, Never>?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        startSync()
+        // The dev build (bundle id systems.semiotic.nerfjournal.dev) runs beside the
+        // installed app, and only one process can own a global hot key, so it
+        // leaves Cmd-Shift-J to the installed app. -- claude, 2026-10-28
+        #if !DEV
         registerGlobalHotKey()
+        #endif
+    }
+
+    // Keeps the engine syncing for the life of the process. -- claude, 2026-10-28
+    private func startSync() {
+        let sync = AppDatabase.shared.sync
+        syncTask = Task.detached {
+            await sync.engine.run()
+        }
     }
 
     private func registerGlobalHotKey() {

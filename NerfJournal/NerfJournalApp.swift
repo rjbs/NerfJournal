@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
+import NerfCore
 
 struct TodoCommands: Commands {
     @FocusedValue(\.focusAddTodo) var focusAddTodo: Binding<Bool>?
@@ -18,8 +19,7 @@ struct TodoCommands: Commands {
         }
         CommandGroup(after: .newItem) {
             Button("Go to Today") {
-                let today = Calendar.current.startOfDay(for: Date())
-                Task { try? await journalStore?.selectDate(today) }
+                Task { try? await journalStore?.selectDate(.today) }
             }
             .keyboardShortcut("t", modifiers: .command)
             .disabled(journalStore == nil)
@@ -65,10 +65,8 @@ struct TodoCommands: Commands {
         let todos = filteredTodos(memberIDs: memberIDs)
         let categories = categoryStore?.categories ?? []
         let html = exportPageHTML(date: page.date, todos: todos, categories: categories)
-        let df = DateFormatter()
-        df.dateFormat = "yyyy-MM-dd"
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = df.string(from: page.date) + ".html"
+        panel.nameFieldStringValue = page.date.iso + ".html"
         panel.allowedContentTypes = [.html]
         guard panel.runModal() == .OK, let url = panel.url else { return }
         try? html.write(to: url, atomically: true, encoding: .utf8)
@@ -92,6 +90,7 @@ struct TodoCommands: Commands {
 @main
 struct NerfJournalApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @StateObject private var dayClock = DayClock()
     @StateObject private var pageStore = PageStore()
     @StateObject private var journalStore = JournalStore()
     @StateObject private var bundleStore = BundleStore()
@@ -101,6 +100,7 @@ struct NerfJournalApp: App {
     var body: some Scene {
         Window("Journal", id: "journal") {
             JournalView()
+                .environmentObject(dayClock)
                 .environmentObject(journalStore)
                 .environmentObject(pageStore)
                 .environmentObject(bundleStore)
@@ -131,6 +131,10 @@ struct NerfJournalApp: App {
                 .environmentObject(categoryStore)
         }
         .defaultSize(width: 480, height: 400)
+
+        Settings {
+            SyncSettingsView()
+        }
 
         Window("Export Groups", id: "export-groups") {
             ExportGroupManagerView()

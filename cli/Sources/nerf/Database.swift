@@ -1,92 +1,12 @@
 import ArgumentParser
 import Foundation
 import GRDB
+import NerfCore
 
-// MARK: - Model types (mirroring the app's Models.swift)
-
-struct JournalPage: FetchableRecord, TableRecord, Decodable {
-    var id: Int64?
-    var date: Date
-
-    static let databaseTableName = "journalPage"
-}
-
-// TodoEnding is stored as a JSON string in SQLite (matching the app exactly).
-struct TodoEnding: DatabaseValueConvertible {
-    enum Kind: String, Codable { case done, abandoned }
-    var date: Date
-    var kind: Kind
-
-    var databaseValue: DatabaseValue {
-        let enc = JSONEncoder()
-        enc.dateEncodingStrategy = .iso8601
-        let data = try! enc.encode(Coded(date: date, kind: kind))
-        return String(data: data, encoding: .utf8)!.databaseValue
-    }
-
-    static func fromDatabaseValue(_ dbValue: DatabaseValue) -> TodoEnding? {
-        guard let s = String.fromDatabaseValue(dbValue),
-              let d = s.data(using: .utf8) else { return nil }
-        let dec = JSONDecoder()
-        dec.dateDecodingStrategy = .iso8601
-        guard let coded = try? dec.decode(Coded.self, from: d) else { return nil }
-        return TodoEnding(date: coded.date, kind: coded.kind)
-    }
-
-    private struct Coded: Codable {
-        var date: Date
-        var kind: Kind
-    }
-}
-
-// GRDB's MutablePersistableRecord requires EncodableRecord, so encode(to:) is
-// provided manually; FetchableRecord (below) adds the read side for `nerf todo`.
-struct Todo: MutablePersistableRecord {
-    var id: Int64?
-    var title: String
-    var shouldMigrate: Bool
-    var start: Date
-    var ending: TodoEnding?
-    var categoryID: Int64?
-    var externalURL: String?
-
-    static let databaseTableName = "todo"
-
-    mutating func didInsert(_ inserted: InsertionSuccess) {
-        id = inserted.rowID
-    }
-
-    func encode(to container: inout PersistenceContainer) throws {
-        container["id"]            = id
-        container["title"]         = title
-        container["shouldMigrate"] = shouldMigrate
-        container["start"]         = start
-        container["ending"]        = ending
-        container["categoryID"]    = categoryID
-        container["externalURL"]   = externalURL
-    }
-}
-
-extension Todo: FetchableRecord {
-    init(row: Row) {
-        id            = row["id"]
-        title         = row["title"]
-        shouldMigrate = row["shouldMigrate"]
-        start         = row["start"]
-        ending        = row["ending"]
-        categoryID    = row["categoryID"]
-        externalURL   = row["externalURL"]
-    }
-}
-
-struct Category: FetchableRecord, TableRecord, Decodable {
-    var id: Int64?
-    var name: String
-    var color: String
-    var sortOrder: Int
-
-    static let databaseTableName = "category"
-}
+// Category moved into NerfCore, where it no longer shadows a same-named type in
+// another imported module, so the bare name became ambiguous. The alias restores
+// it for the CLI sources. -- claude, 2026-10-17
+typealias Category = NerfCore.Category
 
 // MARK: - Errors
 
@@ -101,16 +21,38 @@ struct CLIError: Error, CustomStringConvertible {
 
 // Mixed into each subcommand via @OptionGroup so they all accept --database.
 struct DatabaseOptions: ParsableArguments {
-    @Option(name: .long, help: "Override the default database path (for testing).")
+    @Option(name: .long, help: "Override the default database path (also settable as NERF_DATABASE).")
     var database: String?
 
+    // The installed app's database, unless NERF_DATABASE says otherwise. The
+    // variable exists so a shell can be pointed at the dev build's container
+    // (systems.semiotic.nerfjournal.dev) without passing --database to every command.
+    // -- claude, 2026-10-28
     static func defaultPath() -> String {
+        if let path = ProcessInfo.processInfo.environment["NERF_DATABASE"], !path.isEmpty {
+            return path
+        }
         let home = NSHomeDirectory()
-        return "\(home)/Library/Containers/org.rjbs.nerfjournal/Data/Library/Application Support/NerfJournal/journal.sqlite"
+        return "\(home)/Library/Containers/systems.semiotic.nerfjournal/Data/Library/Application Support/NerfJournal/journal.sqlite"
+    }
+
+    var path: String { database ?? Self.defaultPath() }
+
+    // The preferences file of the app whose sandbox container holds the
+    // database, so a database in the dev container reads the dev build's
+    // settings. Nil for a database outside any container. The sandboxed
+    // app's defaults domain cannot be read through UserDefaults from
+    // outside the sandbox, hence the file. -- claude, 2026-10-30
+    static func appPreferencesURL(forDatabaseAt path: String) -> URL? {
+        let parts = URL(fileURLWithPath: path).pathComponents
+        guard let i = parts.firstIndex(of: "Containers"), i + 2 < parts.count, parts[i + 2] == "Data" else {
+            return nil
+        }
+        let container = URL(fileURLWithPath: "/").appending(path: parts[1...(i + 2)].joined(separator: "/"))
+        return container.appending(path: "Library/Preferences/\(parts[i + 1]).plist")
     }
 
     func open() throws -> DatabaseQueue {
-        let path = database ?? Self.defaultPath()
         var config = Configuration()
         config.busyMode = .timeout(5)
         do {
@@ -119,15 +61,25 @@ struct DatabaseOptions: ParsableArguments {
             throw CLIError("could not open database at \(path): \(error)")
         }
     }
-}
 
-// MARK: - Change notification
-
-// Notify any running NerfJournal instance to refresh after a write.
-func postExternalChangeNotification() {
-    DistributedNotificationCenter.default().postNotificationName(
-        NSNotification.Name("org.rjbs.nerfjournal.externalChange"),
-        object: nil,
-        deliverImmediately: true
-    )
+    // The database plus the sync engine over it, which is how todos are read
+    // and written now. Server settings are the ones the app saved, so the
+    // CLI follows the app's settings pane; NERF_JMAP_URL and
+    // NERF_JMAP_ACCOUNT override them, and the prototype stands in when
+    // there is nothing saved. Reads need no server; only a sync does.
+    // -- claude, 2026-10-28; the saved settings 2026-10-30
+    func openSync() throws -> JournalSync {
+        let dbQueue = try open()
+        let saved = Self.appPreferencesURL(forDatabaseAt: path)
+            .flatMap { SyncSettings.from(preferencesAt: $0) } ?? .prototype
+        do {
+            return try JournalSync(
+                writer: dbQueue,
+                databasePath: path,
+                settings: SyncSettings.from(environment: ProcessInfo.processInfo.environment, over: saved)
+            )
+        } catch {
+            throw CLIError("could not set up sync for \(path): \(error)")
+        }
+    }
 }

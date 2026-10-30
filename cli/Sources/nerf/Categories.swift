@@ -1,8 +1,8 @@
 import ArgumentParser
 import Foundation
-import GRDB
+import NerfCore
 
-struct Categories: ParsableCommand {
+struct Categories: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "categories",
         abstract: "List the categories defined in NerfJournal, in display order."
@@ -14,18 +14,14 @@ struct Categories: ParsableCommand {
 
     @OptionGroup var db: DatabaseOptions
 
-    func run() throws {
-        let dbQueue = try db.open()
+    func run() async throws {
+        let sync = try db.openSync()
 
         let categories: [Category]
         do {
-            categories = try dbQueue.read { database in
-                try Category
-                    .order(Column("sortOrder"))
-                    .fetchAll(database)
-            }
+            categories = try await sync.categories()
         } catch {
-            throw CLIError("could not query categories: \(error)")
+            throw CLIError("could not read categories: \(error)")
         }
 
         if json {
@@ -40,9 +36,9 @@ struct Categories: ParsableCommand {
 
         let nameWidth = categories.map(\.name.count).max() ?? 0
         for category in categories {
-            let swatch = Palette.swatch(named: category.color)
+            let swatch = Palette.swatch(named: category.color.rawValue)
             let name = category.name.padding(toLength: nameWidth, withPad: " ", startingAt: 0)
-            print("\(swatch) \(name)  \(category.color)")
+            print("\(swatch) \(name)  \(category.color.rawValue)")
         }
     }
 
@@ -52,7 +48,7 @@ struct Categories: ParsableCommand {
             var color: String
         }
         let entries = categories.map {
-            Entry(name: $0.name, color: Palette.hex(named: $0.color))
+            Entry(name: $0.name, color: Palette.hex(named: $0.color.rawValue))
         }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]

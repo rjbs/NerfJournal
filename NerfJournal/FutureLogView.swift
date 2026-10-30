@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import NerfCore
 
 // Width of the date column: probed at launch using "Sep 29" — widest typical
 // abbreviated-month + two-digit-day. -- claude, 2026-03-03
@@ -16,7 +17,6 @@ private let futureLogDateColumnWidth: CGFloat = {
 
 struct FutureLogView: View {
     @EnvironmentObject private var pageStore: PageStore
-    @EnvironmentObject private var categoryStore: CategoryStore
     @Environment(\.undoManager) private var undoManager
 
     @State private var selectedIDs: Set<Int64> = []
@@ -107,7 +107,7 @@ struct FutureLogRow: View {
                 .frame(width: 8, height: 8)
 
             if showDate {
-                Text(todo.start.formatted(.dateTime.month(.abbreviated).day()))
+                Text(todo.start.date().formatted(.dateTime.month(.abbreviated).day()))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
@@ -231,7 +231,7 @@ struct FutureLogRow: View {
             Text("Please enter a valid URL (e.g. https://example.com) or clear the field to remove the URL.")
         }
         .sheet(isPresented: $showingSendToDateSheet) {
-            let minDate = pageStore.page?.date ?? Calendar.current.startOfDay(for: Date())
+            let minDate = pageStore.page?.date.date() ?? Calendar.current.startOfDay(for: Date())
             VStack(spacing: 16) {
                 Text("Send to\u{2026}")
                     .font(.headline)
@@ -290,19 +290,27 @@ struct FutureLogRow: View {
 // Shows all pending future-log todos for a single date, without a date
 // column (redundant when all rows share the same day). Intended for
 // embedding in the calendar detail pane for pages that don't exist yet.
+//
+// With `includeEarlier`, also shows todos whose day is before `date` — the
+// carried-forward work a page created on `date` would inherit. This is used
+// for today, so the preview matches what Start Today actually loads onto the
+// page (every todo with start <= today), not just today's brand-new items.
+// -- claude, 2026-07-24
 struct FutureLogForDateView: View {
     @EnvironmentObject private var pageStore: PageStore
-    @EnvironmentObject private var categoryStore: CategoryStore
     @Environment(\.undoManager) private var undoManager
 
-    let date: Date
+    let date: CivilDate
+    var includeEarlier: Bool = false
 
     @State private var selectedIDs: Set<Int64> = []
     @State private var editingTodoID: Int64? = nil
     @State private var rowModalPresented = false
 
     private var filteredTodos: [Todo] {
-        pageStore.futureTodos.filter { Calendar.current.isDate($0.start, inSameDayAs: date) }
+        pageStore.futureTodos.filter { todo in
+            includeEarlier ? todo.start <= date : todo.start == date
+        }
     }
 
     var body: some View {

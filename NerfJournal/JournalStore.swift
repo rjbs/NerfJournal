@@ -1,17 +1,21 @@
 import Foundation
 import GRDB
+import NerfCore
 
 @MainActor
 final class JournalStore: ObservableObject {
     private let db: AppDatabase
 
-    @Published var pageDates: Set<Date> = []
-    @Published var selectedDate: Date? = nil
+    @Published var pageDates: Set<CivilDate> = []
+    @Published var selectedDate: CivilDate? = nil
     @Published var selectedPage: JournalPage? = nil
     @Published var selectedTodos: [Todo] = []
 
+    private let reader: TaskReader
+
     init(database: AppDatabase = .shared) {
         self.db = database
+        self.reader = TaskReader(sync: database.sync)
         NotificationCenter.default.addObserver(
             forName: .nerfJournalDatabaseDidChange,
             object: nil,
@@ -39,7 +43,7 @@ final class JournalStore: ObservableObject {
 
     var isSelectedPageLast: Bool {
         guard let page = selectedPage, let lastDate = pageDates.max() else { return false }
-        return Calendar.current.startOfDay(for: page.date) == lastDate
+        return page.date == lastDate
     }
 
     func loadIndex() async throws {
@@ -49,33 +53,28 @@ final class JournalStore: ObservableObject {
         pageDates = Set(dates)
     }
 
-    func selectDate(_ date: Date) async throws {
-        let start = Calendar.current.startOfDay(for: date)
-
-        // Fetch everything in one read so all published properties can be
-        // updated synchronously below — SwiftUI then coalesces them into a
-        // single view pass instead of animating through intermediate states.
-        let (foundPage, allTodos) = try await db.dbQueue.read { db in
-            let page = try JournalPage
-                .filter(Column("date") == start)
+    func selectDate(_ date: CivilDate) async throws {
+        // Match by civil day: page and todo dates are civil dates, so exact and
+        // `<=` comparisons work directly and are time-zone-proof. Fetch everything
+        // in one read so all published properties can be updated synchronously
+        // below — SwiftUI then coalesces them into a single view pass instead of
+        // animating through intermediate states.
+        let foundPage = try await db.dbQueue.read { db in
+            try JournalPage
+                .filter(Column("date") == date)
                 .fetchOne(db)
-            guard page?.id != nil else {
-                return (page, [Todo]())
-            }
-            let t = try Todo
-                .filter(Column("start") <= start)
-                .fetchAll(db)
-            return (page, t)
         }
+        let allTodos = foundPage?.id != nil ? try await reader.todos() : []
 
-        selectedDate = start
+        selectedDate = date
         selectedPage = foundPage
         // Visible on this day: added on or before it, and ended on or after it
         // (or not yet ended).
         selectedTodos = allTodos
             .filter { todo in
+                guard todo.start <= date else { return false }
                 guard let ending = todo.ending else { return true }
-                return ending.date >= start
+                return ending.day >= date
             }
             .sortedForDisplay()
     }

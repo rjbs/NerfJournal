@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -11,11 +11,14 @@
 		83CBBA111A601CBA00E9B192 /* NerfJournalApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA071A601CBA00E9B192 /* NerfJournalApp.swift */; };
 		83CBBA141A601CBA00E9B192 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 83CBBA0C1A601CBA00E9B192 /* Assets.xcassets */; };
 		83CBBA161A601CBA00E9B192 /* AppDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA1E1A601CBA00E9B192 /* AppDatabase.swift */; };
-		83CBBA171A601CBA00E9B192 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA1F1A601CBA00E9B192 /* Models.swift */; };
+		83CBBA601A601CBA00E9B192 /* CategoryColor+Swatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA611A601CBA00E9B192 /* CategoryColor+Swatch.swift */; };
+		83CBBA671A601CBA00E9B192 /* SyncSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA681A601CBA00E9B192 /* SyncSettingsView.swift */; };
+		83CBBA641A601CBA00E9B192 /* NerfCore in Frameworks */ = {isa = PBXBuildFile; productRef = 83CBBA631A601CBA00E9B192 /* NerfCore */; };
 		83CBBA181A601CBA00E9B192 /* PageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA201A601CBA00E9B192 /* PageStore.swift */; };
 		83CBBA191A601CBA00E9B192 /* JournalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA211A601CBA00E9B192 /* JournalStore.swift */; };
 		83CBBA1A1A601CBA00E9B192 /* JournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA221A601CBA00E9B192 /* JournalView.swift */; };
 		83CBBA2E1A601CBA00E9B192 /* FutureLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA2F1A601CBA00E9B192 /* FutureLogView.swift */; };
+		83CBBA501A601CBA00E9B192 /* DayClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA511A601CBA00E9B192 /* DayClock.swift */; };
 		83CBBA1B1A601CBA00E9B192 /* DebugCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA231A601CBA00E9B192 /* DebugCommands.swift */; };
 		83CBBA1C1A601CBA00E9B192 /* BundleStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA241A601CBA00E9B192 /* BundleStore.swift */; };
 		83CBBA1D1A601CBA00E9B192 /* BundleManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA251A601CBA00E9B192 /* BundleManagerView.swift */; };
@@ -23,7 +26,6 @@
 		83CC1A001B601CBA00E9B201 /* CategoryLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CC1A011B601CBA00E9B201 /* CategoryLabel.swift */; };
 		83CBBA281A601CBA00E9B192 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA291A601CBA00E9B192 /* AppDelegate.swift */; };
 		83CBBA2A1A601CBA00E9B192 /* QuickNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA2B1A601CBA00E9B192 /* QuickNoteView.swift */; };
-		83CBBA341A601CBA00E9B192 /* DateParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA351A601CBA00E9B192 /* DateParser.swift */; };
 		83CBBA2C1A601CBA00E9B192 /* HTMLExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA2D1A601CBA00E9B192 /* HTMLExport.swift */; };
 		83CBBA301A601CBA00E9B192 /* ExportGroupStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA311A601CBA00E9B192 /* ExportGroupStore.swift */; };
 		83CBBA321A601CBA00E9B192 /* ExportGroupManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA331A601CBA00E9B192 /* ExportGroupManagerView.swift */; };
@@ -35,11 +37,13 @@
 		83CBBA0C1A601CBA00E9B192 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		83CBBA0D1A601CBA00E9B192 /* NerfJournal.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NerfJournal.entitlements; sourceTree = "<group>"; };
 		83CBBA1E1A601CBA00E9B192 /* AppDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDatabase.swift; sourceTree = "<group>"; };
-		83CBBA1F1A601CBA00E9B192 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		83CBBA611A601CBA00E9B192 /* CategoryColor+Swatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CategoryColor+Swatch.swift"; sourceTree = "<group>"; };
+		83CBBA681A601CBA00E9B192 /* SyncSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncSettingsView.swift; sourceTree = "<group>"; };
 		83CBBA201A601CBA00E9B192 /* PageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageStore.swift; sourceTree = "<group>"; };
 		83CBBA211A601CBA00E9B192 /* JournalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalStore.swift; sourceTree = "<group>"; };
 		83CBBA221A601CBA00E9B192 /* JournalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalView.swift; sourceTree = "<group>"; };
 		83CBBA2F1A601CBA00E9B192 /* FutureLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FutureLogView.swift; sourceTree = "<group>"; };
+		83CBBA511A601CBA00E9B192 /* DayClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayClock.swift; sourceTree = "<group>"; };
 		83CBBA231A601CBA00E9B192 /* DebugCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugCommands.swift; sourceTree = "<group>"; };
 		83CBBA241A601CBA00E9B192 /* BundleStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleStore.swift; sourceTree = "<group>"; };
 		83CBBA251A601CBA00E9B192 /* BundleManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleManagerView.swift; sourceTree = "<group>"; };
@@ -47,7 +51,6 @@
 		83CC1A011B601CBA00E9B201 /* CategoryLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryLabel.swift; sourceTree = "<group>"; };
 		83CBBA291A601CBA00E9B192 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		83CBBA2B1A601CBA00E9B192 /* QuickNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNoteView.swift; sourceTree = "<group>"; };
-		83CBBA351A601CBA00E9B192 /* DateParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateParser.swift; sourceTree = "<group>"; };
 		83CBBA2D1A601CBA00E9B192 /* HTMLExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLExport.swift; sourceTree = "<group>"; };
 		83CBBA311A601CBA00E9B192 /* ExportGroupStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportGroupStore.swift; sourceTree = "<group>"; };
 		83CBBA331A601CBA00E9B192 /* ExportGroupManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportGroupManagerView.swift; sourceTree = "<group>"; };
@@ -59,6 +62,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3DA15FB52F537A45004D38F5 /* GRDB in Frameworks */,
+				83CBBA641A601CBA00E9B192 /* NerfCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,11 +82,13 @@
 			children = (
 				83CBBA071A601CBA00E9B192 /* NerfJournalApp.swift */,
 				83CBBA1E1A601CBA00E9B192 /* AppDatabase.swift */,
-				83CBBA1F1A601CBA00E9B192 /* Models.swift */,
+				83CBBA611A601CBA00E9B192 /* CategoryColor+Swatch.swift */,
+				83CBBA681A601CBA00E9B192 /* SyncSettingsView.swift */,
 				83CBBA201A601CBA00E9B192 /* PageStore.swift */,
 				83CBBA211A601CBA00E9B192 /* JournalStore.swift */,
 				83CBBA221A601CBA00E9B192 /* JournalView.swift */,
 				83CBBA2F1A601CBA00E9B192 /* FutureLogView.swift */,
+				83CBBA511A601CBA00E9B192 /* DayClock.swift */,
 				83CBBA231A601CBA00E9B192 /* DebugCommands.swift */,
 				83CBBA241A601CBA00E9B192 /* BundleStore.swift */,
 				83CBBA251A601CBA00E9B192 /* BundleManagerView.swift */,
@@ -90,7 +96,6 @@
 				83CC1A011B601CBA00E9B201 /* CategoryLabel.swift */,
 				83CBBA291A601CBA00E9B192 /* AppDelegate.swift */,
 				83CBBA2B1A601CBA00E9B192 /* QuickNoteView.swift */,
-				83CBBA351A601CBA00E9B192 /* DateParser.swift */,
 				83CBBA2D1A601CBA00E9B192 /* HTMLExport.swift */,
 				83CBBA311A601CBA00E9B192 /* ExportGroupStore.swift */,
 				83CBBA331A601CBA00E9B192 /* ExportGroupManagerView.swift */,
@@ -136,7 +141,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1540;
-				LastUpgradeCheck = 2630;
+				LastUpgradeCheck = 2710;
 				TargetAttributes = {
 					83CBBA001A601CBA00E9B192 = {
 						CreatedOnToolsVersion = 15.4;
@@ -144,7 +149,7 @@
 				};
 			};
 			buildConfigurationList = 83CBB9F91A601CBA00E9B192 /* Build configuration list for PBXProject "NerfJournal" */;
-			compatibilityVersion = "Xcode 14.0";
+			compatibilityVersion = "Xcode 15.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -153,6 +158,7 @@
 			);
 			mainGroup = 83CBB9F81A601CBA00E9B192;
 			packageReferences = (
+				83CBBA621A601CBA00E9B192 /* XCLocalSwiftPackageReference "NerfCore" */,
 				3DA15FB32F537A45004D38F5 /* XCRemoteSwiftPackageReference "GRDB" */,
 			);
 			productRefGroup = 83CBBA0B1A601CBA00E9B192 /* Products */;
@@ -182,11 +188,13 @@
 			files = (
 				83CBBA111A601CBA00E9B192 /* NerfJournalApp.swift in Sources */,
 				83CBBA161A601CBA00E9B192 /* AppDatabase.swift in Sources */,
-				83CBBA171A601CBA00E9B192 /* Models.swift in Sources */,
+				83CBBA601A601CBA00E9B192 /* CategoryColor+Swatch.swift in Sources */,
+				83CBBA671A601CBA00E9B192 /* SyncSettingsView.swift in Sources */,
 				83CBBA181A601CBA00E9B192 /* PageStore.swift in Sources */,
 				83CBBA191A601CBA00E9B192 /* JournalStore.swift in Sources */,
 				83CBBA1A1A601CBA00E9B192 /* JournalView.swift in Sources */,
 				83CBBA2E1A601CBA00E9B192 /* FutureLogView.swift in Sources */,
+				83CBBA501A601CBA00E9B192 /* DayClock.swift in Sources */,
 				83CBBA1B1A601CBA00E9B192 /* DebugCommands.swift in Sources */,
 				83CBBA1C1A601CBA00E9B192 /* BundleStore.swift in Sources */,
 				83CBBA1D1A601CBA00E9B192 /* BundleManagerView.swift in Sources */,
@@ -194,7 +202,6 @@
 				83CC1A001B601CBA00E9B201 /* CategoryLabel.swift in Sources */,
 				83CBBA281A601CBA00E9B192 /* AppDelegate.swift in Sources */,
 				83CBBA2A1A601CBA00E9B192 /* QuickNoteView.swift in Sources */,
-				83CBBA341A601CBA00E9B192 /* DateParser.swift in Sources */,
 				83CBBA2C1A601CBA00E9B192 /* HTMLExport.swift in Sources */,
 				83CBBA301A601CBA00E9B192 /* ExportGroupStore.swift in Sources */,
 				83CBBA321A601CBA00E9B192 /* ExportGroupManagerView.swift in Sources */,
@@ -253,7 +260,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -263,6 +270,66 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
+		};
+		83CBBA651A601CBA00E9B192 /* Dev */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_IVAR_ACCESS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNINITIALIZED = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = RF24M9W2UV;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Dev;
 		};
 		83CBBA031A601CBA00E9B192 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -307,7 +374,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -319,6 +386,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOL_FRAMEWORK_EXTENSIONS = YES;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = NerfJournal/NerfJournal.entitlements;
@@ -329,7 +397,7 @@
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
-				ENABLE_OUTGOING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
 				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
 				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
@@ -349,17 +417,65 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = org.rjbs.nerfjournal;
+				PRODUCT_BUNDLE_IDENTIFIER = systems.semiotic.nerfjournal;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
+		};
+		83CBBA661A601CBA00E9B192 /* Dev */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOL_FRAMEWORK_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = NerfJournal/NerfJournal.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "NerfJournal Dev";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = systems.semiotic.nerfjournal.dev;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEV $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Dev;
 		};
 		83CBBA051A601CBA00E9B192 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOL_FRAMEWORK_EXTENSIONS = YES;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = NerfJournal/NerfJournal.entitlements;
@@ -370,7 +486,7 @@
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
-				ENABLE_OUTGOING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
 				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
 				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
@@ -390,10 +506,12 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = org.rjbs.nerfjournal;
+				PRODUCT_BUNDLE_IDENTIFIER = systems.semiotic.nerfjournal;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
 		};
@@ -404,6 +522,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				83CBBA021A601CBA00E9B192 /* Debug */,
+				83CBBA651A601CBA00E9B192 /* Dev */,
 				83CBBA031A601CBA00E9B192 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -413,6 +532,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				83CBBA041A601CBA00E9B192 /* Debug */,
+				83CBBA661A601CBA00E9B192 /* Dev */,
 				83CBBA051A601CBA00E9B192 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -420,18 +540,29 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		83CBBA621A601CBA00E9B192 /* XCLocalSwiftPackageReference "NerfCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = NerfCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		3DA15FB32F537A45004D38F5 /* XCRemoteSwiftPackageReference "GRDB" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/groue/GRDB.swift";
 			requirement = {
-				branch = master;
-				kind = branch;
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.0.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		83CBBA631A601CBA00E9B192 /* NerfCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = NerfCore;
+		};
 		3DA15FB42F537A45004D38F5 /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 3DA15FB32F537A45004D38F5 /* XCRemoteSwiftPackageReference "GRDB" */;
