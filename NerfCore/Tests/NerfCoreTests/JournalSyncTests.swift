@@ -66,7 +66,7 @@ final class JournalSyncTests: XCTestCase {
         let onServer = try XCTUnwrap(rig.server.object("Task", id))
         XCTAssertEqual(onServer["title"], "Review the release notes")
         XCTAssertEqual(onServer["taskListIds"], [.init(rig.workId): true])
-        XCTAssertEqual(onServer["nerfjournal.rjbs.cloud:autoCancel"], true)
+        XCTAssertEqual(onServer["nerfjournal.semiotic.systems:autoCancel"], true)
         XCTAssertNil(onServer["keywords"])
 
         let tasks = try await rig.sync.tasks()

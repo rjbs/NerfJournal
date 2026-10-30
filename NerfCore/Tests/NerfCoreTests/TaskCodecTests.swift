@@ -1,5 +1,6 @@
 import XCTest
 import JinxJSON
+import JinxPatch
 import JinxStore
 import NerfCore
 
@@ -60,7 +61,7 @@ final class TaskCodecTests: XCTestCase {
                 "showWithoutTime": true,
                 "progress": "completed",
                 "progressUpdated": "2026-09-13T18:03:22Z",
-                "nerfjournal.rjbs.cloud:endedAt": "2026-09-13T14:03:22-04:00",
+                "nerfjournal.semiotic.systems:endedAt": "2026-09-13T14:03:22-04:00",
             ]
         )
     }
@@ -76,10 +77,10 @@ final class TaskCodecTests: XCTestCase {
                 "title": "Read the on-call log",
                 "start": "2026-09-12T00:00:00",
                 "showWithoutTime": true,
-                "nerfjournal.rjbs.cloud:autoCancel": true,
+                "nerfjournal.semiotic.systems:autoCancel": true,
                 "progress": "cancelled",
                 "progressUpdated": "2026-09-13T12:00:07Z",
-                "nerfjournal.rjbs.cloud:endedAt": "2026-09-12",
+                "nerfjournal.semiotic.systems:endedAt": "2026-09-12",
             ]
         )
     }
@@ -116,7 +117,7 @@ final class TaskCodecTests: XCTestCase {
             existing: [
                 "progress": "completed",
                 "progressUpdated": "2026-09-13T12:00:07Z",
-                "nerfjournal.rjbs.cloud:endedAt": "2026-09-13",
+                "nerfjournal.semiotic.systems:endedAt": "2026-09-13",
             ],
             expecting: [
                 "@type": "Task", "taskListIds": ["L0": true], "title": "T", "start": "2026-09-12T00:00:00", "showWithoutTime": true,
@@ -146,7 +147,7 @@ final class TaskCodecTests: XCTestCase {
                 "@type": "Task", "taskListIds": ["L0": true], "title": "T", "start": "2026-09-12T00:00:00", "showWithoutTime": true,
                 "progress": "cancelled",
                 "progressUpdated": "2026-09-13T12:00:07Z",
-                "nerfjournal.rjbs.cloud:endedAt": "2026-09-12",
+                "nerfjournal.semiotic.systems:endedAt": "2026-09-12",
             ]
         )
     }
@@ -161,7 +162,7 @@ final class TaskCodecTests: XCTestCase {
                 "@type": "Task", "taskListIds": ["L0": true], "title": "T", "start": "2026-09-12T00:00:00", "showWithoutTime": true,
                 "progress": "completed",
                 "progressUpdated": "2026-10-01T00:00:00Z",
-                "nerfjournal.rjbs.cloud:endedAt": "2026-09-12",
+                "nerfjournal.semiotic.systems:endedAt": "2026-09-12",
             ]
         )
     }
@@ -204,11 +205,11 @@ final class TaskCodecTests: XCTestCase {
     // MARK: - Lenient reading
 
     func testAutoCancelIsTrueOnlyForJSONTrue() {
-        checkDecode(["title": "T", "start": "2026-09-13T00:00:00", "nerfjournal.rjbs.cloud:autoCancel": true],
+        checkDecode(["title": "T", "start": "2026-09-13T00:00:00", "nerfjournal.semiotic.systems:autoCancel": true],
                     expecting: Todo(id: 1, title: "T", shouldMigrate: false, start: day("2026-09-13")))
-        checkDecode(["title": "T", "start": "2026-09-13T00:00:00", "nerfjournal.rjbs.cloud:autoCancel": "true"],
+        checkDecode(["title": "T", "start": "2026-09-13T00:00:00", "nerfjournal.semiotic.systems:autoCancel": "true"],
                     expecting: Todo(id: 1, title: "T", shouldMigrate: true, start: day("2026-09-13")))
-        checkDecode(["title": "T", "start": "2026-09-13T00:00:00", "nerfjournal.rjbs.cloud:autoCancel": 1],
+        checkDecode(["title": "T", "start": "2026-09-13T00:00:00", "nerfjournal.semiotic.systems:autoCancel": 1],
                     expecting: Todo(id: 1, title: "T", shouldMigrate: true, start: day("2026-09-13")))
         checkDecode(["title": "T", "start": "2026-09-13T00:00:00"],
                     expecting: Todo(id: 1, title: "T", shouldMigrate: true, start: day("2026-09-13")))
@@ -224,24 +225,24 @@ final class TaskCodecTests: XCTestCase {
     func testProgressValues() {
         for pending in ["needs-action", "in-process"] {
             checkDecode(["title": "T", "start": "2026-09-13T00:00:00", "progress": .string(pending),
-                         "nerfjournal.rjbs.cloud:endedAt": "2026-09-13"],
+                         "nerfjournal.semiotic.systems:endedAt": "2026-09-13"],
                         expecting: Todo(id: 1, title: "T", shouldMigrate: true, start: day("2026-09-13")))
         }
         checkDecode(["title": "T", "start": "2026-09-13T00:00:00", "progress": "failed",
-                     "nerfjournal.rjbs.cloud:endedAt": "2026-09-14"],
+                     "nerfjournal.semiotic.systems:endedAt": "2026-09-14"],
                     expecting: Todo(id: 1, title: "T", shouldMigrate: true, start: day("2026-09-13"),
                                     ending: TodoEnding(day: day("2026-09-14"), kind: .abandoned)))
     }
 
     func testEndedAtShapes() {
         checkDecode(["title": "T", "start": "2026-09-13T00:00:00", "progress": "completed",
-                     "nerfjournal.rjbs.cloud:endedAt": "2026-09-13T23:30:00-04:00"],
+                     "nerfjournal.semiotic.systems:endedAt": "2026-09-13T23:30:00-04:00"],
                     expecting: Todo(id: 1, title: "T", shouldMigrate: true, start: day("2026-09-13"),
                                     ending: TodoEnding(day: day("2026-09-13"),
                                                        time: Moment(instant: instant("2026-09-14T03:30:00Z"), offsetSeconds: -4 * 3600),
                                                        kind: .done)))
         checkDecode(["title": "T", "start": "2026-09-13T00:00:00", "progress": "completed",
-                     "nerfjournal.rjbs.cloud:endedAt": "2026-09-14T03:30:00Z"],
+                     "nerfjournal.semiotic.systems:endedAt": "2026-09-14T03:30:00Z"],
                     expecting: Todo(id: 1, title: "T", shouldMigrate: true, start: day("2026-09-13"),
                                     ending: TodoEnding(day: day("2026-09-14"),
                                                        time: Moment(instant: instant("2026-09-14T03:30:00Z"), offsetSeconds: 0),
@@ -251,7 +252,7 @@ final class TaskCodecTests: XCTestCase {
     func testEndingDayFallbackChain() {
         let garbage: JSONValue = "soon"
         checkDecode(["title": "T", "start": "2026-09-13T00:00:00", "progress": "completed",
-                     "nerfjournal.rjbs.cloud:endedAt": garbage,
+                     "nerfjournal.semiotic.systems:endedAt": garbage,
                      "progressUpdated": "2026-09-16T02:00:00Z", "updated": "2026-09-20T02:00:00Z"],
                     expecting: Todo(id: 1, title: "T", shouldMigrate: true, start: day("2026-09-13"),
                                     ending: TodoEnding(day: day("2026-09-15"), kind: .done)))
@@ -290,7 +291,42 @@ final class TaskCodecTests: XCTestCase {
                     expecting: Todo(id: 1, title: "T", shouldMigrate: true, start: day("2026-09-13")))
     }
 
+    // MARK: - The prefix before 2026-10-30
+
+    func testLegacyPrefixIsReadAndStrippedOnWrite() throws {
+        checkDecode(["title": "T", "start": "2026-09-12T00:00:00", "progress": "cancelled",
+                     "nerfjournal.rjbs.cloud:autoCancel": true, "nerfjournal.rjbs.cloud:endedAt": "2026-09-12"],
+                    expecting: Todo(id: 1, title: "T", shouldMigrate: false, start: day("2026-09-12"),
+                                    ending: TodoEnding(day: day("2026-09-12"), kind: .abandoned)))
+        // The new name wins when both are present.
+        checkDecode(["title": "T", "start": "2026-09-12T00:00:00", "progress": "cancelled",
+                     "nerfjournal.semiotic.systems:endedAt": "2026-09-13", "nerfjournal.rjbs.cloud:endedAt": "2026-09-12"],
+                    expecting: Todo(id: 1, title: "T", shouldMigrate: true, start: day("2026-09-12"),
+                                    ending: TodoEnding(day: day("2026-09-13"), kind: .abandoned)))
+        try checkOwnedMerge(
+            Todo(id: nil, title: "T", shouldMigrate: false, start: day("2026-09-12"),
+                 ending: TodoEnding(day: day("2026-09-12"), kind: .abandoned)),
+            existing: ["uid": "u", "progress": "cancelled", "progressUpdated": "2026-09-13T12:00:07Z",
+                       "nerfjournal.rjbs.cloud:autoCancel": true, "nerfjournal.rjbs.cloud:endedAt": "2026-09-12"],
+            expecting: ["@type": "Task", "uid": "u", "taskListIds": ["L0": true], "title": "T",
+                        "start": "2026-09-12T00:00:00", "showWithoutTime": true,
+                        "progress": "cancelled", "progressUpdated": "2026-09-13T12:00:07Z",
+                        "nerfjournal.semiotic.systems:autoCancel": true,
+                        "nerfjournal.semiotic.systems:endedAt": "2026-09-12"]
+        )
+    }
+
     // MARK: - Helpers
+
+    // The Task as the writer stores it: `existing` with the owned
+    // properties replaced by the encoding of `todo`.
+    private func checkOwnedMerge(_ todo: Todo, existing: JSONValue, expecting expected: JSONValue,
+                                 file: StaticString = #filePath, line: UInt = #line) throws {
+        let encoding = try TaskCodec.encode(todo, lists: lists, existing: existing)
+        let actual = try existing.mergingOwnedProperties(TaskCodec.ownedProperties, from: encoding)
+        XCTAssertEqual(actual, expected, file: file, line: line)
+    }
+
 
     private func checkEncode(_ todo: Todo, existing: JSONValue? = nil, now: Date = instant("2026-01-01T00:00:00Z"),
                              expecting expected: JSONValue, file: StaticString = #filePath, line: UInt = #line) throws {

@@ -127,7 +127,7 @@ final class TaskWriterTests: XCTestCase {
         let object = try await rig.sync.engine.object(key: key)
         let value = try XCTUnwrap(object).value
         XCTAssertEqual(value["progress"], "needs-action")
-        XCTAssertNil(value["nerfjournal.rjbs.cloud:endedAt"])
+        XCTAssertNil(value["nerfjournal.semiotic.systems:endedAt"])
 
         try await rig.writer.destroy([key])
         let remaining = try await rig.todos()

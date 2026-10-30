@@ -47,7 +47,7 @@ final class TaskReaderTests: XCTestCase {
     func testReadsEveryTaskWithLocalKeyAsId() async throws {
         let rig = try Rig()
         let a = rig.serverTask("A", in: rig.workId)
-        let b = rig.serverTask("B", ["progress": "completed", "nerfjournal.rjbs.cloud:endedAt": "2026-09-14"])
+        let b = rig.serverTask("B", ["progress": "completed", "nerfjournal.semiotic.systems:endedAt": "2026-09-14"])
         try await rig.sync.engine.sync()
         let work = try await rig.sync.categories()[0]
 

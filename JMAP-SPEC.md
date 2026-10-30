@@ -20,8 +20,10 @@ server.  Waiting on JMAP for Tasks support in Cyrus IMAP.
     database becomes a cache of Task objects plus client-only state.
 
 2.  **Standard properties where they fit, vendor properties where they
-    do not.**  Vendor properties use the prefix `nerfjournal.rjbs.cloud:`
-    as RFC 8984 section 3.3 requires.
+    do not.**  Vendor properties use the prefix `nerfjournal.semiotic.systems:`
+    as RFC 8984 section 3.3 requires.  (Before 2026-10-30 the prefix was
+    `nerfjournal.rjbs.cloud:`; every Task on the server was rewritten that
+    day.)
 
 3.  **Only our own properties are ever written.**  Every write is a JMAP
     PatchObject touching named properties.  The client never replaces a
@@ -115,7 +117,7 @@ model.
 
 `Todo.shouldMigrate` becomes the vendor property
 
-    "nerfjournal.rjbs.cloud:autoCancel": true
+    "nerfjournal.semiotic.systems:autoCancel": true
 
 with the opposite sense: `autoCancel` true means `shouldMigrate` false.
 The property is a Boolean and defaults to false when absent, so a Task
@@ -143,7 +145,7 @@ is pending, has `autoCancel` true, and has a start day before today.
 Each such Task receives
 
     "progress": "cancelled",
-    "nerfjournal.rjbs.cloud:endedAt": "<its start day>"
+    "nerfjournal.semiotic.systems:endedAt": "<its start day>"
 
 The ending day is the Task's start day.  A non-migrating task is live on
 exactly one day, so that is by definition the day it was abandoned.
@@ -179,7 +181,7 @@ removes `endedAt` and `progressUpdated`.
 
 The ending's time is the vendor property
 
-    "nerfjournal.rjbs.cloud:endedAt"
+    "nerfjournal.semiotic.systems:endedAt"
 
 a String in one of two shapes:
 
@@ -330,7 +332,7 @@ Standard:
 | `created`         | no      | fallback | start day for foreign Tasks  |
 | `updated`         | no      | fallback | ending day for foreign Tasks |
 
-Vendor, all prefixed `nerfjournal.rjbs.cloud:`:
+Vendor, all prefixed `nerfjournal.semiotic.systems:`:
 
 | Property     | Type    | Default | Purpose                              |
 |--------------|---------|---------|--------------------------------------|
@@ -363,7 +365,7 @@ The same todo, completed at a known moment:
       ...,
       "progress": "completed",
       "progressUpdated": "2026-09-13T18:03:22Z",
-      "nerfjournal.rjbs.cloud:endedAt": "2026-09-13T14:03:22-04:00"
+      "nerfjournal.semiotic.systems:endedAt": "2026-09-13T14:03:22-04:00"
     }
 
 A habitual, non-migrating todo that was not done, after the sweep:
@@ -374,10 +376,10 @@ A habitual, non-migrating todo that was not done, after the sweep:
       "title": "Read the on-call log",
       "start": "2026-09-12T00:00:00",
       "showWithoutTime": true,
-      "nerfjournal.rjbs.cloud:autoCancel": true,
+      "nerfjournal.semiotic.systems:autoCancel": true,
       "progress": "cancelled",
       "progressUpdated": "2026-09-13T12:00:07Z",
-      "nerfjournal.rjbs.cloud:endedAt": "2026-09-12"
+      "nerfjournal.semiotic.systems:endedAt": "2026-09-12"
     }
 
 A born-done todo (something done that was never planned) is created in
