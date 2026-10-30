@@ -1,0 +1,15 @@
+// On wide windows Just the Docs keeps the content column centered by widening
+// the sidebar and right-aligning the nav inside it, which leaves an empty band
+// down the left edge.  Hold the sidebar at its natural width instead and start
+// the content right beside it. -- claude, 2026-10-30
+.side-bar {
+  @include mq(lg) {
+    width: $nav-width;
+  }
+
+  & + .main {
+    @include mq(lg) {
+      margin-left: $nav-width;
+    }
+  }
+}
