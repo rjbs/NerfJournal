@@ -5,10 +5,6 @@
 The learning curriculum in `learning/` is a sub-project called **NerfLearning**.
 The user may refer to it by that name.
 
-When the user asks a question about Swift or SwiftUI during a learning
-discussion, log it to `learning/questions.md` under the appropriate unit
-heading, then commit it. Do this automatically without being prompted.
-
 When writing unit content:
 
 - The reader knows Perl and Rust well. Compare Swift to Rust when it is more
