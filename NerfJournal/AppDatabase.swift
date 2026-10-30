@@ -3,10 +3,10 @@ import GRDB
 import NerfCore
 
 extension Notification.Name {
-    static let nerfJournalDatabaseDidChange = Notification.Name("org.rjbs.nerfjournal.databaseDidChange")
+    static let nerfJournalDatabaseDidChange = Notification.Name("systems.semiotic.nerfjournal.databaseDidChange")
     // Posted by PageStore.refreshContents() so other stores can stay in sync
     // with live todo mutations without a full database reload. -- claude, 2026-03-06
-    static let nerfJournalTodosDidChange = Notification.Name("org.rjbs.nerfjournal.todosDidChange")
+    static let nerfJournalTodosDidChange = Notification.Name("systems.semiotic.nerfjournal.todosDidChange")
 }
 
 struct AppDatabase {

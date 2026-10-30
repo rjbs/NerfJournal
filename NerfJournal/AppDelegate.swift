@@ -15,7 +15,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         startSync()
-        // The dev build (bundle id org.rjbs.nerfjournal.dev) runs beside the
+        // The dev build (bundle id systems.semiotic.nerfjournal.dev) runs beside the
         // installed app, and only one process can own a global hot key, so it
         // leaves Cmd-Shift-J to the installed app. -- claude, 2026-10-28
         #if !DEV

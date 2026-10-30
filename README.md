@@ -75,7 +75,7 @@ applied.
 - **`AppDatabase`** — wraps a GRDB `DatabaseQueue`, owns the SQLite
   file, creates the schema, and builds the process's one
   `JournalSync`. The file lives under the app's sandbox container:
-  `~/Library/Containers/org.rjbs.nerfjournal/Data/Library/Application Support/NerfJournal/journal.sqlite`
+  `~/Library/Containers/systems.semiotic.nerfjournal/Data/Library/Application Support/NerfJournal/journal.sqlite`
   and holds both the client-only tables and the sync engine's `jinx_`
   tables. `AppDelegate` starts the engine at launch, which runs push,
   pull, EventSource push notifications, and journal tailing until quit.
@@ -346,11 +346,11 @@ The app is sandboxed. Set your Development Team in Xcode's Signing &
 Capabilities tab before building.
 
 There are two shared schemes. `NerfJournal` builds the app you install
-(Debug or Release, bundle id `org.rjbs.nerfjournal`). `NerfJournal Dev`
-builds the `Dev` configuration: bundle id `org.rjbs.nerfjournal.dev`,
+(Debug or Release, bundle id `systems.semiotic.nerfjournal`). `NerfJournal Dev`
+builds the `Dev` configuration: bundle id `systems.semiotic.nerfjournal.dev`,
 displayed as "NerfJournal Dev", compiled with the `DEV` condition. The
 sandbox gives it its own container, so its database is
-`~/Library/Containers/org.rjbs.nerfjournal.dev/Data/Library/Application Support/NerfJournal/journal.sqlite`
+`~/Library/Containers/systems.semiotic.nerfjournal.dev/Data/Library/Application Support/NerfJournal/journal.sqlite`
 and it can run beside the installed app without touching its data. Under
 `DEV` the app does not register the global quick-entry hot key, which
 only one process can own. Point the CLI at the dev database with

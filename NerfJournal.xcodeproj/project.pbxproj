@@ -417,7 +417,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = org.rjbs.nerfjournal;
+				PRODUCT_BUNDLE_IDENTIFIER = systems.semiotic.nerfjournal;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -461,7 +461,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = org.rjbs.nerfjournal.dev;
+				PRODUCT_BUNDLE_IDENTIFIER = systems.semiotic.nerfjournal.dev;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEV $(inherited)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -506,7 +506,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = org.rjbs.nerfjournal;
+				PRODUCT_BUNDLE_IDENTIFIER = systems.semiotic.nerfjournal;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;

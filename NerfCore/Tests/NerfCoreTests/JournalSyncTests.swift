@@ -97,8 +97,8 @@ final class JournalSyncTests: XCTestCase {
         let a = JournalSync.signalName(forDatabaseAt: "/a/journal.sqlite")
         XCTAssertEqual(a, JournalSync.signalName(forDatabaseAt: "/a/journal.sqlite"))
         XCTAssertNotEqual(a, JournalSync.signalName(forDatabaseAt: "/b/journal.sqlite"))
-        XCTAssertTrue(a.hasPrefix("org.rjbs.nerfjournal.jinx."))
-        XCTAssertEqual(a.count, "org.rjbs.nerfjournal.jinx.".count + 16)
+        XCTAssertTrue(a.hasPrefix("systems.semiotic.nerfjournal.jinx."))
+        XCTAssertEqual(a.count, "systems.semiotic.nerfjournal.jinx.".count + 16)
     }
 
     func testSettingsSources() {
@@ -106,10 +106,15 @@ final class JournalSyncTests: XCTestCase {
         XCTAssertEqual(
             SyncSettings.from(environment: ["NERF_JMAP_URL": "https://jmap.example/session", "NERF_JMAP_ACCOUNT": "u1"]),
             SyncSettings(sessionURL: URL(string: "https://jmap.example/session")!, accountId: "u1"))
-        let defaults = UserDefaults(suiteName: "org.rjbs.nerfjournal.tests.\(UUID().uuidString)")!
+        // Registered rather than set: a set value is written to disk, and
+        // the suite would leave a plist in ~/Library/Preferences on every
+        // run. -- claude, 2026-10-30
+        let defaults = UserDefaults(suiteName: "systems.semiotic.nerfjournal.tests.\(UUID().uuidString)")!
         XCTAssertEqual(SyncSettings.from(defaults), .prototype)
-        defaults.set("https://jmap.example/session", forKey: SyncSettings.sessionURLDefaultsKey)
-        defaults.set("u2", forKey: SyncSettings.accountIdDefaultsKey)
+        defaults.register(defaults: [
+            SyncSettings.sessionURLDefaultsKey: "https://jmap.example/session",
+            SyncSettings.accountIdDefaultsKey: "u2",
+        ])
         XCTAssertEqual(SyncSettings.from(defaults),
                        SyncSettings(sessionURL: URL(string: "https://jmap.example/session")!, accountId: "u2"))
     }

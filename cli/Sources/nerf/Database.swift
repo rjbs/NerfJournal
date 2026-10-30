@@ -26,14 +26,14 @@ struct DatabaseOptions: ParsableArguments {
 
     // The installed app's database, unless NERF_DATABASE says otherwise. The
     // variable exists so a shell can be pointed at the dev build's container
-    // (org.rjbs.nerfjournal.dev) without passing --database to every command.
+    // (systems.semiotic.nerfjournal.dev) without passing --database to every command.
     // -- claude, 2026-10-28
     static func defaultPath() -> String {
         if let path = ProcessInfo.processInfo.environment["NERF_DATABASE"], !path.isEmpty {
             return path
         }
         let home = NSHomeDirectory()
-        return "\(home)/Library/Containers/org.rjbs.nerfjournal/Data/Library/Application Support/NerfJournal/journal.sqlite"
+        return "\(home)/Library/Containers/systems.semiotic.nerfjournal/Data/Library/Application Support/NerfJournal/journal.sqlite"
     }
 
     var path: String { database ?? Self.defaultPath() }

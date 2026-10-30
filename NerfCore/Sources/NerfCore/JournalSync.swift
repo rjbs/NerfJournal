@@ -114,7 +114,7 @@ public actor JournalSync {
     public static func signalName(forDatabaseAt path: String) -> String {
         let digest = SHA256.hash(data: Data(path.utf8))
         let hex = digest.prefix(8).map { String(format: "%02x", $0) }.joined()
-        return "org.rjbs.nerfjournal.jinx.\(hex)"
+        return "systems.semiotic.nerfjournal.jinx.\(hex)"
     }
 
     // MARK: - Lists
