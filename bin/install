@@ -1,0 +1,66 @@
+#!/usr/bin/env perl
+use v5.36;
+
+# bin/install: build NerfJournal in Release and install it into
+# ~/Applications, without Xcode's Run.  Run from the top of the repository:
+#
+#   bin/install
+#
+# This builds with xcodebuild, so it doesn't mind the project (or Jinx)
+# being open in Xcode, and it builds into its own derived data, away from
+# Xcode's.  Signing is automatic and for development, which is enough for a
+# Mac app that never leaves this one.
+#
+# The build number is the count of commits on HEAD, but the working tree
+# needn't be clean: this is for trying things.
+
+use File::Path qw(remove_tree);
+
+-d 'NerfJournal.xcodeproj' or die "run this from the top of the repository\n";
+
+# A plain build may shell out to rsync both from PATH and as /usr/bin/rsync;
+# a Homebrew rsync earlier in PATH can disagree with Apple's about flags, so
+# put the system tools first.  -- claude, 2026-11-04
+$ENV{PATH} = "/usr/bin:/bin:/usr/sbin:/sbin:$ENV{PATH}";
+
+chomp(my $build = `git rev-list --count HEAD`);
+$build =~ /\A[0-9]+\z/ or die "couldn't count commits\n";
+
+my $derived = 'build/install';
+my $target  = "$ENV{HOME}/Applications/NerfJournal.app";
+
+check_not_running($target);
+
+run(
+  'xcodebuild', 'build', '-quiet',
+  '-project', 'NerfJournal.xcodeproj',
+  '-scheme', 'NerfJournal',
+  '-configuration', 'Release',
+  '-destination', 'platform=macOS',
+  '-derivedDataPath', $derived,
+  '-allowProvisioningUpdates',
+  "CURRENT_PROJECT_VERSION=$build",
+);
+
+# The check is made again just before the copy, since a build takes long
+# enough to have started the app in the meantime.  It's still a race, only
+# a shorter one.  -- claude, 2026-11-04
+check_not_running($target);
+remove_tree($target);
+run('ditto', "$derived/Build/Products/Release/NerfJournal.app", $target);
+say "installed build $build as $target";
+
+# check_not_running dies if the app at $app is running, since replacing a
+# running app's bundle leaves it reading files out from under itself.
+sub check_not_running ($app) {
+  my $exe = "$app/Contents/MacOS/NerfJournal";
+  my @running = grep { m{\A\s*\d+\s+\Q$exe\E(\s|\z)} } `ps -axo pid=,command=`;
+  return unless @running;
+  my @pids = map { /(\d+)/ } @running;
+  die "$app is running (pid @pids); quit it first\n";
+}
+
+sub run (@command) {
+  say "+ @command";
+  system(@command) == 0 or die "failed: @command\n";
+}
