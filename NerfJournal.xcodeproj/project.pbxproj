@@ -14,6 +14,7 @@
 		83CBBA601A601CBA00E9B192 /* CategoryColor+Swatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA611A601CBA00E9B192 /* CategoryColor+Swatch.swift */; };
 		83CBBA671A601CBA00E9B192 /* SyncSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA681A601CBA00E9B192 /* SyncSettingsView.swift */; };
 		83CBBA641A601CBA00E9B192 /* NerfCore in Frameworks */ = {isa = PBXBuildFile; productRef = 83CBBA631A601CBA00E9B192 /* NerfCore */; };
+		83CBBA721A601CBA00E9B192 /* JinxInspector in Frameworks */ = {isa = PBXBuildFile; productRef = 83CBBA711A601CBA00E9B192 /* JinxInspector */; };
 		83CBBA181A601CBA00E9B192 /* PageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA201A601CBA00E9B192 /* PageStore.swift */; };
 		83CBBA191A601CBA00E9B192 /* JournalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA211A601CBA00E9B192 /* JournalStore.swift */; };
 		83CBBA1A1A601CBA00E9B192 /* JournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CBBA221A601CBA00E9B192 /* JournalView.swift */; };
@@ -63,6 +64,7 @@
 			files = (
 				3DA15FB52F537A45004D38F5 /* GRDB in Frameworks */,
 				83CBBA641A601CBA00E9B192 /* NerfCore in Frameworks */,
+				83CBBA721A601CBA00E9B192 /* JinxInspector in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -159,6 +161,7 @@
 			mainGroup = 83CBB9F81A601CBA00E9B192;
 			packageReferences = (
 				83CBBA621A601CBA00E9B192 /* XCLocalSwiftPackageReference "NerfCore" */,
+				83CBBA701A601CBA00E9B192 /* XCLocalSwiftPackageReference "../Jinx" */,
 				3DA15FB32F537A45004D38F5 /* XCRemoteSwiftPackageReference "GRDB" */,
 			);
 			productRefGroup = 83CBBA0B1A601CBA00E9B192 /* Products */;
@@ -545,6 +548,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = NerfCore;
 		};
+		83CBBA701A601CBA00E9B192 /* XCLocalSwiftPackageReference "../Jinx" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Jinx;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -562,6 +569,11 @@
 		83CBBA631A601CBA00E9B192 /* NerfCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = NerfCore;
+		};
+		83CBBA711A601CBA00E9B192 /* JinxInspector */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 83CBBA701A601CBA00E9B192 /* XCLocalSwiftPackageReference "../Jinx" */;
+			productName = JinxInspector;
 		};
 		3DA15FB42F537A45004D38F5 /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;

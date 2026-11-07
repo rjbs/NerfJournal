@@ -5,9 +5,16 @@ import NerfCore
 
 struct DebugCommands: Commands {
     @FocusedObject var store: PageStore?
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
         CommandMenu("Debug") {
+            Button("Sync Inspector") {
+                openWindow(id: "sync-inspector")
+            }
+
+            Divider()
+
             Button("Export…") {
                 Task { await exportDatabase() }
             }

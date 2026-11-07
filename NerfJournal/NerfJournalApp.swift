@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
+import JinxInspector
 import NerfCore
 
 struct TodoCommands: Commands {
@@ -142,5 +143,13 @@ struct NerfJournalApp: App {
                 .environmentObject(categoryStore)
         }
         .defaultSize(width: 480, height: 360)
+
+        // Opened from the Debug menu, so kept out of the Window menu, which
+        // is for the journal itself. -- claude, 2026-11-07
+        Window("Sync Inspector", id: "sync-inspector") {
+            JinxInspectorView(engine: AppDatabase.shared.sync.engine)
+        }
+        .defaultSize(width: 760, height: 600)
+        .commandsRemoved()
     }
 }
