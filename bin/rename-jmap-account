@@ -1,0 +1,131 @@
+#!/usr/bin/env perl
+use v5.36;
+
+# bin/rename-jmap-account: move the journal's sync data from one JMAP
+# account id to another, for when the server's account has been renamed
+# but its data (and so its object ids and states) is unchanged:
+#
+#   bin/rename-jmap-account rjbs NEW
+#
+# Every Jinx table is keyed by account.  Merely changing the app's account
+# setting makes the engine see an empty account and fetch everything again,
+# giving each object a new jinx_object.key; bundleTodo.categoryID and
+# exportGroupMember.categoryID hold those keys, so they would be left
+# pointing at the orphaned rows.  Renaming the account in place keeps the
+# keys and the saved server states, and the next sync is an ordinary
+# /changes call.
+#
+# Quit the app (and any nerf) first; this refuses to run if either is up.
+# Unless told otherwise, it also sets jmapAccountId in the app's defaults,
+# which nerf reads too.
+
+use DBI;
+use Getopt::Long::Descriptive;
+
+my $default_db = "$ENV{HOME}/Library/Containers/systems.semiotic.nerfjournal"
+               . "/Data/Library/Application Support/NerfJournal/journal.sqlite";
+
+my ($opt, $usage) = describe_options(
+  '%c %o OLD-ACCOUNT NEW-ACCOUNT',
+  [ 'db=s',       'the journal database', { default => $default_db } ],
+  [ 'domain=s',   'the defaults domain whose jmapAccountId to set',
+                  { default => 'systems.semiotic.nerfjournal' } ],
+  [ 'no-defaults', "don't touch the app's defaults" ],
+  [ 'dry-run|n',  'report what would change, then roll back' ],
+  [],
+  [ 'help',       'print usage and exit', { shortcircuit => 1 } ],
+);
+
+print($usage->text), exit if $opt->help;
+@ARGV == 2 or die $usage->text;
+my ($old, $new) = @ARGV;
+$old ne $new or die "old and new account ids are the same\n";
+-f $opt->db or die "no database at " . $opt->db . "\n";
+
+refuse_if_running('NerfJournal', 'NerfJournal Dev', 'nerf');
+
+my $dbh = DBI->connect("dbi:SQLite:dbname=" . $opt->db, undef, undef, {
+  RaiseError => 1,
+  AutoCommit => 1,
+  sqlite_unicode => 1,
+});
+
+# Rather than a fixed list, every Jinx table with an account column, so a
+# table added by a later Jinx migration isn't silently left behind.
+# -- claude, 2026-11-07
+my @tables = grep {; has_account_column($dbh, $_) } @{
+  $dbh->selectcol_arrayref(
+    "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'jinx\\_%' ESCAPE '\\' ORDER BY name"
+  )
+};
+
+@tables or die "no Jinx tables in " . $opt->db . "\n";
+
+# IMMEDIATE takes the write lock up front, so a process we failed to notice
+# can't slip a commit in between our checks and our updates.
+$dbh->do('BEGIN IMMEDIATE');
+
+my $ok = eval {
+  my %clash = map {; $_ => count($dbh, $_, $new) } @tables;
+  if (my @busy = grep {; $clash{$_} } @tables) {
+    die "account $new already has rows in: "
+      . join(q{, }, map {; "$_ ($clash{$_})" } @busy) . "\n";
+  }
+
+  my $total = 0;
+  for my $table (@tables) {
+    my $n = $dbh->do("UPDATE $table SET account = ? WHERE account = ?", undef, $new, $old);
+    $n = 0 if $n eq '0E0';
+    $total += $n;
+    printf "%-20s %6d\n", $table, $n;
+  }
+
+  $total or die "no rows belong to account $old; nothing to do\n";
+
+  my $pending = count($dbh, 'jinx_pending', $new);
+  say "$pending pending change(s) carried over; they will be pushed on next sync"
+    if $pending;
+
+  1;
+};
+
+unless ($ok) {
+  my $error = $@;
+  $dbh->do('ROLLBACK');
+  die $error;
+}
+
+if ($opt->dry_run) {
+  $dbh->do('ROLLBACK');
+  say "dry run: rolled back";
+  exit;
+}
+
+$dbh->do('COMMIT');
+say "renamed account $old to $new in " . $opt->db;
+
+unless ($opt->no_defaults) {
+  system('defaults', 'write', $opt->domain, 'jmapAccountId', $new) == 0
+    or die "defaults write failed; set jmapAccountId to $new by hand\n";
+
+  chomp(my $now = `defaults read \Q${\$opt->domain}\E jmapAccountId`);
+  $now eq $new
+    or die "defaults now say jmapAccountId is '$now', not '$new'\n";
+
+  say "set jmapAccountId to $new in " . $opt->domain;
+}
+
+sub has_account_column ($dbh, $table) {
+  my $columns = $dbh->selectcol_arrayref("SELECT name FROM pragma_table_info(?)", undef, $table);
+  return !! grep {; $_ eq 'account' } @$columns;
+}
+
+sub count ($dbh, $table, $account) {
+  my ($n) = $dbh->selectrow_array("SELECT COUNT(*) FROM $table WHERE account = ?", undef, $account);
+  return $n;
+}
+
+sub refuse_if_running (@names) {
+  my @running = grep {; system('pgrep', '-qx', $_) == 0 } @names;
+  die "quit these first: @running\n" if @running;
+}
