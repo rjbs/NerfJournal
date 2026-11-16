@@ -47,7 +47,7 @@ struct BundleManagerView: View {
         List(selection: selectionBinding) {
             ForEach(bundleStore.bundles) { bundle in
                 Text(bundle.name)
-                    .tag(bundle.id)
+                    .tag(bundle.id!)
                     .contextMenu {
                         Button("Rename\u{2026}") {
                             renameText = bundle.name

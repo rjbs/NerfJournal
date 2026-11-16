@@ -36,7 +36,7 @@ struct ExportGroupManagerView: View {
         List(selection: selectionBinding) {
             ForEach(exportGroupStore.groups) { group in
                 Text(group.name)
-                    .tag(group.id)
+                    .tag(group.id!)
                     .contextMenu {
                         Button("Rename\u{2026}") {
                             renameText = group.name
