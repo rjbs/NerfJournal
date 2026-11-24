@@ -1,8 +1,3 @@
----
-title: "Unit 3: Local State and Binding"
-nav_order: 30
----
-
 # Unit 3: Local State and Binding
 
 ## Introduction
@@ -89,6 +84,7 @@ write back when the user taps + or −. You'd pass `count` (the plain `Int`) for
 display; you pass `$count` (the `Binding<Int>`) when something needs to write.
 
 This is the `$` convention throughout SwiftUI:
+
 - `count` — the current value
 - `$count` — the binding (read + write)
 
@@ -314,6 +310,7 @@ changes.
 
 The same scope applies to `ForEach` IDs — unique within the collection, not
 globally. The difference in intent:
+
 - `ForEach(items, id: \.id)` — IDs distinguish siblings *from each other*; must be unique within the collection at any given moment
 - `.id(value)` on a single view — signals "treat me as new when this value changes"; sibling uniqueness isn't the point
 
@@ -427,6 +424,7 @@ exactly what the category picker in `TodoRow` does at line 972.
     return cal.date(from: cal.dateComponents([.year, .month], from: Date()))!
 }()
 ```
+
 The initial value is a closure that runs immediately (the trailing `()`). Why
 can't you just write `@State private var displayMonth: Date = Date()`?
 (Consider what `Date()` gives you, and what the calendar grid needs.)

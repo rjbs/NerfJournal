@@ -1,8 +1,3 @@
----
-title: "Unit 1: Swift as a Language"
-nav_order: 10
----
-
 # Unit 1: Swift as a Language
 
 ## Introduction
@@ -612,6 +607,7 @@ var isPending: Bool {
     return true
 }
 ```
+
 It compiles and works the same way. Then revert it. The original is idiomatic
 Swift; understanding why both work is useful.
 

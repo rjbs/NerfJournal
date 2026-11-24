@@ -1,8 +1,3 @@
----
-title: "Unit 5: App Structure and Multiple Windows"
-nav_order: 50
----
-
 # Unit 5: App Structure and Multiple Windows
 
 ## Introduction

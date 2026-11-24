@@ -1,8 +1,3 @@
----
-title: "Unit 2: Views as Values"
-nav_order: 20
----
-
 # Unit 2: Views as Values
 
 ## Introduction

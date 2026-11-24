@@ -1,12 +1,7 @@
----
-title: Home
-nav_order: 1
----
-
 # NerfLearning
 
 A self-guided curriculum using NerfJournal — a macOS bullet-journal app — as
 the working example throughout. Written for an experienced programmer who knows
 Perl and general programming concepts well but is new to Swift.
 
-See the [Syllabus](SYLLABUS) for the full unit list.
+See the [Syllabus](SYLLABUS.md) for the full unit list.

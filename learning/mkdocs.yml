@@ -1,0 +1,79 @@
+site_name: NerfLearning
+site_description: >-
+  A self-guided Swift and SwiftUI curriculum for an experienced programmer,
+  using NerfJournal as the working example throughout.
+site_url: https://nerfjournal.rjbs.cloud/
+use_directory_urls: true
+
+copyright: >-
+  this content generated for <a href="https://rjbs.cloud/">rjbs</a> and of
+  questionable value to anybody else
+
+# From here to the nav, this file is the same as those of the Jinx manual
+# and the Go booklet in gizmo, but for the primary colour, the icons and
+# smarty, so that the three look alike and can still be told apart.  Change
+# them together.
+theme:
+  name: material
+  logo: assets/images/icon.png
+  favicon: assets/images/favicon.png
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep orange
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - content.code.copy
+    - navigation.footer
+    - navigation.top
+    - toc.follow
+
+extra_css:
+  - extra.css
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  # Jekyll's Markdown curled the quotes in this text, which was written with
+  # straight ones.  This keeps them curled.  The sibling sites do without.
+  - smarty
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+nav:
+  - Home: index.md
+  - Syllabus: SYLLABUS.md
+  - 1. Swift as a Language: unit-01-swift-language.md
+  - 2. Views as Values: unit-02-views-as-values.md
+  - 3. Local State and Binding: unit-03-state-and-binding.md
+  - 4. Observable Objects and Stores: unit-04-observable-objects.md
+  - 5. App Structure and Multiple Windows: unit-05-app-structure.md
+  - 6. Focus and Notifications: unit-06-focus-and-notifications.md
+  - 7. Persistence with GRDB: unit-07-persistence-grdb.md
+  - 8. Undo, Transactions, and Correctness: unit-08-undo-and-correctness.md
+  - 9. Swift Concurrency: unit-09-swift-concurrency.md
+  - 10. AppKit Interoperability: unit-10-appkit-interop.md
+  - 11. The Command-Line Tool: unit-11-command-line-tool.md
+  - 12. Swift 6: unit-12-swift-6.md
+  - 13. Packages, Modules, and Tests: unit-13-packages-and-tests.md
+  - "Coda: The Software Moved On": coda.md
+  - Colophon: colophon.md

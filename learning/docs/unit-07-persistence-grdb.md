@@ -1,8 +1,3 @@
----
-title: "Unit 7: Persistence with GRDB"
-nav_order: 70
----
-
 # Unit 7: Persistence with GRDB
 
 ## Introduction
@@ -305,19 +300,20 @@ Two things about how that destructive code runs are worth getting exactly right
   (`ON DELETE CASCADE` needs foreign keys on). The single enforcement point is
   that one full-database scan at commit.
 
-  A consequence worth stating plainly, because the in-code comment overstates it:
-  for a migration that wipes *every* related table, the delete order does **not**
-  actually matter. With enforcement deferred to a commit-time scan and the
-  committed end-state empty, there are no orphan rows for `foreign_key_check` to
-  find, whatever order you emptied the tables in. The children-first ordering here
-  — and even doing `DELETE` before `DROP TABLE` at all — is defensive habit, not a
-  requirement; with foreign keys off, `DROP TABLE` removes the rows with no
-  constraint action. Order *does* matter in two other cases: under
-  `foreignKeyChecks: .immediate` (foreign keys on, checked per statement), where
-  deleting a still-referenced parent fails on that statement; and under deferred
-  checks when the committed end-state still holds live rows whose foreign keys
-  must resolve — the classic create-new-table / copy-data / drop-old-table
-  rebuild, where the final scan runs against real data.
+    A consequence worth stating plainly, because the in-code comment overstates it:
+    for a migration that wipes *every* related table, the delete order does **not**
+    actually matter. With enforcement deferred to a commit-time scan and the
+    committed end-state empty, there are no orphan rows for `foreign_key_check` to
+    find, whatever order you emptied the tables in. The children-first ordering here
+    — and even doing `DELETE` before `DROP TABLE` at all — is defensive habit, not a
+    requirement; with foreign keys off, `DROP TABLE` removes the rows with no
+    constraint action. Order *does* matter in two other cases: under
+    `foreignKeyChecks: .immediate` (foreign keys on, checked per statement), where
+    deleting a still-referenced parent fails on that statement; and under deferred
+    checks when the committed end-state still holds live rows whose foreign keys
+    must resolve — the classic create-new-table / copy-data / drop-old-table
+    rebuild, where the final scan runs against real data.
+
 - **The whole migration is one transaction.** GRDB wraps each migration in a
   transaction by default, so if any statement throws, the entire migration rolls
   back and the file stays at the previous version. A half-applied schema is not a

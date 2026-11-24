@@ -1,8 +1,3 @@
----
-title: "Unit 6: Focus, Cross-Window Communication, and Notifications"
-nav_order: 60
----
-
 # Unit 6: Focus, Cross-Window Communication, and Notifications
 
 ## Introduction

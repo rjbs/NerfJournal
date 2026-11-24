@@ -1,8 +1,3 @@
----
-title: "Unit 10: AppKit Interoperability and the Quick-Entry Panel"
-nav_order: 100
----
-
 # Unit 10: AppKit Interoperability and the Quick-Entry Panel
 
 ## Introduction

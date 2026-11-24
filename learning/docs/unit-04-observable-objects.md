@@ -1,8 +1,3 @@
----
-title: "Unit 4: Observable Objects and Stores"
-nav_order: 40
----
-
 # Unit 4: Observable Objects and Stores
 
 ## Introduction

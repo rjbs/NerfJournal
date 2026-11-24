@@ -1,8 +1,3 @@
----
-title: "Unit 12: Swift 6 — Strict Concurrency by Default"
-nav_order: 120
----
-
 # Unit 12: Swift 6 — Strict Concurrency by Default
 
 ## Introduction
@@ -54,22 +49,22 @@ rules your crate is held to, and you can migrate a crate at a time.
 Each of NerfJournal's three build products sets its mode in its own way:
 
 - **The app** is an Xcode target, so it uses build settings in `project.pbxproj`:
-  ```
-  SWIFT_APPROACHABLE_CONCURRENCY = YES;
-  SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-  SWIFT_VERSION = 6.0;
-  ```
+    ```
+    SWIFT_APPROACHABLE_CONCURRENCY = YES;
+    SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+    SWIFT_VERSION = 6.0;
+    ```
 - **NerfCore** is a Swift package whose manifest begins `// swift-tools-version: 6.0`. A
   package built with tools version 6 or later defaults to Swift 6 language mode, so
   nothing else needs saying.
 - **The CLI** is also a package, at tools version 6.2, with two features turned on by
   name:
-  ```swift
-  swiftSettings: [
-      .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
-      .enableUpcomingFeature("InferIsolatedConformances"),
-  ]
-  ```
+    ```swift
+    swiftSettings: [
+        .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
+        .enableUpcomingFeature("InferIsolatedConformances"),
+    ]
+    ```
 
 The three settings differ on purpose. The rest of the unit explains each one.
 

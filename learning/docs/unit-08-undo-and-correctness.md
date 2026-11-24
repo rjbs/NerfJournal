@@ -1,8 +1,3 @@
----
-title: "Unit 8: Undo, Transactions, and Correctness"
-nav_order: 80
----
-
 # Unit 8: Undo, Transactions, and Correctness
 
 ## Introduction
@@ -267,17 +262,17 @@ Both properties come from structure, not from any special bulk API:
   together. `restoreBulkTodos` loops the same way, re-inserting each captured value
   with its original id (the identity argument above, applied N times):
 
-  ```swift
-  private func restoreBulkTodos(_ todos: [Todo]) async throws {
-      try await db.dbQueue.write { db in
-          for todo in todos {
-              var restored = todo
-              try restored.insert(db)
-          }
-      }
-      try await refreshContents()
-  }
-  ```
+    ```swift
+    private func restoreBulkTodos(_ todos: [Todo]) async throws {
+        try await db.dbQueue.write { db in
+            for todo in todos {
+                var restored = todo
+                try restored.insert(db)
+            }
+        }
+        try await refreshContents()
+    }
+    ```
 
 `setBulkCategory` adds one wrinkle worth singling out. It captures prior categories
 from **both** live and future todos:

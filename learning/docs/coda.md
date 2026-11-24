@@ -1,8 +1,3 @@
----
-title: "Coda: The Software Moved On"
-nav_order: 140
----
-
 # Coda: The Software Moved On
 
 Units 1 through 11 describe NerfJournal as a self-contained Mac app: one SQLite file in

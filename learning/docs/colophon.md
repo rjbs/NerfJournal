@@ -1,8 +1,3 @@
----
-title: Colophon
-nav_order: 150
----
-
 # Colophon
 
 NerfLearning was written for one reader: an experienced Perl programmer, fluent in
@@ -22,11 +17,10 @@ text was reconciled with the code at intervals, each one a merge of the app's ma
 branch into this branch that marks an **edition**. There were nine. The last one
 followed NerfJournal's move to a JMAP backend, a change too big to patch into the
 earlier units. They were left as written and preserved as the git tag
-`edition-local-sqlite`, and the [coda](coda) maps where they no longer match the code.
+`edition-local-sqlite`, and the [coda](coda.md) maps where they no longer match the code.
 
 By the numbers: thirteen units and a coda, about 45,000 words, and about ninety commits.
 
-The site is built with [Jekyll](https://jekyllrb.com/) and the
-[Just the Docs](https://just-the-docs.com/) theme, and published by GitHub Pages from
-the `swift-learning` branch of
+The site is built with [Zensical](https://zensical.org/), and published by GitHub
+Pages from the `swift-learning` branch of
 [NerfJournal](https://github.com/rjbs/NerfJournal). Its icon is NerfJournal's.

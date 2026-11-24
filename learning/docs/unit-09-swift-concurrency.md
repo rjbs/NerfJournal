@@ -1,8 +1,3 @@
----
-title: "Unit 9: Swift Concurrency"
-nav_order: 90
----
-
 # Unit 9: Swift Concurrency
 
 ## Introduction

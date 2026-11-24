@@ -5,7 +5,5 @@ DerivedData/
 *.xcworkspace/xcuserdata/
 .build/
 
-# Jekyll build output
-_site/
-.jekyll-cache/
-learning/.bundle/
+# The built learning site
+learning/site/

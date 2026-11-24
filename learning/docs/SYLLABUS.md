@@ -1,8 +1,3 @@
----
-title: Syllabus
-nav_order: 2
----
-
 # NerfJournal Swift/SwiftUI Learning Path
 
 A self-guided curriculum for an experienced programmer — strong in Perl and
