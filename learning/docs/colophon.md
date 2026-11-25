@@ -21,6 +21,8 @@ earlier units. They were left as written and preserved as the git tag
 
 By the numbers: thirteen units and a coda, about 45,000 words, and about ninety commits.
 
-The site is built with [Zensical](https://zensical.org/), and published by GitHub
-Pages from the `swift-learning` branch of
+The site was first built with [Jekyll](https://jekyllrb.com/) and the
+[Just the Docs](https://just-the-docs.com/) theme, and was ported to
+[Zensical](https://zensical.org/) in November 2026, after the text was finished. It is
+published by GitHub Pages from the `swift-learning` branch of
 [NerfJournal](https://github.com/rjbs/NerfJournal). Its icon is NerfJournal's.
