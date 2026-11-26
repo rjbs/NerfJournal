@@ -20,7 +20,7 @@ Each unit lives in its own file in this directory and follows this structure:
 
 ## Units
 
-### [Unit 1 — Swift as a Language](unit-01-swift-language.md)
+### [1. Swift as a Language](unit-01-swift-language.md)
 
 The language before the framework. Value types vs. reference types (structs vs.
 classes) is the single most important concept in the whole curriculum — SwiftUI
@@ -35,7 +35,7 @@ organizes and isolates code — the basis for access control (`public`,
 
 ---
 
-### [Unit 2 — Views as Values](unit-02-views-as-values.md)
+### [2. Views as Values](unit-02-views-as-values.md)
 
 SwiftUI's fundamental model: a `View` is a protocol, views are structs (value
 types), and the whole UI is a description that SwiftUI renders and re-renders as
@@ -47,7 +47,7 @@ breaking UI into small reusable pieces.
 
 ---
 
-### [Unit 3 — Local State and Binding](unit-03-state-and-binding.md)
+### [3. Local State and Binding](unit-03-state-and-binding.md)
 
 `@State` and `@Binding` — the smallest unit of reactivity. How data flows
 *down* the view tree (parent owns state, passes it to children) and signals
@@ -62,7 +62,7 @@ preserved or reset.
 
 ---
 
-### [Unit 4 — Observable Objects and Stores](unit-04-observable-objects.md)
+### [4. Observable Objects and Stores](unit-04-observable-objects.md)
 
 `ObservableObject`, `@Published`, and the three ways to attach one to a view
 (`@StateObject`, `@ObservedObject`, `@EnvironmentObject`). How NerfJournal's
@@ -75,7 +75,7 @@ happen on background threads. This is where MVC intuition maps most cleanly.
 
 ---
 
-### [Unit 5 — App Structure and Multiple Windows](unit-05-app-structure.md)
+### [5. App Structure and Multiple Windows](unit-05-app-structure.md)
 
 The `App` protocol, `Scene`, and the difference between `Window` and
 `WindowGroup`. Why NerfJournal uses `Window` (single instances, no "New
@@ -88,7 +88,7 @@ objects.
 
 ---
 
-### [Unit 6 — Focus, Cross-Window Communication, and Notifications](unit-06-focus-and-notifications.md)
+### [6. Focus, Cross-Window Communication, and Notifications](unit-06-focus-and-notifications.md)
 
 `@FocusedValue`, `@FocusedSceneObject`, and `@FocusedObject`: how SwiftUI
 exposes which window/view is currently active to menu commands that live outside
@@ -102,7 +102,7 @@ boundaries.
 
 ---
 
-### [Unit 7 — Persistence with GRDB](unit-07-persistence-grdb.md)
+### [7. Persistence with GRDB](unit-07-persistence-grdb.md)
 
 `DatabaseQueue`, migrations, and the `AppDatabase` wrapper. How Swift's
 `Codable` protocol connects to GRDB's `MutablePersistableRecord` and
@@ -116,7 +116,7 @@ that query looks like.
 
 ---
 
-### [Unit 8 — Undo, Transactions, and Correctness](unit-08-undo-and-correctness.md)
+### [8. Undo, Transactions, and Correctness](unit-08-undo-and-correctness.md)
 
 `UndoManager` and how SwiftUI/AppKit exposes it. NerfJournal's undo pattern:
 capturing state before a mutation, registering the inverse. Why `restoreTodo`
@@ -129,7 +129,7 @@ to work around them. Bulk operations and single-undo-step design.
 
 ---
 
-### [Unit 9 — Swift Concurrency](unit-09-swift-concurrency.md)
+### [9. Swift Concurrency](unit-09-swift-concurrency.md)
 
 `async`/`await`, `Task`, and actors — the model that replaces callback closures
 and dispatch queues. `@MainActor` as actor isolation, not just "run on the main
@@ -145,7 +145,7 @@ maps to — and differs from — Rust's `Send`/`Sync` and Perl's lack of any of 
 
 ---
 
-### [Unit 10 — AppKit Interoperability and the Quick-Entry Panel](unit-10-appkit-interop.md)
+### [10. AppKit Interoperability and the Quick-Entry Panel](unit-10-appkit-interop.md)
 
 SwiftUI does not stand alone on macOS. The global quick-entry panel is pure
 AppKit glue: an `NSApplicationDelegate` (bridged in via `@NSApplicationDelegateAdaptor`),
@@ -162,7 +162,7 @@ feature is built on.
 
 ---
 
-### [Unit 11 — The Command-Line Tool: swift-argument-parser and a Standalone Executable](unit-11-command-line-tool.md)
+### [11. The Command-Line Tool: swift-argument-parser and a Standalone Executable](unit-11-command-line-tool.md)
 
 NerfJournal's `nerf` CLI is a second, independent program that talks to the same
 SQLite file — a Swift Package executable (not part of the Xcode app project) with
@@ -192,7 +192,7 @@ Units 1–11 were written against the local-SQLite NerfJournal, preserved as the
 git tag `edition-local-sqlite`. The units below follow the move to a JMAP for
 Tasks backend, and the coda maps what changed.
 
-### [Unit 12 — Swift 6: Strict Concurrency by Default](unit-12-swift-6.md)
+### [12. Swift 6: Strict Concurrency by Default](unit-12-swift-6.md)
 
 Unit 9's model, now enforced in full. What Swift 6 *language mode* means, as
 distinct from the compiler version, and why turning it on was nearly free for
@@ -210,7 +210,7 @@ cross-process notifications, with `isolated deinit` ending the loop.
 
 ---
 
-### [Unit 13 — Packages, Modules, and Tests](unit-13-packages-and-tests.md)
+### [13. Packages, Modules, and Tests](unit-13-packages-and-tests.md)
 
 What changes when your own code becomes a library. `NerfCore` as a Swift Package
 with a library product, consumed by the app (through an Xcode local package
@@ -226,7 +226,7 @@ and testing only through the public API.
 
 ---
 
-### [Coda — The Software Moved On](coda.md)
+### [Coda: The Software Moved On](coda.md)
 
 What changed in NerfJournal after Unit 11, and why: the JMAP for Tasks backend,
 the Jinx sync engine, and the TaskMaster server. Then a unit-by-unit map of the
