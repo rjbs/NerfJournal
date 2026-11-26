@@ -14,7 +14,7 @@ been assumed or a framework that needed placing in context.
 
 The app kept changing underneath the book. Instead of chasing it continuously, the
 text was reconciled with the code at intervals, each one a merge of the app's main
-branch into this branch that marks an **edition**. There were nine. The last one
+branch into the book's own branch that marks an **edition**. There were nine. The last one
 followed NerfJournal's move to a JMAP backend, a change too big to patch into the
 earlier units. They were left as written and preserved as the git tag
 `edition-local-sqlite`, and the [coda](coda.md) maps where they no longer match the code.
@@ -24,5 +24,5 @@ By the numbers: thirteen units and a coda, about 45,000 words, and about ninety 
 The site was first built with [Jekyll](https://jekyllrb.com/) and the
 [Just the Docs](https://just-the-docs.com/) theme, and was ported to
 [Zensical](https://zensical.org/) in November 2026, after the text was finished. It is
-published by GitHub Pages from the `swift-learning` branch of
-[NerfJournal](https://github.com/rjbs/nerfjournal). Its icon is NerfJournal's.
+published by GitHub Pages from [NerfJournal](https://github.com/rjbs/nerfjournal)'s
+repository. Its icon is NerfJournal's.
