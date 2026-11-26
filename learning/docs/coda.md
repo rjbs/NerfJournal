@@ -1,4 +1,4 @@
-# Coda: The Software Moved On
+# Coda: the software moved on
 
 Units 1 through 11 describe NerfJournal as a self-contained Mac app: one SQLite file in
 its sandbox, a companion CLI that wrote to the same file, and a distributed notification
@@ -76,7 +76,7 @@ Unit 3 is still accurate.
 
 ## Unit by unit
 
-### 1. Swift as a Language
+### 1. Swift as a language
 
 - The model types left the app. `NerfJournal/Models.swift` is gone, and the types now
   live, all `public`, in `NerfCore/Sources/NerfCore/Models.swift`.
@@ -94,7 +94,7 @@ Unit 3 is still accurate.
   It still can't reach the app, but both now import NerfCore, and the CLI writes todos
   through the sync engine, not SQL.
 
-### 2. Views as Values
+### 2. Views as values
 
 - Dates throughout the calendar are `CivilDate` values: `MonthCalendarView` takes
   `today: CivilDate` from the new `DayClock` and sets of `CivilDate`, and `DayCell`'s
@@ -102,12 +102,12 @@ Unit 3 is still accurate.
 - `FutureLogRow` formats `todo.start.date()`, since `start` is a `CivilDate`.
 - Modifiers, `@ViewBuilder`, composition, and `CategoryLabel` are unchanged.
 
-### 3. Local State and Binding
+### 3. Local state and binding
 
 Still accurate. `Todo.id` is now the sync engine's local key for the Task, but it's still
 an `Int64` and still a stable identity, which is all the unit relies on.
 
-### 4. Observable Objects and Stores
+### 4. Observable objects and stores
 
 - There are six stores: `DayClock` publishes the current civil day so views notice
   midnight. `AppDatabase` is a struct that holds a `sync: JournalSync` alongside its
@@ -122,7 +122,7 @@ an `Int64` and still a stable identity, which is all the unit relies on.
 - `PageStore` and `CategoryStore` reload from the engine's change stream (Unit 12)
   instead of a distributed-notification observer.
 
-### 5. App Structure and Multiple Windows
+### 5. App structure and multiple windows
 
 - A fifth scene, `Settings { SyncSettingsView() }`, holds the server settings and the
   engine's status.
@@ -131,7 +131,7 @@ an `Int64` and still a stable identity, which is all the unit relies on.
 - Factory Reset empties only this Mac. The server keeps its data, and the next sync
   fetches it again.
 
-### 6. Focus, Cross-Window Communication, and Notifications
+### 6. Focus, cross-window communication, and notifications
 
 - The focus material is unchanged.
 - The in-process notification names moved to the new bundle id prefix,
@@ -162,7 +162,7 @@ an `Int64` and still a stable identity, which is all the unit relies on.
 - The CLI section's hand-written `encode(to container:)` and re-declared records are
   gone: the CLI imports NerfCore (Unit 13).
 
-### 8. Undo, Transactions, and Correctness
+### 8. Undo, transactions, and correctness
 
 - Mutations now read `writer.update(key) { $0.ending = … }`. `defaultEndingDate` became
   `defaultEnding(kind:)`, which gives a day-only ending on a past page.
@@ -177,7 +177,7 @@ an `Int64` and still a stable identity, which is all the unit relies on.
 - The scheduling of undo actions, the redo discussion, and `setBulkCategory`'s use of
   `todos + futureTodos` are unchanged.
 
-### 9. Swift Concurrency
+### 9. Swift concurrency
 
 - **"No custom actors" and "exactly two isolation domains" are no longer true.**
   NerfCore's `JournalSync` and Jinx's `SyncEngine` are actors (Unit 12).
@@ -196,7 +196,7 @@ an `Int64` and still a stable identity, which is all the unit relies on.
 - In `AppDelegate`, only the Carbon callback's `assumeIsolated` remains. `DayClock` has
   three more.
 
-### 10. AppKit Interoperability and the Quick-Entry Panel
+### 10. AppKit interoperability and the quick-entry panel
 
 - `applicationDidFinishLaunching` also starts the sync engine.
 - `QuickNoteStore.addTodo` creates the todo with `TaskWriter`, writing a page to
@@ -208,7 +208,7 @@ an `Int64` and still a stable identity, which is all the unit relies on.
 - The panel, the nonactivating style, the Combine resize pipeline, and the lazy load
   are unchanged.
 
-### 11. The Command-Line Tool
+### 11. The command-line tool
 
 - The manifest depends on `../NerfCore` by path, takes GRDB `from: "7.0.0"` (not a
   branch), declares tools version 6.2, and enables two upcoming features (Unit 12).

@@ -26,7 +26,7 @@ round-trippable with almost no boilerplate.
 
 ---
 
-## The Wrapper: `AppDatabase` and `DatabaseQueue`
+## The wrapper: `AppDatabase` and `DatabaseQueue`
 
 `AppDatabase` is a `struct` with a single stored property:
 
@@ -553,7 +553,7 @@ posts the distributed notification that pokes the running app to re-read.
 
 ---
 
-## Code Tour
+## Code tour
 
 ### `AppDatabase.swift` lines 54–74: the wrapper and `shared`
 

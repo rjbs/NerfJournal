@@ -1,4 +1,4 @@
-# 4. Observable Objects and Stores
+# 4. Observable objects and stores
 
 ## Introduction
 
@@ -56,7 +56,7 @@ views observing the same `CategoryStore` object see the same data.
 
 ---
 
-## Attaching a Store to a View
+## Attaching a store to a view
 
 Three property wrappers attach an `ObservableObject` to a view:
 
@@ -167,7 +167,7 @@ a distinct type.
 
 ---
 
-## NerfJournal's Six Stores
+## NerfJournal's six stores
 
 ```
 NerfJournalApp (@StateObject)
@@ -239,7 +239,7 @@ you're declaring that this code must *stay* on one specific thread.
 
 ---
 
-## `[weak self]` in Notification Observers
+## `[weak self]` in notification observers
 
 The stores subscribe to `NotificationCenter` in `init`, and the closures
 capture `self`:
@@ -302,7 +302,7 @@ cleanup is only needed with the block-based form.
 
 ---
 
-## How `JournalStore` Watches `PageStore`
+## How `JournalStore` watches `PageStore`
 
 The stores are not entirely independent. `JournalStore` needs to know when
 todos change (to refresh the calendar's highlighted dates). Rather than
@@ -343,7 +343,7 @@ communication patterns.
 
 ---
 
-## Code Tour
+## Code tour
 
 ### `NerfJournalApp.swift` lines 98–145
 

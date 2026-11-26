@@ -1,4 +1,4 @@
-# 10. AppKit Interoperability and the Quick-Entry Panel
+# 10. AppKit interoperability and the quick-entry panel
 
 ## Introduction
 
@@ -635,7 +635,7 @@ logic into a Perl module that both a web app and a cron script can `use`.
 
 ---
 
-## Code Tour
+## Code tour
 
 ### `NerfJournalApp.swift` line 99: the adaptor
 

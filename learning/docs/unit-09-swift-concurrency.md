@@ -1,4 +1,4 @@
-# 9. Swift Concurrency
+# 9. Swift concurrency
 
 ## Introduction
 
@@ -419,7 +419,7 @@ not advice — code that violates them does not compile.
 
 ---
 
-## Code Tour
+## Code tour
 
 ### `PageStore.swift` line 4 and lines 75–87: isolation and a seam
 

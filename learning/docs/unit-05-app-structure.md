@@ -1,4 +1,4 @@
-# 5. App Structure and Multiple Windows
+# 5. App structure and multiple windows
 
 ## Introduction
 
@@ -13,7 +13,7 @@ described as a value; SwiftUI handles the platform details.
 
 ---
 
-## The `App` Protocol and `@main`
+## The `App` protocol and `@main`
 
 Every SwiftUI application is a type that conforms to the
 [`App`](https://developer.apple.com/documentation/swiftui/app) protocol. The
@@ -49,7 +49,7 @@ what you want, and Swift generates the actual entry point.
 
 ---
 
-## Scene Types: `Window` and `WindowGroup`
+## Scene types: `Window` and `WindowGroup`
 
 SwiftUI offers several scene types; the two you'll see on macOS are
 [`Window`](https://developer.apple.com/documentation/swiftui/window) and
@@ -97,7 +97,7 @@ a macOS-only concern.
 
 ---
 
-## NerfJournal's Four Windows
+## NerfJournal's four windows
 
 ```swift
 @main
@@ -133,7 +133,7 @@ launches; `defaultSize` only applies the first time the window is opened.
 
 ---
 
-## Scoping Environment Objects
+## Scoping environment objects
 
 Not every window receives every store. Each `Window` injects only what its
 view hierarchy needs:
@@ -262,7 +262,7 @@ focused-object pattern covered in depth in Unit 6.
 
 ---
 
-## `@NSApplicationDelegateAdaptor` — the AppKit Bridge
+## `@NSApplicationDelegateAdaptor` — the AppKit bridge
 
 ```swift
 @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -308,7 +308,7 @@ struct, though NerfJournal doesn't need to.
 
 ---
 
-## Code Tour
+## Code tour
 
 ### `NerfJournalApp.swift` lines 98–147: the full app declaration
 

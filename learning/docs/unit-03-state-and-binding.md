@@ -1,4 +1,4 @@
-# 3. Local State and Binding
+# 3. Local state and binding
 
 ## Introduction
 
@@ -60,7 +60,7 @@ view needs to read or write the value, you pass a *binding* to it.
 
 ---
 
-## The `$` Prefix and Bindings
+## The `$` prefix and bindings
 
 The `$` prefix on a `@State` property produces a
 [`Binding<T>`](https://developer.apple.com/documentation/swiftui/binding) —
@@ -99,7 +99,7 @@ to show the current text and writes back to it as the user types.
 
 ---
 
-## `@Binding` — Receiving a Binding
+## `@Binding` — receiving a binding
 
 When a child view needs to read *and write* state owned by a parent, it
 declares a [`@Binding`](https://developer.apple.com/documentation/swiftui/binding)
@@ -157,7 +157,7 @@ field) or presses Escape (clear focus).
 
 ---
 
-## Custom Bindings
+## Custom bindings
 
 Sometimes you need a binding that doesn't directly map to a `@State` property
 — for example, to bridge between a store and a SwiftUI control that expects a
@@ -185,7 +185,7 @@ to drive a store mutation directly.
 
 ---
 
-## The `todoToSetURL` / `showingSetURLAlert` Pattern
+## The `todoToSetURL` / `showingSetURLAlert` pattern
 
 This is the most important practical lesson in this unit. Consider the natural
 way to drive an alert from an optional value:
@@ -245,7 +245,7 @@ and `TodoRow` throughout NerfJournal.
 
 ---
 
-## View Identity and `@State` Lifetime
+## View identity and `@State` lifetime
 
 SwiftUI maintains a persistent *view graph* — a render tree that outlives any
 individual struct instance. Your struct's `body` is the *input* to that tree,
@@ -316,7 +316,7 @@ globally. The difference in intent:
 
 ---
 
-## Other Local State Wrappers
+## Other local state wrappers
 
 Two more wrappers you'll see in NerfJournal, briefly:
 
@@ -360,7 +360,7 @@ These are read-only; you can't write back through `@Environment`.
 
 ---
 
-## Code Tour
+## Code tour
 
 ### `JournalView.swift` lines 308–319: `JournalPageDetailView` `@State` cluster
 

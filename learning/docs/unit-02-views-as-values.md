@@ -1,4 +1,4 @@
-# 2. Views as Values
+# 2. Views as values
 
 ## Introduction
 
@@ -13,7 +13,7 @@ Unit 1, are **value types**.
 
 ---
 
-## `View` is a Protocol
+## `View` is a protocol
 
 Every piece of UI in SwiftUI is a type that conforms to the
 [`View`](https://developer.apple.com/documentation/swiftui/view) protocol.
@@ -46,7 +46,7 @@ conforming to `View`.
 
 ---
 
-## `some View` — Opaque Return Types
+## `some View` — opaque return types
 
 `some View` is the piece that looks strangest at first. If you know Rust,
 it's exactly [`impl View`](https://doc.rust-lang.org/book/ch10-02-traits.html#returning-types-that-implement-traits)
@@ -75,7 +75,7 @@ var body: some View {
 
 ---
 
-## Views Are Values: No Mutation, Just Re-description
+## Views are values: no mutation, just re-description
 
 Because views are structs, they follow all the value-type rules from Unit 1.
 When SwiftUI needs to redraw, it calls your `body` again. You don't update
@@ -138,7 +138,7 @@ Text("\(Calendar.current.component(.day, from: date))")
 
 ---
 
-## Layout: Stacks, Spacer, Padding
+## Layout: stacks, spacer, padding
 
 SwiftUI's layout primitives:
 
@@ -213,7 +213,7 @@ VStack {
 
 ---
 
-## View Composition
+## View composition
 
 Large views are broken into smaller ones. This is the primary tool for
 managing complexity in SwiftUI — each sub-view is its own struct, independently
@@ -257,7 +257,7 @@ it needs, and is assembled by its parent.
 
 ---
 
-## Private Computed Properties as Sub-Views
+## Private computed properties as sub-views
 
 An alternative to extracting a new struct is breaking a complex `body` into
 `private var` computed properties, each returning `some View`. `MonthCalendarView`
@@ -302,7 +302,7 @@ reused or needs its own state.
 
 ---
 
-## Code Tour
+## Code tour
 
 ### `CategoryLabel.swift` — the whole file
 

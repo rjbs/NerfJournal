@@ -1,4 +1,4 @@
-# 1. Swift as a Language
+# 1. Swift as a language
 
 ## Introduction
 
@@ -15,7 +15,7 @@ Everything else makes more sense once that has settled in.
 
 ---
 
-## Value Types vs. Reference Types
+## Value types vs. reference types
 
 In Perl, almost everything passed around is a reference. Scalars are copied, but
 you mostly work with references to arrays, hashes, and objects anyway, and
@@ -222,7 +222,7 @@ array containing every case. It shows up in the category picker UI.
 
 ---
 
-## Implicit Member Expression
+## Implicit member expression
 
 When the expected type is known from context, you can write `.memberName`
 instead of `TypeName.memberName`. Swift fills in the type automatically. This
@@ -441,7 +441,7 @@ the closure runs, the list may have changed. Worth keeping in mind.
 
 ---
 
-## Argument Labels
+## Argument labels
 
 Swift functions and methods can have two names for each parameter: an
 **argument label** used at the call site, and a **parameter name** used inside
@@ -474,7 +474,7 @@ write just `undoManager: UndoManager?` rather than
 
 ---
 
-## Computed Properties
+## Computed properties
 
 A property doesn't have to store a value — it can compute one on demand.
 
@@ -499,7 +499,7 @@ var isAbandoned: Bool { ending?.kind == .abandoned }
 
 ---
 
-## The `mutating` Keyword
+## The `mutating` keyword
 
 Because structs are value types, Swift enforces that methods on a struct cannot
 modify the struct's stored properties — unless you explicitly mark the method
@@ -525,7 +525,7 @@ database-assigned ID. It's `mutating` because it modifies `self.id`.
 
 ---
 
-## Property Wrappers (Preview)
+## Property wrappers (preview)
 
 You will see `@State`, `@Binding`, `@Published`, `@EnvironmentObject`, and
 others throughout NerfJournal's UI code. These are *property wrappers* — a
@@ -556,7 +556,7 @@ defined in the Swift standard library (and your own code can define them too).
 
 ---
 
-## Code Tour: `Models.swift`
+## Code tour: `Models.swift`
 
 Open `NerfJournal/Models.swift`. All of it is worth reading at this point.
 

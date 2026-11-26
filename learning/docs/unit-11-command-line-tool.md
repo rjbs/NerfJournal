@@ -1,4 +1,4 @@
-# 11. The Command-Line Tool: swift-argument-parser and a Standalone Executable
+# 11. The command-line tool: swift-argument-parser and a standalone executable
 
 ## Introduction
 
@@ -36,7 +36,7 @@ the payoff the previous unit set up.
 
 ---
 
-## A second program, not a second window: the Swift Package
+## A second program, not a second window: the Swift package
 
 The app is an Xcode project: a `.xcodeproj` bundle, a `project.pbxproj` you've had to
 hand-edit (the gotchas file remembers the pain), and a build driven by Xcode. The CLI
@@ -548,7 +548,7 @@ structs are what happens when you *can't* cleanly `use` the original, and copy i
 
 ---
 
-## Code Tour
+## Code tour
 
 ### `cli/Package.swift`: the whole manifest
 

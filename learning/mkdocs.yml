@@ -61,18 +61,18 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - 1. Swift as a Language: unit-01-swift-language.md
-  - 2. Views as Values: unit-02-views-as-values.md
-  - 3. Local State and Binding: unit-03-state-and-binding.md
-  - 4. Observable Objects and Stores: unit-04-observable-objects.md
-  - 5. App Structure and Multiple Windows: unit-05-app-structure.md
-  - 6. Focus and Notifications: unit-06-focus-and-notifications.md
+  - 1. Swift as a language: unit-01-swift-language.md
+  - 2. Views as values: unit-02-views-as-values.md
+  - 3. Local state and binding: unit-03-state-and-binding.md
+  - 4. Observable objects and stores: unit-04-observable-objects.md
+  - 5. App structure and multiple windows: unit-05-app-structure.md
+  - 6. Focus and notifications: unit-06-focus-and-notifications.md
   - 7. Persistence with GRDB: unit-07-persistence-grdb.md
-  - 8. Undo, Transactions, and Correctness: unit-08-undo-and-correctness.md
-  - 9. Swift Concurrency: unit-09-swift-concurrency.md
-  - 10. AppKit Interoperability: unit-10-appkit-interop.md
-  - 11. The Command-Line Tool: unit-11-command-line-tool.md
+  - 8. Undo, transactions, and correctness: unit-08-undo-and-correctness.md
+  - 9. Swift concurrency: unit-09-swift-concurrency.md
+  - 10. AppKit interoperability: unit-10-appkit-interop.md
+  - 11. The command-line tool: unit-11-command-line-tool.md
   - 12. Swift 6: unit-12-swift-6.md
-  - 13. Packages, Modules, and Tests: unit-13-packages-and-tests.md
-  - "Coda: The Software Moved On": coda.md
+  - 13. Packages, modules, and tests: unit-13-packages-and-tests.md
+  - "Coda: the software moved on": coda.md
   - Colophon: colophon.md

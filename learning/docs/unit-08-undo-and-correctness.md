@@ -1,4 +1,4 @@
-# 8. Undo, Transactions, and Correctness
+# 8. Undo, transactions, and correctness
 
 ## Introduction
 
@@ -380,7 +380,7 @@ in doubt.)
 
 ---
 
-## Code Tour
+## Code tour
 
 ### `PageStore.swift` lines 512–518: `scheduleUndo`
 

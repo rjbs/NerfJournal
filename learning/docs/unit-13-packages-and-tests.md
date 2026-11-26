@@ -1,4 +1,4 @@
-# 13. Packages, Modules, and Tests
+# 13. Packages, modules, and tests
 
 ## Introduction
 
@@ -470,7 +470,7 @@ conventions. Swift's access levels are checked.
 
 ---
 
-## Code Tour
+## Code tour
 
 ### `NerfCore/Package.swift` lines 10–33
 

@@ -1,4 +1,4 @@
-# 6. Focus, Cross-Window Communication, and Notifications
+# 6. Focus, cross-window communication, and notifications
 
 ## Introduction
 
@@ -17,7 +17,7 @@ CLI tool requires a different notification center entirely.
 
 ---
 
-## The Problem: Menus Without References
+## The problem: menus without references
 
 Menu commands in SwiftUI are declared outside any window's view hierarchy.
 `TodoCommands` has no `init` parameters, no stored properties pointing at
@@ -33,7 +33,7 @@ itself.
 
 ---
 
-## Scene-Level Focus: `focusedSceneObject` and `@FocusedObject`
+## Scene-level focus: `focusedSceneObject` and `@FocusedObject`
 
 [`.focusedSceneObject(_:)`](https://developer.apple.com/documentation/swiftui/view/focusedsceneobject(_:)-1rnaj)
 publishes an `ObservableObject` into the focus environment for an entire scene.
@@ -151,7 +151,7 @@ publishing mechanism.
 
 ---
 
-## View-Level Focus: `focusedValue` and `FocusedValueKey`
+## View-level focus: `focusedValue` and `FocusedValueKey`
 
 Some state is more specific than "a whole window's store." The "Add Todo" command
 needs to write to `addFieldFocused` inside a particular `JournalPageDetailView`.
@@ -239,7 +239,7 @@ when that specific view (with a real page loaded) is in the picture.
 
 ---
 
-## In-Process Events: `NotificationCenter`
+## In-process events: `NotificationCenter`
 
 Stores don't hold references to each other. `JournalStore` doesn't know
 `PageStore` exists. Yet when `PageStore` refreshes its todo list, `JournalStore`
@@ -289,7 +289,7 @@ the OS for something that doesn't cross any process boundary.
 
 ---
 
-## Cross-Process Events: `DistributedNotificationCenter`
+## Cross-process events: `DistributedNotificationCenter`
 
 The CLI tool (`nerf add-todo`) runs as a separate process. When it inserts a
 todo, the journal app needs to reload — but the two processes share no memory
@@ -353,7 +353,7 @@ else.
 
 ---
 
-## Code Tour
+## Code tour
 
 ### `NerfJournalApp.swift` lines 107–131: `.focusedSceneObject` placements
 

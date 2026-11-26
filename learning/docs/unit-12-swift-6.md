@@ -1,4 +1,4 @@
-# 12. Swift 6: Strict Concurrency by Default
+# 12. Swift 6: strict concurrency by default
 
 ## Introduction
 
@@ -496,7 +496,7 @@ only state it's allowed to.
 
 ---
 
-## Code Tour
+## Code tour
 
 ### `NerfJournal.xcodeproj/project.pbxproj` lines 422–425
 
