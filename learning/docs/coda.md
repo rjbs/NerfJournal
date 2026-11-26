@@ -76,7 +76,7 @@ Unit 3 is still accurate.
 
 ## Unit by unit
 
-### Unit 1 — Swift as a Language
+### 1. Swift as a Language
 
 - The model types left the app. `NerfJournal/Models.swift` is gone, and the types now
   live, all `public`, in `NerfCore/Sources/NerfCore/Models.swift`.
@@ -94,7 +94,7 @@ Unit 3 is still accurate.
   It still can't reach the app, but both now import NerfCore, and the CLI writes todos
   through the sync engine, not SQL.
 
-### Unit 2 — Views as Values
+### 2. Views as Values
 
 - Dates throughout the calendar are `CivilDate` values: `MonthCalendarView` takes
   `today: CivilDate` from the new `DayClock` and sets of `CivilDate`, and `DayCell`'s
@@ -102,12 +102,12 @@ Unit 3 is still accurate.
 - `FutureLogRow` formats `todo.start.date()`, since `start` is a `CivilDate`.
 - Modifiers, `@ViewBuilder`, composition, and `CategoryLabel` are unchanged.
 
-### Unit 3 — Local State and Binding
+### 3. Local State and Binding
 
 Still accurate. `Todo.id` is now the sync engine's local key for the Task, but it's still
 an `Int64` and still a stable identity, which is all the unit relies on.
 
-### Unit 4 — Observable Objects and Stores
+### 4. Observable Objects and Stores
 
 - There are six stores: `DayClock` publishes the current civil day so views notice
   midnight. `AppDatabase` is a struct that holds a `sync: JournalSync` alongside its
@@ -122,7 +122,7 @@ an `Int64` and still a stable identity, which is all the unit relies on.
 - `PageStore` and `CategoryStore` reload from the engine's change stream (Unit 12)
   instead of a distributed-notification observer.
 
-### Unit 5 — App Structure and Multiple Windows
+### 5. App Structure and Multiple Windows
 
 - A fifth scene, `Settings { SyncSettingsView() }`, holds the server settings and the
   engine's status.
@@ -131,7 +131,7 @@ an `Int64` and still a stable identity, which is all the unit relies on.
 - Factory Reset empties only this Mac. The server keeps its data, and the next sync
   fetches it again.
 
-### Unit 6 — Focus, Cross-Window Communication, and Notifications
+### 6. Focus, Cross-Window Communication, and Notifications
 
 - The focus material is unchanged.
 - The in-process notification names moved to the new bundle id prefix,
@@ -145,7 +145,7 @@ an `Int64` and still a stable identity, which is all the unit relies on.
   traces is now: CLI write → Darwin notification → the app's engine reads the journal →
   `changes()` → `refreshContents()`.
 
-### Unit 7 — Persistence with GRDB
+### 7. Persistence with GRDB
 
 - GRDB still holds the client-only tables, but there's no `todo` or `category` table.
   Todos and categories live in Jinx's tables (`jinx_object`, `jinx_pending`, …) in the
@@ -162,7 +162,7 @@ an `Int64` and still a stable identity, which is all the unit relies on.
 - The CLI section's hand-written `encode(to container:)` and re-declared records are
   gone: the CLI imports NerfCore (Unit 13).
 
-### Unit 8 — Undo, Transactions, and Correctness
+### 8. Undo, Transactions, and Correctness
 
 - Mutations now read `writer.update(key) { $0.ending = … }`. `defaultEndingDate` became
   `defaultEnding(kind:)`, which gives a day-only ending on a past page.
@@ -177,7 +177,7 @@ an `Int64` and still a stable identity, which is all the unit relies on.
 - The scheduling of undo actions, the redo discussion, and `setBulkCategory`'s use of
   `todos + futureTodos` are unchanged.
 
-### Unit 9 — Swift Concurrency
+### 9. Swift Concurrency
 
 - **"No custom actors" and "exactly two isolation domains" are no longer true.**
   NerfCore's `JournalSync` and Jinx's `SyncEngine` are actors (Unit 12).
@@ -196,7 +196,7 @@ an `Int64` and still a stable identity, which is all the unit relies on.
 - In `AppDelegate`, only the Carbon callback's `assumeIsolated` remains. `DayClock` has
   three more.
 
-### Unit 10 — AppKit Interoperability and the Quick-Entry Panel
+### 10. AppKit Interoperability and the Quick-Entry Panel
 
 - `applicationDidFinishLaunching` also starts the sync engine.
 - `QuickNoteStore.addTodo` creates the todo with `TaskWriter`, writing a page to
@@ -208,7 +208,7 @@ an `Int64` and still a stable identity, which is all the unit relies on.
 - The panel, the nonactivating style, the Combine resize pipeline, and the lazy load
   are unchanged.
 
-### Unit 11 — The Command-Line Tool
+### 11. The Command-Line Tool
 
 - The manifest depends on `../NerfCore` by path, takes GRDB `from: "7.0.0"` (not a
   branch), declares tools version 6.2, and enables two upcoming features (Unit 12).
