@@ -25,4 +25,4 @@ The site was first built with [Jekyll](https://jekyllrb.com/) and the
 [Just the Docs](https://just-the-docs.com/) theme, and was ported to
 [Zensical](https://zensical.org/) in November 2026, after the text was finished. It is
 published by GitHub Pages from the `swift-learning` branch of
-[NerfJournal](https://github.com/rjbs/NerfJournal). Its icon is NerfJournal's.
+[NerfJournal](https://github.com/rjbs/nerfjournal). Its icon is NerfJournal's.

@@ -6,7 +6,7 @@ site_description: >-
 # to find its style sheets, and it takes that from here.  Every other page
 # links relatively.  If the site moves, change this, or the 404 page comes
 # out unstyled.
-site_url: https://semiotic.systems/NerfJournal/
+site_url: https://semiotic.systems/nerfjournal/
 use_directory_urls: true
 
 copyright: >-

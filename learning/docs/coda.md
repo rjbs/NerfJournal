@@ -4,7 +4,7 @@ Units 1 through 11 describe NerfJournal as a self-contained Mac app: one SQLite 
 its sandbox, a companion CLI that wrote to the same file, and a distributed notification
 to tell the app something had changed. That app is preserved, together with the text
 written against it, at the git tag
-[`edition-local-sqlite`](https://github.com/rjbs/NerfJournal/tree/edition-local-sqlite).
+[`edition-local-sqlite`](https://github.com/rjbs/nerfjournal/tree/edition-local-sqlite).
 Every file path and line range in those units' Code Tours is accurate at that tag.
 
 After it, the app moved to a new foundation. Units 12 and 13 cover the Swift that came
