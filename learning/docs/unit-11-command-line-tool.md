@@ -91,7 +91,7 @@ to but not including 2.0.0" — SemVer-compatible, the same caret-range default 
 uses for `argument-parser = "1.3.0"`. But GRDB is pinned to `branch: "master"`, a
 moving target with no version guarantee. That's a deliberate (if slightly risky) choice
 to track GRDB's tip, and the resolved commit is frozen in `Package.resolved` (the
-analogue of `Cargo.lock` or `cpanfile.snapshot`) so a checkout still builds
+analog of `Cargo.lock` or `cpanfile.snapshot`) so a checkout still builds
 reproducibly until someone runs `swift package update`.
 
 You build and run this with `swift build` and `swift run nerf …` from inside `cli/`,
@@ -285,7 +285,7 @@ contending with the running app waits rather than failing, and wraps any failure
 friendly `CLIError`). The option and the code that consumes it travel together as one
 reusable unit. clap models the same thing with `#[command(flatten)]` on a struct of
 shared args; Perl role-based option sets (a `MooseX::Getopt` role consumed by several
-commands) are the nearest analogue.
+commands) are the nearest analog.
 
 ---
 

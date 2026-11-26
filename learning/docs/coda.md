@@ -36,7 +36,7 @@ is written up in `JMAP-SPEC.md`.
 Three new pieces of software made it real:
 
 - **Jinx**, a JMAP sync engine in Swift. It keeps a local copy of the server's objects
-  in the app's own SQLite file, queues writes made offline, pushes and fetches,
+  in the app's own SQLite file, queues writes made offline, pushes, and fetches,
   listens for the server's push notifications, and watches the shared database for
   commits by other processes on the same Mac. Its design is in `SYNC-DESIGN.md`.
 - **TaskMaster**, a JMAP for Tasks server.
@@ -192,7 +192,7 @@ an `Int64` and still a stable identity, which is all the unit relies on.
 - `Todo` is a public type in another module, so its `Sendable` conformance is declared,
   not inferred (Unit 12).
 - The observer-plus-`Task` pattern survives for in-process notifications. The change
-  stream's `for await` loop, cancelled by an `isolated deinit`, is the newer pattern.
+  stream's `for await` loop, canceled by an `isolated deinit`, is the newer pattern.
 - In `AppDelegate`, only the Carbon callback's `assumeIsolated` remains. `DayClock` has
   three more.
 

@@ -305,7 +305,7 @@ continuation in a dictionary so that `emit` can fan each change set out to all
 subscribers. It's a broadcast channel built from single-consumer streams.
 
 `onTermination` runs when the consumer stops iterating, whether its loop ends or its
-task is cancelled. Its job is to remove the continuation from `subscribers` so the
+task is canceled. Its job is to remove the continuation from `subscribers` so the
 engine stops yielding into a stream nobody reads. Note that `onTermination` is a
 synchronous `@Sendable` closure, while `removeSubscriber` is isolated to the engine
 actor. The closure can't `await`, so it starts a `Task` to make the hop. That's the same
@@ -327,7 +327,7 @@ changeTask = Task { [weak self] in
 **`for await`** iterates an async sequence: each pass suspends until the next value
 arrives, then runs the body. While suspended it holds no thread and doesn't block the
 main actor. The UI runs normally between changes. The loop ends when the stream
-finishes or the enclosing task is cancelled.
+finishes or the enclosing task is canceled.
 
 **The `Task` inherits the main actor.** It's created inside `PageStore.init`, which is
 main-actor-isolated, and a `Task` created in an isolated context inherits that
@@ -392,7 +392,7 @@ silently. In Swift 6 mode it's an error, and that was the one line of app source
 migration changed.
 
 The stores use the same form to cancel their change tasks, and the chain of effects is
-worth following once. `changeTask?.cancel()` marks the task cancelled. The `for await`
+worth following once. `changeTask?.cancel()` marks the task canceled. The `for await`
 loop's pending wait on the `AsyncStream` returns `nil`, so the loop ends. The stream's
 `onTermination` fires, which starts the `Task` that removes this subscriber from the
 engine's dictionary. Every link is a standard-library behavior. Nothing in NerfJournal

@@ -22,3 +22,7 @@ When writing unit content:
 - When mentioning a Swift standard library type, protocol, or language feature
   for the first time, link to its official documentation on
   `developer.apple.com` if a stable URL exists.
+- Headings are in sentence case, as are titles and menu entries.  A proper
+  noun keeps its capital, and the word after a colon does not get one.
+- American spelling ("color", "canceled"), and the serial comma: "Snap,
+  Crackle, and Pop".

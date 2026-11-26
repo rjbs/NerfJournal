@@ -413,7 +413,7 @@ it operator by operator:
 - **`.store(in: &cancellables)`** — keep the subscription alive. This is the crucial,
   easily-missed part. A Combine subscription is represented by an
   [`AnyCancellable`](https://developer.apple.com/documentation/combine/anycancellable)
-  token, and when that token is deallocated the subscription is cancelled. `sink`
+  token, and when that token is deallocated the subscription is canceled. `sink`
   returns one; if you don't *store* it, it dies at the end of the function and the
   pipeline never fires. Stashing it in the `cancellables` set ties its lifetime to
   the `AppDelegate`. Tearing down the panel does `cancellables.removeAll()`, which
@@ -592,7 +592,7 @@ built from exactly this kind of Swift.
 - **A non-capturing C-callback closure ≈ a Rust `fn` (not a closure).** A C function
   pointer can't carry an environment in either language; both make you smuggle state
   through a `void *`/`*mut c_void` user-data parameter instead. Perl has no real
-  analogue — a Perl coderef always closes over its lexicals, because there's no
+  analog — a Perl coderef always closes over its lexicals, because there's no
   bare-function-pointer layer beneath it.
 - **The caseless `enum` namespace ≈ a Rust `mod` of free functions, or a Perl package
   with subs and no constructor.** A grouping of related functions under a name, with

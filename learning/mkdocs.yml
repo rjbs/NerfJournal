@@ -10,7 +10,7 @@ copyright: >-
   questionable value to anybody else
 
 # From here to the nav, this file is the same as those of the Jinx manual
-# and the Go booklet in gizmo, but for the primary colour, the icons and
+# and the Go booklet in gizmo, but for the primary color, the icons, and
 # smarty, so that the three look alike and can still be told apart.  Change
 # them together.
 theme:
