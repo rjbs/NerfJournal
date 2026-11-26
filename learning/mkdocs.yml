@@ -61,7 +61,6 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Syllabus: SYLLABUS.md
   - 1. Swift as a Language: unit-01-swift-language.md
   - 2. Views as Values: unit-02-views-as-values.md
   - 3. Local State and Binding: unit-03-state-and-binding.md
