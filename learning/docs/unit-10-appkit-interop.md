@@ -1,4 +1,4 @@
-# Unit 10: AppKit Interoperability and the Quick-Entry Panel
+# 10. AppKit Interoperability and the Quick-Entry Panel
 
 ## Introduction
 

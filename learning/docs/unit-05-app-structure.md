@@ -1,4 +1,4 @@
-# Unit 5: App Structure and Multiple Windows
+# 5. App Structure and Multiple Windows
 
 ## Introduction
 

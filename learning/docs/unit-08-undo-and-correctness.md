@@ -1,4 +1,4 @@
-# Unit 8: Undo, Transactions, and Correctness
+# 8. Undo, Transactions, and Correctness
 
 ## Introduction
 

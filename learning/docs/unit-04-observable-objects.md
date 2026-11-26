@@ -1,4 +1,4 @@
-# Unit 4: Observable Objects and Stores
+# 4. Observable Objects and Stores
 
 ## Introduction
 

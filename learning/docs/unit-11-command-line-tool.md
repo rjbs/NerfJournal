@@ -1,4 +1,4 @@
-# Unit 11: The Command-Line Tool — swift-argument-parser and a Standalone Executable
+# 11. The Command-Line Tool — swift-argument-parser and a Standalone Executable
 
 ## Introduction
 

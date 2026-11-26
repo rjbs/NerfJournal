@@ -1,4 +1,4 @@
-# Unit 12: Swift 6 — Strict Concurrency by Default
+# 12. Swift 6 — Strict Concurrency by Default
 
 ## Introduction
 

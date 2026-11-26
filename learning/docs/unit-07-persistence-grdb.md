@@ -1,4 +1,4 @@
-# Unit 7: Persistence with GRDB
+# 7. Persistence with GRDB
 
 ## Introduction
 

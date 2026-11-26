@@ -1,4 +1,4 @@
-# Unit 3: Local State and Binding
+# 3. Local State and Binding
 
 ## Introduction
 

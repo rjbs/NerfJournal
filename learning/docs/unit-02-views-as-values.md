@@ -1,4 +1,4 @@
-# Unit 2: Views as Values
+# 2. Views as Values
 
 ## Introduction
 

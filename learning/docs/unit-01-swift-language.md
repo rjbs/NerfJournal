@@ -1,4 +1,4 @@
-# Unit 1: Swift as a Language
+# 1. Swift as a Language
 
 ## Introduction
 

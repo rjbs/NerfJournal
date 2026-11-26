@@ -1,4 +1,4 @@
-# Unit 6: Focus, Cross-Window Communication, and Notifications
+# 6. Focus, Cross-Window Communication, and Notifications
 
 ## Introduction
 
