@@ -5,3 +5,6 @@ DerivedData/
 *.xcworkspace/xcuserdata/
 .build/
 build/
+
+# The built learning site
+learning/site/
