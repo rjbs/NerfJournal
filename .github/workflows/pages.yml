@@ -1,10 +1,10 @@
-name: Deploy learning site to GitHub Pages
+name: Deploy the site to GitHub Pages
 
 on:
   push:
     branches: [main]
     paths:
-      - 'learning/**'
+      - 'doc/web/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -30,15 +30,15 @@ jobs:
       - uses: actions/configure-pages@v5
 
       - name: Install Zensical
-        run: pip install -r learning/requirements.txt
+        run: pip install -r doc/web/requirements.txt
 
       - name: Build site
         run: zensical build --clean --strict
-        working-directory: learning
+        working-directory: doc/web
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: learning/site
+          path: doc/web/site
 
   deploy:
     runs-on: ubuntu-latest

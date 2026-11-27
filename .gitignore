@@ -6,5 +6,6 @@ DerivedData/
 .build/
 build/
 
-# The built learning site
-learning/site/
+# The built site
+/doc/web/site/
+/doc/web/.cache/

@@ -1,9 +1,9 @@
 #!/bin/sh
-# Builds or serves the booklet with Zensical, run in Docker so that nothing
+# Builds or serves the site with Zensical, run in Docker so that nothing
 # need be installed locally beyond Docker itself.
 #
-#   learning/build.sh          # builds into learning/site/
-#   learning/build.sh serve    # serves at http://localhost:8000 with reload
+#   doc/web/build.sh          # builds into doc/web/site/
+#   doc/web/build.sh serve    # serves at http://localhost:8000 with reload
 #
 # The version here and the one in requirements.txt, which the Pages workflow
 # installs, should be the same.

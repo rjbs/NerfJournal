@@ -2,14 +2,15 @@
 
 ## NerfLearning
 
-The learning curriculum in `learning/` is a sub-project called **NerfLearning**.
-The user may refer to it by that name.
+The learning curriculum in `doc/web/docs/learning/` is a sub-project called
+**NerfLearning**.  The user may refer to it by that name.  It is one section
+of NerfJournal's site.
 
-The site is built by Zensical from `learning/mkdocs.yml`: `learning/build.sh`
-builds it in Docker, and `learning/build.sh serve` previews it.  The theme
-settings there, and the rules in `learning/docs/extra.css`, are kept the same
-as those of the Jinx manual (`../Jinx/doc/manual`) and the Go booklet in gizmo
-(`../gizmo/learning`, on its `go-learning` branch).
+The site is built by Zensical from `doc/web/mkdocs.yml`: `doc/web/build.sh`
+builds it in Docker, and `doc/web/build.sh serve` previews it.  The theme
+settings there, and the rules in `doc/web/docs/extra.css`, are kept the same
+as those of the Jinx manual (`../Jinx/doc/manual`) and gizmo's site
+(`../gizmo/doc/web`), except where `mkdocs.yml` says otherwise.
 
 The Markdown is Python-Markdown's, which is stricter than most: a list needs a
 blank line before it, and a second paragraph or a code block inside a list

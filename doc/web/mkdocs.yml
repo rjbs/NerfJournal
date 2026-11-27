@@ -1,7 +1,9 @@
-site_name: NerfLearning
+site_name: NerfJournal
 site_description: >-
-  A self-guided Swift and SwiftUI curriculum for an experienced programmer,
-  using NerfJournal as the working example throughout.
+  NerfJournal, a macOS bullet journal kept on a JMAP server: the reference
+  manual for its NerfCore library, and NerfLearning, a Swift and SwiftUI
+  curriculum that uses it as the working example.
+
 # The 404 page can be served at any depth, so it alone needs the site's path
 # to find its style sheets, and it takes that from here.  Every other page
 # links relatively.  If the site moves, change this, or the 404 page comes
@@ -15,8 +17,9 @@ copyright: >-
 
 # From here to the nav, this file is the same as those of the Jinx manual
 # and the Go booklet in gizmo, but for the primary color, the icons, and
-# smarty, so that the three look alike and can still be told apart.  Change
-# them together.
+# smarty, so that the three look alike and can still be told apart, and
+# for navigation.indexes and navigation.tabs, which this site needs because
+# it has sections and the manual does not.  Change them together.
 theme:
   name: material
   logo: assets/images/icon.png
@@ -35,6 +38,8 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
   features:
+    - navigation.indexes
+    - navigation.tabs
     - content.code.copy
     - navigation.footer
     - navigation.top
@@ -63,20 +68,23 @@ markdown_extensions:
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
 
+# A new unit must be added here, or it is built but appears in no menu.
 nav:
   - Home: index.md
-  - 1. Swift as a language: unit-01-swift-language.md
-  - 2. Views as values: unit-02-views-as-values.md
-  - 3. Local state and binding: unit-03-state-and-binding.md
-  - 4. Observable objects and stores: unit-04-observable-objects.md
-  - 5. App structure and multiple windows: unit-05-app-structure.md
-  - 6. Focus and notifications: unit-06-focus-and-notifications.md
-  - 7. Persistence with GRDB: unit-07-persistence-grdb.md
-  - 8. Undo, transactions, and correctness: unit-08-undo-and-correctness.md
-  - 9. Swift concurrency: unit-09-swift-concurrency.md
-  - 10. AppKit interoperability: unit-10-appkit-interop.md
-  - 11. The command-line tool: unit-11-command-line-tool.md
-  - 12. Swift 6: unit-12-swift-6.md
-  - 13. Packages, modules, and tests: unit-13-packages-and-tests.md
-  - "Coda: the software moved on": coda.md
-  - Colophon: colophon.md
+  - NerfLearning:
+    - learning/index.md
+    - 1. Swift as a language: learning/unit-01-swift-language.md
+    - 2. Views as values: learning/unit-02-views-as-values.md
+    - 3. Local state and binding: learning/unit-03-state-and-binding.md
+    - 4. Observable objects and stores: learning/unit-04-observable-objects.md
+    - 5. App structure and multiple windows: learning/unit-05-app-structure.md
+    - 6. Focus and notifications: learning/unit-06-focus-and-notifications.md
+    - 7. Persistence with GRDB: learning/unit-07-persistence-grdb.md
+    - 8. Undo, transactions, and correctness: learning/unit-08-undo-and-correctness.md
+    - 9. Swift concurrency: learning/unit-09-swift-concurrency.md
+    - 10. AppKit interoperability: learning/unit-10-appkit-interop.md
+    - 11. The command-line tool: learning/unit-11-command-line-tool.md
+    - 12. Swift 6: learning/unit-12-swift-6.md
+    - 13. Packages, modules, and tests: learning/unit-13-packages-and-tests.md
+    - "Coda: the software moved on": learning/coda.md
+    - Colophon: learning/colophon.md
