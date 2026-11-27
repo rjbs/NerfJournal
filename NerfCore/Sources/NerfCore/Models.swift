@@ -4,11 +4,10 @@ import GRDB
 public enum CategoryColor: String, CaseIterable, Codable, Sendable {
     case blue, red, green, orange, purple, pink, teal, yellow
 
-    // A TaskList's color is a CSS color, a name or #rrggbb. Every case here
-    // is itself a CSS color name, so writing is just the raw value. Reading
-    // takes one of our names as is and a hex value as the nearest case in
-    // RGB; anything else is nil and the caller falls back to `derived(from:)`.
-    // -- claude, 2026-10-28
+    /// A TaskList's color is a CSS color, a name or #rrggbb. Every case here
+    /// is itself a CSS color name, so writing is just the raw value. Reading
+    /// takes one of our names as is and a hex value as the nearest case in
+    /// RGB; anything else is nil and the caller falls back to ``derived(from:)``.
     public var cssName: String { rawValue }
 
     public init?(css: String) {
@@ -21,9 +20,9 @@ public enum CategoryColor: String, CaseIterable, Codable, Sendable {
         self = Self.allCases.min { Self.distance($0.rgb, rgb) < Self.distance($1.rgb, rgb) }!
     }
 
-    // The color for a list that has none, chosen from its name so every
-    // client picks the same one. FNV-1a rather than Hasher, whose seed
-    // changes per process.
+    /// The color for a list that has none, chosen from its name so every
+    /// client picks the same one. FNV-1a rather than Hasher, whose seed
+    /// changes per process.
     public static func derived(from name: String) -> CategoryColor {
         var hash: UInt32 = 2_166_136_261
         for byte in name.utf8 {
@@ -63,9 +62,9 @@ public enum CategoryColor: String, CaseIterable, Codable, Sendable {
     }
 }
 
-// A category is a TaskList on the server; `id` is the engine's local key
-// for that list, as a Todo's is for its Task. See TaskListIndex, which
-// builds these from the lists in the store. -- claude, 2026-10-28
+/// A category is a TaskList on the server; `id` is the engine's local key
+/// for that list, as a ``Todo``'s is for its Task. See ``TaskListIndex``, which
+/// builds these from the lists in the store.
 public struct Category: Identifiable, Codable, Hashable, Sendable {
     public var id: Int64?
     public var name: String
@@ -80,7 +79,9 @@ public struct Category: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
-// NOTE: Named TaskBundle rather than Bundle to avoid shadowing Foundation.Bundle.
+/// A named set of todos that can be added to a page all at once.
+///
+/// It is called `TaskBundle`, not `Bundle`, so as not to shadow Foundation's.
 public struct TaskBundle: Identifiable, Codable, FetchableRecord, MutablePersistableRecord, Sendable {
     public var id: Int64?
     public var name: String
@@ -142,13 +143,13 @@ public struct JournalPage: Identifiable, Codable, FetchableRecord, MutablePersis
     }
 }
 
-// Completion or abandonment record, encoded as a nested object in export
-// JSON and carried on the server as the Task's progress and endedAt.
-//
-// `day` (the civil day it ended) is always present — the ordering/membership
-// spine. `time` is the precise moment when we know it (a genuine completion),
-// and nil when we don't: resolving something on a past page, or the auto-abandon
-// sweep, both of which record only the day. -- claude, 2026-07-25
+/// Completion or abandonment record, encoded as a nested object in export
+/// JSON and carried on the server as the Task's progress and endedAt.
+///
+/// ``day`` (the ``CivilDate`` it ended) is always present — the ordering/membership
+/// spine. ``time`` is the precise ``Moment`` when we know it (a genuine completion),
+/// and nil when we don't: resolving something on a past page, or the auto-abandon
+/// sweep, both of which record only the day.
 public struct TodoEnding: Codable, Hashable, Sendable {
     public enum Kind: String, Codable, Sendable { case done, abandoned }
     public var day: CivilDate
@@ -161,17 +162,17 @@ public struct TodoEnding: Codable, Hashable, Sendable {
         self.kind = kind
     }
 
-    // A moment-based ending keeps its civil day in sync with the moment.
+    /// A moment-based ending keeps its civil day in sync with the moment.
     public init(moment: Moment, kind: Kind) {
         self.init(day: moment.civilDate, time: moment, kind: kind)
     }
 }
 
-// A todo spans journal pages naturally: it is visible on any day from its
-// `start` date until the day it ends. No per-page duplication; "migration"
-// is an emergent display property, not a status value. A todo is a Task
-// on the server, decoded by TaskCodec; its id is the sync engine's local
-// key for that Task.
+/// A todo spans journal pages naturally: it is visible on any day from its
+/// ``start`` date until the day it ends. No per-page duplication; "migration"
+/// is an emergent display property, not a status value. A todo is a Task
+/// on the server, decoded by ``TaskCodec``; its id is the sync engine's local
+/// key for that Task.
 public struct Todo: Identifiable, Codable, Equatable, Sendable {
     public var id: Int64?
     public var title: String
@@ -215,8 +216,8 @@ public struct ExportGroup: Identifiable, Codable, FetchableRecord, MutablePersis
     }
 }
 
-// Junction record linking an ExportGroup to a category it contains.
-// categoryID == nil represents the "Other" bucket (uncategorized todos).
+/// Junction record linking an ``ExportGroup`` to a category it contains.
+/// categoryID == nil represents the "Other" bucket (uncategorized todos).
 public struct ExportGroupMember: Codable, FetchableRecord, TableRecord, Sendable {
     public var groupID: Int64
     public var categoryID: Int64?
@@ -230,16 +231,16 @@ public struct ExportGroupMember: Codable, FetchableRecord, TableRecord, Sendable
 }
 
 extension [Todo] {
-    // Sort by insertion order (id); cross-category ordering is done in the view
-    // using category.sortOrder.
+    /// Sort by insertion order (id); cross-category ordering is done in the view
+    /// using category.sortOrder.
     public func sortedForDisplay() -> [Todo] {
         sorted { ($0.id ?? 0) < ($1.id ?? 0) }
     }
 }
 
-// Groups `items` by category, sorting named groups by `category.sortOrder`.
-// Items whose categoryID is nil or no longer matches a known category collect
-// into an "Other" group appended at the end. -- claude, 2026-03-02
+/// Groups `items` by category, sorting named groups by `category.sortOrder`.
+/// Items whose categoryID is nil or no longer matches a known category collect
+/// into an "Other" group appended at the end.
 public func groupedByCategory<Item>(
     _ items: [Item],
     categoryID keyPath: KeyPath<Item, Int64?>,

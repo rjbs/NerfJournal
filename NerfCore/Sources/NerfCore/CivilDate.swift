@@ -1,17 +1,17 @@
 import Foundation
 import GRDB
 
-// A calendar day with no time-of-day and no time zone — a "civil date" in the
-// floating/local sense. A journal day is a subjective span, not an instant: one
-// page can legitimately hold events from either side of a time-zone change (fly
-// Sydney→US and "Saturday" is honestly more than 24 hours long). Modelling the
-// day as bare year/month/day, independent of any zone, is what makes that work
-// and what stops the calendar from breaking when you view your journal from a
-// time zone other than the one it was written in. -- claude, 2026-07-25
-//
-// Persisted as ISO "YYYY-MM-DD" TEXT, whose lexicographic order matches
-// chronological order, so `ORDER BY`, `<=`, and range filters work directly in
-// SQL with no date math.
+/// A calendar day with no time-of-day and no time zone — a "civil date" in the
+/// floating/local sense. A journal day is a subjective span, not an instant: one
+/// page can legitimately hold events from either side of a time-zone change (fly
+/// Sydney→US and "Saturday" is honestly more than 24 hours long). Modelling the
+/// day as bare year/month/day, independent of any zone, is what makes that work
+/// and what stops the calendar from breaking when you view your journal from a
+/// time zone other than the one it was written in.
+///
+/// Persisted as ISO "YYYY-MM-DD" TEXT, whose lexicographic order matches
+/// chronological order, so `ORDER BY`, `<=`, and range filters work directly in
+/// SQL with no date math.
 public struct CivilDate: Hashable, Comparable, Sendable {
     public var year: Int
     public var month: Int
@@ -23,7 +23,7 @@ public struct CivilDate: Hashable, Comparable, Sendable {
         self.day = day
     }
 
-    // The civil date on which `instant` falls, as seen in `zone`.
+    /// The civil date on which `instant` falls, as seen in `zone`.
     public init(instant: Date, in zone: TimeZone) {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = zone
@@ -48,8 +48,8 @@ public struct CivilDate: Hashable, Comparable, Sendable {
         self.init(year: y, month: m, day: d)
     }
 
-    // Day arithmetic that can cross month/year boundaries; delegated to Calendar
-    // (in UTC, where every day is 24h) for correctness.
+    /// Day arithmetic that can cross month/year boundaries; delegated to Calendar
+    /// (in UTC, where every day is 24h) for correctness.
     public func adding(days: Int) -> CivilDate {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = TimeZone(identifier: "UTC")!
@@ -58,8 +58,8 @@ public struct CivilDate: Hashable, Comparable, Sendable {
         return CivilDate(instant: moved, in: cal.timeZone)
     }
 
-    // Whole days from `other` to self (positive when self is later); computed in
-    // UTC, where every day is 24h.
+    /// Whole days from `other` to self (positive when self is later); computed in
+    /// UTC, where every day is 24h.
     public func daysSince(_ other: CivilDate) -> Int {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = TimeZone(identifier: "UTC")!
@@ -68,8 +68,8 @@ public struct CivilDate: Hashable, Comparable, Sendable {
         return cal.dateComponents([.day], from: a, to: b).day ?? 0
     }
 
-    // Noon in `zone`, a safe anchor for date-only display formatting — far from
-    // any midnight/DST edge that could round onto an adjacent day.
+    /// Noon in `zone`, a safe anchor for date-only display formatting — far from
+    /// any midnight/DST edge that could round onto an adjacent day.
     public func date(in zone: TimeZone = .current) -> Date {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = zone
@@ -106,10 +106,10 @@ extension CivilDate: DatabaseValueConvertible {
     }
 }
 
-// A precise moment: the true UTC instant plus the UTC offset in effect where and
-// when the event happened. Keeping both lets us render the wall-clock time that
-// was actually lived (Sydney 9am and US 6pm on one page each show their own local
-// time) and compute which civil day the moment belonged to. -- claude, 2026-07-25
+/// A precise moment, unlike a ``CivilDate``: the true UTC instant plus the UTC offset in effect where and
+/// when the event happened. Keeping both lets us render the wall-clock time that
+/// was actually lived (Sydney 9am and US 6pm on one page each show their own local
+/// time) and compute which civil day the moment belonged to.
 public struct Moment: Hashable, Codable, Sendable {
     public var instant: Date
     public var offsetSeconds: Int
