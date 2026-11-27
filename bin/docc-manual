@@ -1,0 +1,276 @@
+#!/usr/bin/env perl
+use v5.34;
+use warnings;
+use feature 'signatures';
+no warnings 'experimental::signatures';
+
+=head1 NAME
+
+docc-manual - turn DocC's Markdown output into a manual for a Zensical site
+
+=head1 SYNOPSIS
+
+  docc-manual --docc DIR --out DIR [--intro TEXT]
+
+=head1 DESCRIPTION
+
+C<docc convert --enable-experimental-markdown-output> writes one Markdown
+page for every symbol, beside the render JSON for it.  The pages say nothing
+about how they fit together, their links are absolute paths that a static
+site can't serve, and a site with one page for every initializer and property
+is hard to read.
+
+This program reads the render JSON for the structure, and writes one page for
+each of the module's top-level declarations, with all of its members on that
+page, each under a heading with its own anchor.  A nested type and its
+members go on the page of the type it is nested in.  It also writes
+F<index.md>, which lists the pages under the module's topic headings.  Links
+between symbols become relative links between pages and anchors, and a link
+to anything not in the module becomes plain code.
+
+C<--docc> is the C<--output-path> given to C<docc convert>.  If it was given
+C<--source-service>, each declaration links to its source.  Anything in the
+C<--out> directory is left alone, but its pages are overwritten.
+
+The conformances DocC lists as "Default Implementations" are left out, since
+they are the protocols' documentation, not the module's.
+
+=cut
+
+use File::Find ();
+use File::Path qw(make_path);
+use Getopt::Long;
+use JSON::PP;
+
+my $usage = "usage: $0 --docc DIR --out DIR [--intro TEXT]\n";
+GetOptions(
+  'docc=s'  => \(my $docc),
+  'out=s'   => \(my $out),
+  'intro=s' => \(my $intro),
+) or die $usage;
+$docc && $out && !@ARGV or die $usage;
+
+my %node = load_nodes("$docc/data/documentation");
+my ($module) = grep { ($_->{json}{metadata}{symbolKind} // '') eq 'module' } values %node;
+die "no module found under $docc\n" unless $module;
+
+# Every symbol's place in the manual, as [ page, anchor ], where a page's own
+# anchor is undef.  Links are resolved by looking things up here.
+my %place;
+my @pages;
+for my $section (topic_sections($module)) {
+  for my $id ($section->{identifiers}->@*) {
+    my $page = page_name($node{$id});
+    die "two declarations would be documented on $page.md\n"
+      if grep { $_->{name} eq $page } @pages;
+
+    push @pages, { name => $page, id => $id };
+    place_members($id, $page, '', {});
+  }
+}
+
+make_path($out);
+for my $page (@pages) {
+  write_file("$out/$page->{name}.md", render_page($page));
+}
+write_file("$out/index.md", render_index());
+
+sub load_nodes ($dir) {
+  my %node;
+  File::Find::find({
+    no_chdir => 1,
+    wanted   => sub {
+      return unless /\.json\z/;
+      my $json = decode_json(slurp($_));
+      (my $md = $_) =~ s/\.json\z/.md/;
+      $node{ $json->{identifier}{url} } = { json => $json, md => $md };
+    },
+  }, $dir);
+
+  return %node;
+}
+
+sub topic_sections ($node) {
+  return grep {
+    my @ids = $_->{identifiers}->@*;
+    @ids && !grep { /-Implementations\z/ || !$node{$_} } @ids;
+  } ($node->{json}{topicSections} // [])->@*;
+}
+
+sub page_name ($node) {
+  return $node->{json}{metadata}{title} =~ s/\(.*//sr;
+}
+
+# Gives each member of $id, and their members, an anchor on $page.  An anchor
+# is the member's path below the page, like "Kind.done".  DocC's
+# disambiguating suffixes, like "-swift.enum", are dropped when that leaves
+# the anchor unique on the page, and otherwise kept.
+#
+# Python-Markdown reads the inline Markdown of a heading before attr_list
+# reads its "{ #anchor }", so an underscore in an anchor, as in
+# "update(_:now:_:)", starts emphasis and the anchor is lost.  Underscores,
+# and anything else but letters, digits, and ".:()-", become hyphens.
+sub place_members ($id, $page, $prefix, $seen) {
+  $place{$id} //= [ $page, ($prefix eq '' ? undef : $prefix =~ s/\.\z//r) ];
+
+  for my $section (topic_sections($node{$id})) {
+    for my $child ($section->{identifiers}->@*) {
+      my $last = $child =~ s{.*/}{}r =~ s/[^A-Za-z0-9.:()-]/-/gr;
+      my $short = $last =~ s/-swift\.[\w.]+\z//r;
+      my $anchor = $seen->{"$prefix$short"} ? "$prefix$last" : "$prefix$short";
+      die "two members of $page would have the anchor $anchor\n"
+        if $seen->{$anchor}++;
+
+      place_members($child, $page, "$anchor.", $seen);
+    }
+  }
+}
+
+sub render_page ($page) {
+  return render_node($page->{id}, 1, $page->{name});
+}
+
+sub render_node ($id, $level, $page) {
+  my $node = $node{$id};
+  my $meta = $node->{json}{metadata};
+  my $anchor = $place{$id}[1];
+
+  my $text = defined $anchor
+    ? ('#' x $level) . " `$meta->{title}` { #$anchor }\n\n"
+    : "# $meta->{title}\n\n";
+
+  my $source = $meta->{remoteSource} && $meta->{remoteSource}{url};
+  $text .= render_body($node, $level, $page, $source);
+
+  for my $section (topic_sections($node)) {
+    die "$meta->{title} is nested too deeply for Markdown's headings\n"
+      if $level + 2 > 6;
+
+    $text .= ('#' x ($level + 1)) . ' ' . sentence_case($section->{title}) . "\n\n";
+    $text .= render_node($_, $level + 2, $page) for $section->{identifiers}->@*;
+  }
+
+  return $text;
+}
+
+# The body of a symbol's own Markdown page, without its title.  DocC's
+# "Overview" and "Discussion" headings are dropped, since on a page with
+# many symbols they would only add to the table of contents, and the rest are
+# put below the symbol's own heading.  The source link goes after the first
+# code block, which is the declaration.
+sub render_body ($node, $level, $page, $source) {
+  my $md = slurp($node->{md});
+  $md =~ s/\A<!--.*?-->\s*//s;
+  $md =~ s/\A# [^\n]*(?:\n+|\z)//;
+
+  # DocC writes an extension's declaration as "extension [Todo" with its
+  # bracket missing, and the heading already says what is extended.
+  $md =~ s/^```\n[^\n]*\n```\n*//m
+    if ($node->{json}{metadata}{symbolKind} // '') eq 'extension';
+
+  my @out;
+  my $in_code;
+  my $placed_source = !$source;
+  for my $line (split /\n/, $md) {
+    if ($line =~ /\A```/) {
+      $line = '```swift' if !$in_code && $line eq '```';
+      $in_code = !$in_code;
+      push @out, $line;
+      if (!$in_code && !$placed_source) {
+        push @out, '', "<small>[source]($source)</small>";
+        $placed_source = 1;
+      }
+      next;
+    }
+
+    if (!$in_code && $line =~ /\A(#+) (.*)\z/) {
+      my ($hashes, $title) = ($1, $2);
+      next if $title eq 'Overview' || $title eq 'Discussion';
+
+      my $sub = $level + length($hashes) - 1;
+      die "a heading in $node->{md} is nested too deeply\n" if $sub > 6;
+      $line = ('#' x $sub) . ' ' . sentence_case($title);
+    }
+
+    push @out, $in_code ? $line : rewrite_links($line, $page);
+  }
+
+  push @out, '', "<small>[source]($source)</small>" unless $placed_source;
+
+  my $body = join "\n", @out;
+  $body =~ s/\n{3,}/\n\n/g;
+  $body =~ s/\s*\z//;
+  return length $body ? "$body\n\n" : '';
+}
+
+sub rewrite_links ($line, $page) {
+  my $bundle = $module->{json}{identifier}{url} =~ s{\A(doc://[^/]+).*}{$1}r;
+
+  $line =~ s{\[([^\]]*)\]\((/documentation/[^)\s]+)\)}{
+    my ($text, $path) = ($1, $2);
+    my $where = $place{"$bundle$path"};
+    $where ? "[$text](" . link_to($where, $page) . ")" : $text;
+  }ge;
+
+  return $line;
+}
+
+sub link_to ($where, $from) {
+  my ($page, $anchor) = @$where;
+  my $file = $page eq $from ? '' : "$page.md";
+  return defined $anchor ? "$file#$anchor" : $file;
+}
+
+sub render_index () {
+  my $title = $module->{json}{metadata}{title};
+  my $text = "# $title\n\n";
+  $text .= "$intro\n\n" if defined $intro;
+
+  for my $section (topic_sections($module)) {
+    $text .= '## ' . sentence_case($section->{title}) . "\n\n";
+    $text .= "| Name | |\n|---|---|\n";
+    for my $id ($section->{identifiers}->@*) {
+      my $page = page_name($node{$id});
+      my $summary = escape_cell(abstract($node{$id}, 'index'));
+      $text .= "| [`$node{$id}{json}{metadata}{title}`]($page.md) | $summary |\n";
+    }
+    $text .= "\n";
+  }
+
+  return $text;
+}
+
+# The first paragraph of a symbol's page, which DocC makes from the first
+# paragraph of its doc comment, on one line.
+sub abstract ($node, $page) {
+  my $md = slurp($node->{md});
+  $md =~ s/\A<!--.*?-->\s*//s;
+  $md =~ s/\A# [^\n]*(?:\n+|\z)//;
+  return '' if $md eq '' || $md =~ /\A```/;
+
+  my ($para) = split /\n\n/, $md;
+  return rewrite_links($para =~ s/\s*\n\s*/ /gr, $page);
+}
+
+sub escape_cell ($text) {
+  return $text =~ s/\|/\\|/gr;
+}
+
+# DocC's generated topic headings are in title case, like "Instance
+# Methods", and the site's headings are in sentence case.
+sub sentence_case ($title) {
+  my ($first, @rest) = split / /, $title;
+  return join ' ', $first, map { /\A[A-Z][a-z]+\z/ ? lc : $_ } @rest;
+}
+
+sub slurp ($path) {
+  open my $fh, '<:raw', $path or die "can't read $path: $!\n";
+  local $/;
+  return scalar <$fh>;
+}
+
+sub write_file ($path, $text) {
+  open my $fh, '>:raw', $path or die "can't write $path: $!\n";
+  print {$fh} $text;
+  close $fh or die "can't write $path: $!\n";
+}
