@@ -32,8 +32,11 @@ C<--docc> is the C<--output-path> given to C<docc convert>.  If it was given
 C<--source-service>, each declaration links to its source.  Anything in the
 C<--out> directory is left alone, but its pages are overwritten.
 
-The conformances DocC lists as "Default Implementations" are left out, since
-they are the protocols' documentation, not the module's.
+DocC lists a type's own implementations of a protocol's requirements under
+"Default Implementations," with the defaults the protocol supplies.  Run
+C<dump-symbol-graph> with C<--skip-synthesized-members>, or those defaults,
+which are the protocol's documentation and not the module's, will fill the
+pages.
 
 =cut
 
@@ -93,7 +96,7 @@ sub load_nodes ($dir) {
 sub topic_sections ($node) {
   return grep {
     my @ids = $_->{identifiers}->@*;
-    @ids && !grep { /-Implementations\z/ || !$node{$_} } @ids;
+    @ids && !grep { !$node{$_} } @ids;
   } ($node->{json}{topicSections} // [])->@*;
 }
 
@@ -135,8 +138,14 @@ sub render_node ($id, $level, $page) {
   my $meta = $node->{json}{metadata};
   my $anchor = $place{$id}[1];
 
+  # An article, like DocC's "Decodable Implementations", is a heading of
+  # prose, not a name.
+  my $label = $node->{json}{kind} eq 'article'
+    ? sentence_case($meta->{title})
+    : "`$meta->{title}`";
+
   my $text = defined $anchor
-    ? ('#' x $level) . " `$meta->{title}` { #$anchor }\n\n"
+    ? ('#' x $level) . " $label { #$anchor }\n\n"
     : "# $meta->{title}\n\n";
 
   my $source = $meta->{remoteSource} && $meta->{remoteSource}{url};
