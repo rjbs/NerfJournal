@@ -1,4 +1,4 @@
-/* But for the last, these rules are the same as those in the Jinx manual's
+/* But for the last two, these rules are the same as those in the Jinx manual's
    extra.css.  Change them together. */
 
 /* Zensical's modern look leaves the header the color of the page.  Ours
@@ -27,4 +27,13 @@
   filter:
     drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff)
     drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff);
+}
+
+/* This rule is the manual's alone.  Material lets code break anywhere, so
+   that it never overflows, and in the index's tables the summaries squeeze
+   the column of names until they break mid-word.  The longest name is short
+   enough to keep whole. */
+.manual-index td:first-child code {
+  white-space: nowrap;
+  word-break: normal;
 }

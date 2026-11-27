@@ -228,13 +228,17 @@ sub render_index () {
 
   for my $section (topic_sections($module)) {
     $text .= '## ' . sentence_case($section->{title}) . "\n\n";
+
+    # The class lets the site keep the names in the first column from
+    # wrapping, which they otherwise do mid-word, squeezed by the summaries.
+    $text .= qq{<div class="manual-index" markdown>\n\n};
     $text .= "| Name | |\n|---|---|\n";
     for my $id ($section->{identifiers}->@*) {
       my $page = page_name($node{$id});
       my $summary = escape_cell(abstract($node{$id}, 'index'));
       $text .= "| [`$node{$id}{json}{metadata}{title}`]($page.md) | $summary |\n";
     }
-    $text .= "\n";
+    $text .= "\n</div>\n\n";
   }
 
   return $text;
