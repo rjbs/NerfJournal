@@ -2,15 +2,22 @@ import Foundation
 import GRDB
 import JinxStore
 
-// The journal's SQLite schema. Todos and categories live on the JMAP
-// server, held locally in the sync engine's own tables; these are the
-// client-only tables beside them. The app runs this at launch; the CLI
-// assumes it has run.
+/// The journal's SQLite schema.
+///
+/// Todos and categories live on the JMAP server, and are held locally in
+/// the sync engine's own tables.  These are the tables beside them, for
+/// what is kept by this client alone: bundles, pages, and export groups.
 public enum NerfSchema {
-    // The export file format version, recorded in each export. Bump when
-    // the export shape changes.
+    /// The version of the export file's format, recorded in each export.
+    ///
+    /// It must be raised when the shape of ``DatabaseExport`` changes.
     public static let currentVersion = 10
 
+    /// Brings the database up to date, creating the journal's tables and
+    /// the sync engine's, as needed.
+    ///
+    /// The app does this at launch, and the CLI expects it to have been
+    /// done.
     public static func migrate(_ db: DatabaseQueue) throws {
         var migrator = DatabaseMigrator()
 

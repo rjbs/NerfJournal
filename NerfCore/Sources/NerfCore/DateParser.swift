@@ -1,16 +1,21 @@
 import Foundation
 
-// Parses a short natural-language date string typed after `~` in the
-// quick-entry field.  Returns the start-of-day Date for the match, or nil if
-// the query is unrecognized.
-//
-// Supported forms (all case-insensitive, prefix-matched where unambiguous):
-//   today / tomorrow
-//   sun / mon / tue / wed / thu / fri / sat  (next occurrence, always >= 1 day ahead)
-//   +N / +Nd                                 (N days from today)
-//   +Nw                                      (N weeks from today)
-//   an ISO 8601 date (2026-07-20) or timestamp (2026-07-20T09:00:00Z)
+/// Reads the short dates typed after `~` in the field for adding a todo.
 public enum DateParser {
+    /// The start of the day that `query` names, in the current calendar, or
+    /// nil if it names none.
+    ///
+    /// These are understood, ignoring case:
+    ///
+    /// - `today` and `tomorrow`, or any start of them.  A bare "t" is today.
+    /// - The name of a day of the week, or any start of it, meaning the next
+    ///   such day, at least one day ahead, so "monday" on a Monday is next
+    ///   Monday.  A bare "s" is Sunday.
+    /// - `+N` or `+Nd`, meaning N days from today, and `+Nw`, meaning N
+    ///   weeks from today.
+    /// - An ISO 8601 date, like 2026-07-20, or date-time, like
+    ///   2026-07-20T09:00:00Z.  A date-time names the day it falls on in the
+    ///   local time zone.
     public static func parse(_ query: String) -> Date? {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let q = trimmed.lowercased()

@@ -1,21 +1,41 @@
 import Foundation
 import GRDB
 
-// Snapshot of the journal, used for export and import.
+/// The whole journal, as written to an export file and read from one.
+///
+/// Made by ``JournalSync/exportSnapshot()`` and read by
+/// ``JournalSync/importSnapshot(_:)``.
 public struct DatabaseExport: Codable, Sendable {
-    // The export file format version (NerfSchema.currentVersion) at export
-    // time. Not consumed on import, but retained so future code can gate
-    // on it. -- claude, 2026-03-02
+    /// The version of the export file's format, from
+    /// ``NerfSchema/currentVersion`` when it was made.
+    ///
+    /// Importing doesn't read it, but it is kept so that future code can
+    /// tell one format from another.
     public let version: Int
-    // exportedAt is informational metadata in the JSON; not used by the
-    // importer, but useful to a human inspecting an export file. -- claude, 2026-03-02
+
+    /// When the export was made.
+    ///
+    /// Importing doesn't read it, but it is useful to someone looking at an
+    /// export file.
     public let exportedAt: Date
+
+    /// The categories.  On import, each is matched to a category by name, or
+    /// created.
     public let categories: [Category]
+
+    /// The bundles.
     public let taskBundles: [TaskBundle]
+
+    /// The todos in the bundles.
     public let bundleTodos: [BundleTodo]
+
+    /// The pages.
     public let journalPages: [JournalPage]
+
+    /// The todos, each with its Task's uid.
     public let todos: [ExportedTodo]
 
+    /// Makes an export from its parts.
     public init(version: Int, exportedAt: Date, categories: [Category], taskBundles: [TaskBundle],
          bundleTodos: [BundleTodo], journalPages: [JournalPage], todos: [ExportedTodo]) {
         self.version      = version
@@ -27,4 +47,3 @@ public struct DatabaseExport: Codable, Sendable {
         self.todos        = todos
     }
 }
-

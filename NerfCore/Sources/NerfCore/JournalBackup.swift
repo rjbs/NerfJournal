@@ -4,13 +4,17 @@ import Jinx
 import JinxJSON
 import JinxStore
 
-// A todo in an export file: the Todo's own fields plus the uid its Task
-// carries, flattened into one object. The uid is nil only for a Task
-// another client created without one. -- claude, 2026-10-28
+/// A todo in an export file, with its Task's uid.
+///
+/// In the file, the uid is one more property of the todo's own object.
 public struct ExportedTodo: Codable, Sendable, Equatable {
+    /// The Task's uid, or nil for a Task another client created without one.
     public var uid: String?
+
+    /// The todo.
     public var todo: Todo
 
+    /// Makes an exported todo from its parts.
     public init(uid: String?, todo: Todo) {
         self.uid = uid
         self.todo = todo
@@ -18,11 +22,13 @@ public struct ExportedTodo: Codable, Sendable, Equatable {
 
     private enum CodingKeys: String, CodingKey { case uid }
 
+    /// Decodes a todo, and its uid from the same object.
     public init(from decoder: Decoder) throws {
         todo = try Todo(from: decoder)
         uid = try decoder.container(keyedBy: CodingKeys.self).decodeIfPresent(String.self, forKey: .uid)
     }
 
+    /// Encodes the todo, with its uid in the same object.
     public func encode(to encoder: Encoder) throws {
         try todo.encode(to: encoder)
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -30,12 +36,19 @@ public struct ExportedTodo: Codable, Sendable, Equatable {
     }
 }
 
+/// What an import did.
 public struct ImportReport: Sendable, Hashable {
+    /// How many todos in the file became new Tasks.
     public var adopted: Int
+
+    /// How many todos in the file were left alone, since a Task with their
+    /// uid was already in the store.
     public var alreadyPresent: Int
-    // Categories in the file that became new TaskLists.
+
+    /// How many categories in the file became new TaskLists.
     public var categoriesCreated: Int
 
+    /// Makes a report from its parts.
     public init(adopted: Int, alreadyPresent: Int, categoriesCreated: Int = 0) {
         self.adopted = adopted
         self.alreadyPresent = alreadyPresent
@@ -47,8 +60,11 @@ public struct ImportReport: Sendable, Hashable {
 // export groups in the journal's own tables, todos and categories in the
 // sync engine. Nothing here ever destroys server data; a reset empties
 // this client, and the next sync fetches the server's lists and Tasks
-// afresh. -- claude, 2026-10-28
+// afresh.
 extension JournalSync {
+    /// The whole journal, as it stands in this client, for an export file.
+    ///
+    /// Export groups are not included.
     public func exportSnapshot() async throws -> DatabaseExport {
         let todos = try await TaskReader(sync: self).syncedTodos().map { ExportedTodo(uid: $0.uid, todo: $0.todo) }
         let categories = try await categories()
@@ -65,6 +81,8 @@ extension JournalSync {
         }
     }
 
+    /// The whole journal as an export file: the JSON of
+    /// ``exportSnapshot()``, pretty-printed with sorted keys.
     public func exportData() async throws -> Data {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
@@ -72,13 +90,20 @@ extension JournalSync {
         return try encoder.encode(try await exportSnapshot())
     }
 
-    // Gives every category in the file a list, matching by name and
-    // creating the rest, then replaces the client-only tables with the
-    // file's (bundle todos pointed at the lists) and adopts every todo
-    // whose uid the store does not already hold. New lists must reach the
-    // server before todos can be filed in them, so the import syncs in the
-    // middle. A todo with no uid gets a fresh one, so importing it twice
-    // duplicates it; that is the price of having no identity to match on.
+    /// Imports an export, adding its todos to the store, and returns what it
+    /// did.
+    ///
+    /// Each category in the file is matched by name to a category in the
+    /// store, or else created.  Then the bundles and pages in the journal's
+    /// own tables are replaced with those in the file, with the bundle
+    /// todos' categories pointed at the matching ones, and every todo whose
+    /// uid isn't already in the store is created there.  New lists must
+    /// reach the server before todos can be filed in them, so the import
+    /// syncs in the middle.
+    ///
+    /// A todo with no uid gets a fresh one, so importing it twice makes two
+    /// of it.  That is the price of having nothing to match it on.  Nothing
+    /// is ever destroyed on the server.
     @discardableResult
     public func importSnapshot(_ snapshot: DatabaseExport) async throws -> ImportReport {
         var index = try await listIndex()
@@ -125,14 +150,18 @@ extension JournalSync {
                             categoriesCreated: created)
     }
 
+    /// Imports an export file.  See ``importSnapshot(_:)``.
     public func importData(_ data: Data) async throws -> ImportReport {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try await importSnapshot(try decoder.decode(DatabaseExport.self, from: data))
     }
 
-    // Empties this client: the journal's own tables and the engine's whole
-    // local state, pending changes included. The server keeps everything.
+    /// Empties this client: the journal's own tables, and the engine's whole
+    /// local state, including changes not yet sent.
+    ///
+    /// The server keeps everything, and the next sync fetches its lists and
+    /// Tasks afresh.
     public func resetLocalData() async throws {
         try await writer.write { db in
             try BundleTodo.deleteAll(db)
