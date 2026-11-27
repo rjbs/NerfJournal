@@ -7,10 +7,11 @@ The learning curriculum in `doc/web/docs/learning/` is a sub-project called
 of NerfJournal's site.
 
 The site is built by Zensical from `doc/web/mkdocs.yml`: `doc/web/build.sh`
-builds it in Docker, and `doc/web/build.sh serve` previews it.  The theme
-settings there, and the rules in `doc/web/docs/extra.css`, are kept the same
-as those of the Jinx manual (`../Jinx/doc/manual`) and gizmo's site
-(`../gizmo/doc/web`), except where `mkdocs.yml` says otherwise.
+builds it in Docker, and `doc/web/build.sh serve` previews it.  The theme,
+the Markdown settings, the shared style rules, the build, and the deploy
+come from imprint, in `../semiotic-imprint`, which every Semiotic Systems
+site shares; its README says what a site may and may not set itself.  A
+change to how the sites look or are built belongs there, not here.
 
 The site's manual is written from NerfCore's doc comments by DocC and
 `bin/docc-manual`, which `doc/web/prepare` runs before every build.  Its pages

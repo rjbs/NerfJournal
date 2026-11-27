@@ -1,3 +1,9 @@
+# The theme and Markdown settings, and what is in extra_css, come from
+# imprint, which every Semiotic Systems site shares; see its README.  This
+# file must not give a list that imprint's does, like theme.features or
+# markdown_extensions, which would replace imprint's without complaint.
+INHERIT: ../../../semiotic-imprint/config/sectioned.yml
+
 site_name: NerfJournal
 site_description: >-
   NerfJournal, a macOS bullet journal kept on a JMAP server: the reference
@@ -9,18 +15,14 @@ site_description: >-
 # links relatively.  If the site moves, change this, or the 404 page comes
 # out unstyled.
 site_url: https://semiotic.systems/nerfjournal/
-use_directory_urls: true
 
 copyright: >-
   this content generated for <a href="https://rjbs.cloud/">rjbs</a> and of
   questionable value to anybody else
 
-# From here to the nav, this file is the same as those of the Jinx site and
-# the Go booklet in gizmo, but for the primary color, the icons, and smarty,
-# so that the three look alike and can still be told apart.  Change them
-# together.
+# The primary color and the icon are what tell this site apart from its
+# siblings.
 theme:
-  name: material
   logo: assets/images/icon.png
   favicon: assets/images/favicon.png
   palette:
@@ -36,36 +38,6 @@ theme:
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
-  features:
-    - navigation.indexes
-    - navigation.tabs
-    - content.code.copy
-    - navigation.footer
-    - navigation.top
-    - toc.follow
-
-extra_css:
-  - extra.css
-
-markdown_extensions:
-  - admonition
-  - attr_list
-  - md_in_html
-  # Jekyll's Markdown curled the quotes in this text, which was written with
-  # straight ones.  This keeps them curled.  The sibling sites do without.
-  - smarty
-  - tables
-  - toc:
-      permalink: true
-  - pymdownx.details
-  - pymdownx.highlight:
-      anchor_linenums: true
-  - pymdownx.inlinehilite
-  - pymdownx.superfences:
-      custom_fences:
-        - name: mermaid
-          class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_code_format
 
 # A new unit must be added here, or it is built but appears in no menu.  So
 # must a new top-level declaration in NerfCore, and prepare fails until it is.
