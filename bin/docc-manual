@@ -163,10 +163,17 @@ sub render_node ($id, $level, $page) {
 }
 
 # The body of a symbol's own Markdown page, without its title.  DocC's
-# "Overview" and "Discussion" headings are dropped, since on a page with
-# many symbols they would only add to the table of contents, and the rest are
-# put below the symbol's own heading.  The source link goes after the first
-# code block, which is the declaration.
+# "Overview" and "Discussion" headings are dropped when nothing but the
+# summary comes before them, since on a page with many symbols they would
+# only add to the table of contents.  After a heading like "Parameters" they
+# are kept, or the discussion would read as part of the last parameter.  The
+# rest of the headings are put below the symbol's own.
+#
+# DocC writes each parameter as a paragraph of its name in code and then a
+# paragraph describing it, which reads like two things.  They become one
+# list item.
+#
+# The source link goes after the first code block, which is the declaration.
 sub render_body ($node, $level, $page, $source) {
   my $md = slurp($node->{md});
   $md =~ s/\A<!--.*?-->\s*//s;
@@ -180,6 +187,14 @@ sub render_body ($node, $level, $page, $source) {
   my @out;
   my $in_code;
   my $placed_source = !$source;
+  my $seen_heading;
+
+  # While in a "Parameters" section: the name of the parameter whose
+  # description comes next, and whether a description is being continued.
+  my $in_params;
+  my $param;
+  my $in_item;
+
   for my $line (split /\n/, $md) {
     if ($line =~ /\A```/) {
       $line = '```swift' if !$in_code && $line eq '```';
@@ -192,16 +207,44 @@ sub render_body ($node, $level, $page, $source) {
       next;
     }
 
-    if (!$in_code && $line =~ /\A(#+) (.*)\z/) {
+    if ($in_code) {
+      push @out, $line;
+      next;
+    }
+
+    if ($line =~ /\A(#+) (.*)\z/) {
       my ($hashes, $title) = ($1, $2);
-      next if $title eq 'Overview' || $title eq 'Discussion';
+      $in_params = $title eq 'Parameters';
+      undef $param;
+      undef $in_item;
+
+      next if !$seen_heading && ($title eq 'Overview' || $title eq 'Discussion');
+      $seen_heading = 1;
 
       my $sub = $level + length($hashes) - 1;
       die "a heading in $node->{md} is nested too deeply\n" if $sub > 6;
-      $line = ('#' x $sub) . ' ' . sentence_case($title);
+      push @out, ('#' x $sub) . ' ' . sentence_case($title);
+      next;
     }
 
-    push @out, $in_code ? $line : rewrite_links($line, $page);
+    if ($in_params) {
+      if ($line =~ /\A`[^`]+`\z/) {
+        $param = $line;
+        next;
+      }
+      if ($line eq '') {
+        undef $in_item;
+        next if defined $param;
+      } elsif (defined $param) {
+        $line = "- $param: $line";
+        undef $param;
+        $in_item = 1;
+      } elsif ($in_item) {
+        $line = "    $line";
+      }
+    }
+
+    push @out, rewrite_links($line, $page);
   }
 
   push @out, '', "<small>[source]($source)</small>" unless $placed_source;
