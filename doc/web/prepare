@@ -1,0 +1,61 @@
+#!/bin/sh
+# Writes the manual, one page for each of NerfCore's public top-level
+# declarations, from their doc comments, into doc/web/docs/manual/.  DocC
+# writes the Markdown, and bin/docc-manual makes a manual of it.  The pages
+# are made fresh for every build and never committed.  Each declaration
+# links to its source at the commit being built.
+#
+#   doc/web/prepare
+#
+# This needs Xcode, not just a Swift toolchain: DocC reads a symbol graph,
+# which is made by building NerfCore, and NerfCore and Jinx build only on
+# macOS.  Jinx is found at ../Jinx, as NerfCore/Package.swift says.
+set -e
+cd "$(dirname "$0")/../.."
+
+rev=$(git rev-parse HEAD)
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+
+graphs=$(
+  cd NerfCore &&
+  swift package dump-symbol-graph \
+    --minimum-access-level public \
+    --skip-synthesized-members |
+  sed -n 's/^Files written to //p'
+)
+if [ -z "$graphs" ]; then
+  echo "prepare: dump-symbol-graph didn't say where it wrote the graphs" >&2
+  exit 1
+fi
+
+xcrun docc convert \
+  --additional-symbol-graph-dir "$graphs" \
+  --fallback-display-name NerfCore \
+  --fallback-bundle-identifier systems.semiotic.nerfcore \
+  --output-path "$work/docc" \
+  --enable-experimental-markdown-output \
+  --enable-experimental-markdown-output-manifest \
+  --source-service github \
+  --source-service-base-url "https://github.com/rjbs/nerfjournal/blob/$rev" \
+  --checkout-path "$PWD" \
+  --warnings-as-errors
+
+rm -rf doc/web/docs/manual
+bin/docc-manual \
+  --docc "$work/docc" \
+  --out doc/web/docs/manual \
+  --intro "NerfCore is the model layer shared by NerfJournal and its \`nerf\`
+command-line tool.  This is its public interface, written by DocC from the doc
+comments in its source."
+
+# Zensical builds a page that the nav doesn't list without complaint, and
+# it then appears in no menu, so a new declaration must be caught here.
+missing=0
+for page in $(cd doc/web/docs && find manual -name '*.md' | sort); do
+  if ! grep -q " $page\$" doc/web/mkdocs.yml; then
+    echo "prepare: $page is not in the nav in doc/web/mkdocs.yml" >&2
+    missing=1
+  fi
+done
+exit $missing

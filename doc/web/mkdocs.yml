@@ -68,9 +68,39 @@ markdown_extensions:
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
 
-# A new unit must be added here, or it is built but appears in no menu.
+# A new unit must be added here, or it is built but appears in no menu.  So
+# must a new top-level declaration in NerfCore, and prepare fails until it is.
 nav:
   - Home: index.md
+  - Manual:
+    - manual/index.md
+    - BundleTodo: manual/BundleTodo.md
+    - Category: manual/Category.md
+    - CategoryColor: manual/CategoryColor.md
+    - CategoryWriter: manual/CategoryWriter.md
+    - CivilDate: manual/CivilDate.md
+    - DatabaseExport: manual/DatabaseExport.md
+    - DateParser: manual/DateParser.md
+    - ExportedTodo: manual/ExportedTodo.md
+    - ExportGroup: manual/ExportGroup.md
+    - ExportGroupMember: manual/ExportGroupMember.md
+    - groupedByCategory: manual/groupedByCategory.md
+    - ImportReport: manual/ImportReport.md
+    - JournalPage: manual/JournalPage.md
+    - JournalSync: manual/JournalSync.md
+    - JournalSyncError: manual/JournalSyncError.md
+    - Moment: manual/Moment.md
+    - NerfSchema: manual/NerfSchema.md
+    - Swift extensions: manual/Swift.md
+    - SyncedTodo: manual/SyncedTodo.md
+    - SyncSettings: manual/SyncSettings.md
+    - TaskBundle: manual/TaskBundle.md
+    - TaskCodec: manual/TaskCodec.md
+    - TaskListIndex: manual/TaskListIndex.md
+    - TaskReader: manual/TaskReader.md
+    - TaskWriter: manual/TaskWriter.md
+    - Todo: manual/Todo.md
+    - TodoEnding: manual/TodoEnding.md
   - NerfLearning:
     - learning/index.md
     - 1. Swift as a language: learning/unit-01-swift-language.md

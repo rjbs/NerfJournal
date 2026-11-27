@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'doc/web/**'
+      - 'NerfCore/**'
+      - 'bin/docc-manual'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -19,9 +21,20 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # The manual is made by building NerfCore, which builds only on macOS,
+    # and with an SDK new enough for its platform requirement.
+    runs-on: xcode-27
     steps:
+      # NerfCore finds Jinx at ../../Jinx, so the two are checked out side by
+      # side, as they are on the machines where NerfJournal is worked on.
       - uses: actions/checkout@v4
+        with:
+          path: nerfjournal
+
+      - uses: actions/checkout@v4
+        with:
+          repository: rjbs/jinx
+          path: Jinx
 
       - uses: actions/setup-python@v5
         with:
@@ -30,15 +43,18 @@ jobs:
       - uses: actions/configure-pages@v5
 
       - name: Install Zensical
-        run: pip install -r doc/web/requirements.txt
+        run: pip install -r nerfjournal/doc/web/requirements.txt
+
+      - name: Write the manual
+        run: nerfjournal/doc/web/prepare
 
       - name: Build site
         run: zensical build --clean --strict
-        working-directory: doc/web
+        working-directory: nerfjournal/doc/web
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: doc/web/site
+          path: nerfjournal/doc/web/site
 
   deploy:
     runs-on: ubuntu-latest

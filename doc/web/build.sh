@@ -1,14 +1,20 @@
 #!/bin/sh
 # Builds or serves the site with Zensical, run in Docker so that nothing
-# need be installed locally beyond Docker itself.
+# need be installed locally beyond Docker and Xcode.
 #
 #   doc/web/build.sh          # builds into doc/web/site/
 #   doc/web/build.sh serve    # serves at http://localhost:8000 with reload
 #
 # The version here and the one in requirements.txt, which the Pages workflow
 # installs, should be the same.
+#
+# The manual is written by prepare, once, before Zensical starts, and needs
+# Xcode.  While serving, a change to a doc comment shows up only after running
+# doc/web/prepare again.
 set -e
 cd "$(dirname "$0")"
+
+./prepare
 
 image=zensical/zensical:0.1.3
 

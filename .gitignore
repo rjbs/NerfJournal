@@ -9,3 +9,6 @@ build/
 # The built site
 /doc/web/site/
 /doc/web/.cache/
+
+# The manual, written by doc/web/prepare at each build
+/doc/web/docs/manual/

@@ -12,6 +12,16 @@ settings there, and the rules in `doc/web/docs/extra.css`, are kept the same
 as those of the Jinx manual (`../Jinx/doc/manual`) and gizmo's site
 (`../gizmo/doc/web`), except where `mkdocs.yml` says otherwise.
 
+The site's manual is written from NerfCore's doc comments by DocC and
+`bin/docc-manual`, which `doc/web/prepare` runs before every build.  Its pages
+are not committed.  A new public top-level declaration in NerfCore must be
+added to the Manual section of the `nav`, or `prepare` fails.
+
+A comment on a public declaration in NerfCore is a `///` doc comment, with no
+`-- claude` signature, and names another declaration in the module as a DocC
+link, like ``` ``CivilDate`` ``` or ``` ``TodoEnding/day`` ```.  DocC's warnings
+are errors in `prepare`, so a link that doesn't resolve fails the build.
+
 The Markdown is Python-Markdown's, which is stricter than most: a list needs a
 blank line before it, and a second paragraph or a code block inside a list
 item must be indented four spaces.
