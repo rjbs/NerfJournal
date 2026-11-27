@@ -1,40 +1,11 @@
-/* The first two rules are also in the extra.css of the Jinx site and the Go
-   booklet in gizmo, and the last is also in the Jinx site's.  Change them
-   together. */
+/* The rules every Semiotic Systems site shares are in imprint.css, which
+   imprint's build-site copies in.  This is this site's own. */
 
-/* Zensical's modern look leaves the header the color of the page.  Ours
-   takes the primary color, which is also what tells this site apart from
-   its siblings. */
-.md-header {
-  color: var(--md-primary-bg-color);
-  background-color: var(--md-primary-fg-color);
-}
-
-/* The search button draws its text, icon, fill, and key hint from the page's
-   colors, which would be dark on dark here.  Redefining those for the
-   button alone is less to keep up than restyling each part. */
-.md-header .md-search__button {
-  --md-default-fg-color: var(--md-primary-bg-color);
-  --md-default-fg-color--lightest: #ffffff26;
-  --md-default-fg-color--lighter: #ffffff4d;
-  --md-default-bg-color--light: #ffffff33;
-}
-
-/* This rule is NerfLearning's alone.  The icon is a purple rounded square,
-   which is lost on a purple header.  A drop shadow follows the shape of the
-   image, not its box, so four of them with no blur, one to each side, draw a
-   white line around the square. */
+/* The icon is a purple rounded square, which is lost on a purple header.  A
+   drop shadow follows the shape of the image, not its box, so four of them
+   with no blur, one to each side, draw a white line around the square. */
 .md-header__button.md-logo img {
   filter:
     drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff)
     drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff);
-}
-
-/* This rule is the manual's, and the Jinx reference's.  Material lets code
-   break anywhere, so that it never overflows, and in the index's tables the
-   summaries squeeze the column of names until they break mid-word.  The
-   longest name is short enough to keep whole. */
-.manual-index td:first-child code {
-  white-space: nowrap;
-  word-break: normal;
 }

@@ -12,3 +12,6 @@ build/
 
 # The manual, written by doc/web/prepare at each build
 /doc/web/docs/manual/
+
+# Copied in from imprint by its build-site
+/doc/web/docs/imprint.css
