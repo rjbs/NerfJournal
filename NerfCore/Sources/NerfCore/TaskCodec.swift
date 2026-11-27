@@ -1,25 +1,40 @@
 import Foundation
 import JinxJSON
 
-// The boundary between NerfJournal's Todo and the JSCalendar Task that
-// represents it on a JMAP for Tasks server. JMAP-SPEC.md is the contract;
-// this file is its implementation, and the two should be read together.
-//
-// Writing is strict: an encoding always carries the full set of owned
-// properties below, and the sync engine merges exactly those into the
-// Task, leaving everything else (description, alerts, other clients'
-// keywords) as it found it. Reading is lenient: a Task written by another
-// client, with none of our vendor properties, still decodes to a sensible
-// Todo. -- claude, 2026-10-28
+// JMAP-SPEC.md is the contract this implements, and the two should be read
+// together.
+
+/// Turns a ``Todo`` into the JSCalendar Task that it is on a JMAP for Tasks
+/// server, and back.
+///
+/// Writing is strict: an encoding always carries the whole set of
+/// ``ownedProperties``, and the sync engine merges exactly those into the
+/// Task, leaving everything else, like its description, its alerts, and
+/// other clients' keywords, as it found it.  Reading is lenient: a Task
+/// written by another client, with none of NerfJournal's own properties,
+/// still decodes to a sensible todo.
 public enum TaskCodec {
+    /// The prefix of the names of NerfJournal's own Task properties.
     public static let vendorPrefix = "nerfjournal.semiotic.systems:"
+
+    /// The property that is true on the Task of a todo that doesn't
+    /// migrate, which ``TaskWriter/sweep(asOf:now:)`` will abandon after its
+    /// start day.
     public static let autoCancelProperty = vendorPrefix + "autoCancel"
+
+    /// The property that holds when the todo ended: an RFC 3339 date-time
+    /// when the moment is known, and otherwise a bare day, "YYYY-MM-DD".
     public static let endedAtProperty = vendorPrefix + "endedAt"
+
+    /// The key, in the Task's `links`, of the todo's
+    /// ``Todo/externalURL``.
     public static let externalLinkKey = "nerfjournal-external"
 
-    // The properties the encoding carries, and therefore the only ones a
-    // replacement write may change. `uid` is set at creation only and is
-    // deliberately not here.
+    /// The properties an encoding carries, and so the only ones that writing
+    /// a todo may change.
+    ///
+    /// `uid` is set when the Task is created, and never after, so it is not
+    /// one of these.
     public static let ownedProperties: Set<String> = [
         "@type", "title", "start", "showWithoutTime", "taskListIds",
         "progress", "progressUpdated", "keywords", "links",
@@ -28,18 +43,23 @@ public enum TaskCodec {
 
     // MARK: - Encoding
 
-    // The Task encoding of `todo`. When `existing` is the Task's current
-    // value, keywords and links another client put there are carried
-    // through, and `progressUpdated` is left alone unless the ending state
-    // actually changed. `now` is the write instant recorded in
-    // `progressUpdated` for a day-only ending, which has no instant of its
-    // own; it is a parameter so tests are deterministic, and nil omits the
-    // property, which is what a one-time import of old records wants.
-    //
-    // The todo's category decides `taskListIds`: its category's list, or
-    // the default list. A category whose list the server has not yet
-    // acknowledged has no id to file under, which is an error rather than
-    // a silent fall-back to the default list. -- claude, 2026-10-28
+    /// The Task that `todo` is.
+    ///
+    /// When `existing` is the Task as it stands, keywords and links that
+    /// another client put there are carried through, and `progressUpdated`
+    /// is left alone unless the todo's ending has changed.
+    ///
+    /// `now` is the instant recorded in `progressUpdated` for an ending with
+    /// only a day, which has no instant of its own.  It is a parameter so
+    /// that tests can fix it, and nil leaves the property out, which is what
+    /// a one-time import of old records wants.
+    ///
+    /// The todo's category decides `taskListIds`: its category's list, or the
+    /// default list.  A category whose list the server hasn't yet
+    /// acknowledged has no id to file the Task under, and that is the error
+    /// ``JournalSyncError/categoryNotSynced(_:)``, not a quiet fall-back to
+    /// the default list.  With no default list, the error is
+    /// ``JournalSyncError/noTaskList``.
     public static func encode(
         _ todo: Todo,
         lists: TaskListIndex,
@@ -96,8 +116,8 @@ public enum TaskCodec {
         return .object(task)
     }
 
-    // The encoding for a Task that does not exist yet: the ordinary
-    // encoding plus the client-chosen `uid`.
+    /// The Task that `todo` is, for a Task that doesn't exist yet: the
+    /// encoding from ``encode(_:lists:existing:now:)``, with `uid` added.
     public static func encodeNew(
         _ todo: Todo,
         lists: TaskListIndex,
@@ -123,8 +143,15 @@ public enum TaskCodec {
 
     // MARK: - Decoding
 
-    // The Todo a Task displays as. `id` becomes the todo's id. `zone` is
-    // the zone in which fallback instants are turned into days.
+    /// The todo that a Task is, with the id `id`.
+    ///
+    /// A Task with no `start` starts on the day it was created.  An ended
+    /// Task with no usable `endedAt` property ended on the day its progress
+    /// was last updated, or failing that the day the Task was, or failing
+    /// that its start day.  Those instants are turned into days in `zone`.
+    /// A Task in no category list this client knows has no category, and a
+    /// link the Task has, if it has only one, is the todo's
+    /// ``Todo/externalURL`` even if NerfJournal didn't put it there.
     public static func decode(
         _ task: JSONValue,
         id: Int64?,

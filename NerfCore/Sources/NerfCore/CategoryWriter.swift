@@ -4,22 +4,28 @@ import Jinx
 import JinxJSON
 import JinxStore
 
-// Writes categories, which are TaskLists, into the sync engine. Two of
-// these go to the server before returning, because Jinx cannot yet carry a
-// reference to a list the server has not acknowledged: a new list syncs so
-// that Tasks can be filed in it, and a deleted list syncs the departure of
-// its Tasks before the destroy, which would otherwise travel first and be
-// refused. -- claude, 2026-10-28
+/// Writes categories, which are TaskLists, into the sync engine.
+///
+/// Two of these changes are sent to the server before they return, because
+/// Jinx can't yet carry a reference to a list the server hasn't
+/// acknowledged.  A new list is sent so that Tasks can be filed in it, and a
+/// deleted list's Tasks are moved out of it and sent before its destruction,
+/// which would otherwise travel first and be refused.
 public struct CategoryWriter: Sendable {
+    /// The engine written to.
     public let sync: JournalSync
 
+    /// Makes a writer for the engine in `sync`.
     public init(sync: JournalSync) {
         self.sync = sync
     }
 
-    // Creates a list after the last category in order and pushes it. A
-    // push that fails leaves the list pending, visible as a category but
-    // not yet usable for filing; the engine keeps trying.
+    /// Creates a category, sorted after all the others, sends it to the
+    /// server, and returns its list's local key.
+    ///
+    /// If sending fails, the list is left waiting to be sent, so that it is
+    /// a category but can't yet have todos filed in it.  The engine keeps
+    /// trying.
     @discardableResult
     public func create(name: String, color: CategoryColor) async throws -> LocalKey {
         let index = try await sync.listIndex()
@@ -32,16 +38,22 @@ public struct CategoryWriter: Sendable {
         return key
     }
 
+    /// Renames the category whose list has the local key `key`.
     public func rename(_ key: LocalKey, to name: String) async throws {
         try await setProperty(key, "name", .string(name))
     }
 
+    /// Changes the color of the category whose list has the local key
+    /// `key`.
     public func setColor(_ key: LocalKey, to color: CategoryColor) async throws {
         try await setProperty(key, "color", .string(color.cssName))
     }
 
-    // Gives the lists `sortOrder` by their position in `keys`, in one
-    // batch. Lists not named keep their order.
+    /// Puts the categories whose lists have the local keys `keys` in that
+    /// order, in one write.
+    ///
+    /// Each list's `sortOrder` becomes its position in `keys`.  Lists not
+    /// named keep theirs.
     public func reorder(_ keys: [LocalKey]) async throws {
         try await sync.engine.write { writer in
             for (index, key) in keys.enumerated() {
@@ -54,10 +66,14 @@ public struct CategoryWriter: Sendable {
         }
     }
 
-    // Moves the category's Tasks to the default list, pushes that, then
-    // destroys the list, and finally forgets the category in bundle todos
-    // and export groups. If the push fails the category stays, Tasks and
-    // all, and the error says why.
+    /// Deletes the category whose list has the local key `key`, leaving its
+    /// todos uncategorized.
+    ///
+    /// The category's Tasks are moved to the default list and that is sent
+    /// to the server.  Then the list is destroyed, and the category is
+    /// cleared from bundle todos and removed from export groups.  If sending
+    /// the move fails, the category stays, Tasks and all, and the error says
+    /// why.
     public func delete(_ key: LocalKey) async throws {
         let index = try await sync.listIndex()
         guard let entry = index.entry(forCategory: key.rawValue) else { return }
