@@ -15,11 +15,10 @@ copyright: >-
   this content generated for <a href="https://rjbs.cloud/">rjbs</a> and of
   questionable value to anybody else
 
-# From here to the nav, this file is the same as those of the Jinx manual
-# and the Go booklet in gizmo, but for the primary color, the icons, and
-# smarty, so that the three look alike and can still be told apart, and
-# for navigation.indexes and navigation.tabs, which this site needs because
-# it has sections and the manual does not.  Change them together.
+# From here to the nav, this file is the same as those of the Jinx site and
+# the Go booklet in gizmo, but for the primary color, the icons, and smarty,
+# so that the three look alike and can still be told apart.  Change them
+# together.
 theme:
   name: material
   logo: assets/images/icon.png
